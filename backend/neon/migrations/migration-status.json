@@ -1,0 +1,283 @@
+{
+  "tracking": "manual-development-ledger",
+  "environment": "development",
+  "migrations": [
+    {
+      "version": "0001",
+      "file": "0001_identity_organizations.sql",
+      "dependsOn": [],
+      "status": "applied",
+      "appliedAt": "2026-11-06T10:28:27+03:00"
+    },
+    {
+      "version": "0002",
+      "file": "0002_global_opportunity_intelligence.sql",
+      "dependsOn": [
+        "0001"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-06T10:28:27+03:00"
+    },
+    {
+      "version": "0003",
+      "file": "0003_durable_ingestion_foundation.sql",
+      "dependsOn": [
+        "0002"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T00:01:38.403Z"
+    },
+    {
+      "version": "0004",
+      "file": "0004_ingestion_orchestration.sql",
+      "dependsOn": [
+        "0003"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T00:01:39.053Z"
+    },
+    {
+      "version": "0005",
+      "file": "0005_world_bank_procurement_notices_source.sql",
+      "dependsOn": [
+        "0004"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T00:01:39.847Z"
+    },
+    {
+      "version": "0006",
+      "file": "0006_api_client_source_candidates.sql",
+      "dependsOn": [
+        "0005"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T00:01:40.495Z"
+    },
+    {
+      "version": "0007",
+      "file": "0007_canadabuys_candidate.sql",
+      "dependsOn": [
+        "0006"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T00:01:41.164Z"
+    },
+    {
+      "version": "0008",
+      "file": "0008_approve_verified_sources.sql",
+      "dependsOn": [
+        "0007"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T00:25:28.124Z"
+    },
+    {
+      "version": "0009",
+      "file": "0009_activate_world_bank_and_country_registry.sql",
+      "dependsOn": [
+        "0008"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T00:43:56.964Z"
+    },
+    {
+      "version": "0010",
+      "file": "0010_activate_grants_gov_and_sam_gov.sql",
+      "dependsOn": [
+        "0009"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T20:52:43.240Z"
+    },
+    {
+      "version": "0011",
+      "file": "0011_remove_license_gates.sql",
+      "dependsOn": [
+        "0010"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T21:30:16.479Z"
+    },
+    {
+      "version": "0012",
+      "file": "0012_seed_grants_opportunity_type.sql",
+      "dependsOn": [
+        "0011"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-12T22:12:29.839Z"
+    },
+    {
+      "version": "0013",
+      "file": "0013_activate_austender.sql",
+      "dependsOn": [
+        "0012"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T00:48:25.362Z"
+    },
+    {
+      "version": "0014",
+      "file": "0014_activate_boamp.sql",
+      "dependsOn": [
+        "0013"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T01:47:35.176Z"
+    },
+    {
+      "version": "0015",
+      "file": "0015_activate_tenderned.sql",
+      "dependsOn": [
+        "0014"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T18:46:40.464Z"
+    },
+    {
+      "version": "0016",
+      "file": "0016_activate_nest.sql",
+      "dependsOn": [
+        "0015"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T19:18:32.661Z"
+    },
+    {
+      "version": "0017",
+      "file": "0017_activate_kenya_ppip.sql",
+      "dependsOn": [
+        "0016"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T19:55:42.816Z"
+    },
+    {
+      "version": "0018",
+      "file": "0018_activate_uganda_ocp.sql",
+      "dependsOn": [
+        "0017"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T21:00:35.312Z"
+    },
+    {
+      "version": "0019",
+      "file": "0019_fix_uganda_access_method.sql",
+      "dependsOn": [
+        "0018"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T21:14:31.112Z"
+    },
+    {
+      "version": "0020",
+      "file": "0020_activate_south_sudan.sql",
+      "dependsOn": [
+        "0019"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T21:41:30.828Z"
+    },
+    {
+      "version": "0021",
+      "file": "0021_activate_canadabuys.sql",
+      "dependsOn": [
+        "0020"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T22:11:33.047Z"
+    },
+    {
+      "version": "0022",
+      "file": "0022_activate_india.sql",
+      "dependsOn": [
+        "0021"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T22:20:30.865Z"
+    },
+    {
+      "version": "0023",
+      "file": "0023_activate_japan.sql",
+      "dependsOn": [
+        "0022"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T22:50:49.265Z"
+    },
+    {
+      "version": "0024",
+      "file": "0024_activate_philippines.sql",
+      "dependsOn": [
+        "0023"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-13T22:50:50.085Z"
+    },
+    {
+      "version": "0025",
+      "file": "0025_activate_ocp_bulk_countries.sql",
+      "dependsOn": [
+        "0024"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-14T02:00:06.759Z"
+    },
+    {
+      "version": "0026",
+      "file": "0026_activate_html_scrapers.sql",
+      "dependsOn": [
+        "0025"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-14T02:00:07.760Z"
+    },
+    {
+      "version": "0027",
+      "file": "0027_activate_african_scrapers_2.sql",
+      "dependsOn": [
+        "0026"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-14T02:55:29.273Z"
+    },
+    {
+      "version": "0028",
+      "file": "0028_ingestion_parse_status.sql",
+      "dependsOn": [
+        "0027"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-14T19:25:43.906Z"
+    },
+    {
+      "version": "0029",
+      "file": "0029_coverage_truth.sql",
+      "dependsOn": [
+        "0028"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-15T17:12:58.368Z"
+    },
+    {
+      "version": "0030",
+      "file": "0030_zombie_run_reaper.sql",
+      "dependsOn": [
+        "0029"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-15T17:36:05.849Z"
+    },
+    {
+      "version": "0031",
+      "file": "0031_canonical_dedupe_key.sql",
+      "dependsOn": [
+        "0030"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-15T17:47:42.495Z"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+name = "oppsift-ingestion-orchestrator"
+main = "src/index.ts"
+compatibility_date = "2026-11-16"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+# The deployment helper substitutes HYPERDRIVE_ID into a temporary config.
+# Hyperdrive bindings are deployment-time resources, not runtime variables.
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "REPLACE_WITH_HYPERDRIVE_ID"
+
+[[queues.producers]]
+binding = "INGESTION_QUEUE"
+queue = "oppsift-ingestion"
+
+[[queues.consumers]]
+queue = "oppsift-ingestion"
+max_batch_size = 1
+max_batch_timeout = 5
+max_retries = 5
+max_concurrency = 5
+dead_letter_queue = "oppsift-ingestion-dead-letter"
+
+[browser]
+binding = "BROWSER"
+
+[vars]
+MAX_SOURCES_PER_TICK = "250"
+# Collect due sources every cron tick (5 minutes) instead of every 15 minutes.
+MINIMUM_COLLECTION_INTERVAL_SECONDS = "300"
+MAXIMUM_JOB_RETRIES = "5"
+MAX_JOBS_PER_TICK = "10"
+MAX_CONCURRENT_JOBS = "5"
+# Configure SAM_GOV_API_KEY with `wrangler secret put`; never place it in vars.
+# PROBE_TOKEN gates the diagnostic /ingestion-probe route (host-allowlisted).
+

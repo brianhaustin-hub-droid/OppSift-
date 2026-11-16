@@ -1,0 +1,164 @@
+.organization-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.organization-section {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5) 0;
+  border-block: 1px solid var(--color-border);
+  background: transparent;
+}
+
+.organization-section h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.organization-section > p {
+  margin: 0;
+  color: var(--color-text-secondary-accessible);
+  line-height: var(--line-height-normal);
+}
+
+.organization-form {
+  display: grid;
+  max-width: 34rem;
+  gap: var(--space-4);
+}
+
+.organization-form--inline {
+  grid-template-columns: minmax(12rem, 1fr) minmax(8rem, 0.6fr) auto;
+  align-items: end;
+  max-width: none;
+}
+
+.organization-form label,
+.organization-switcher {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.organization-form input,
+.organization-form select,
+.organization-form textarea,
+.organization-switcher select,
+.organization-table select,
+.invitation-link input {
+  min-width: 0;
+  min-height: var(--control-height-md);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.organization-form textarea {
+  min-height: 7rem;
+  padding-block: var(--space-2);
+  resize: vertical;
+}
+
+.organization-section details {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.organization-section summary {
+  color: var(--color-action-text);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+.organization-switcher {
+  width: min(100%, 28rem);
+}
+
+.organization-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+  border-block: 1px solid var(--color-border);
+}
+
+.organization-table {
+  width: 100%;
+  min-width: 42rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.organization-table th,
+.organization-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.organization-table th {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary-accessible);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.organization-table td small {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary-accessible);
+  overflow-wrap: anywhere;
+}
+
+.organization-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.invitation-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.invitation-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.invitation-link {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-surface);
+}
+
+.invitation-link p {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.invitation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (max-width: 50rem) {
+  .organization-form--inline {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

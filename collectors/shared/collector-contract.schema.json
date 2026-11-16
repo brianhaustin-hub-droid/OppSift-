@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://getoppsift.com/schemas/collector-contract-v1.json",
+  "title": "OppSift collector contract",
+  "description": "Versioned, bounded collector request and result envelope shared by Node.js and Python collectors.",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/result" }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "httpsUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion", "jobId", "ingestionRunId", "sourceId",
+        "connectorId", "collectorFramework", "sourceBaseUrl", "allowedHosts",
+        "currentCursor", "limits", "constraints", "adapter"
+      ],
+      "properties": {
+        "contractVersion": { "const": "1.0" },
+        "jobId": { "$ref": "#/$defs/uuid" },
+        "ingestionRunId": { "$ref": "#/$defs/uuid" },
+        "sourceId": { "$ref": "#/$defs/uuid" },
+        "connectorId": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": "^[a-zA-Z0-9._:-]+$" },
+        "collectorFramework": { "enum": ["crawlee", "cheerio", "scrapy", "scrapling"] },
+        "sourceBaseUrl": { "$ref": "#/$defs/httpsUrl" },
+        "allowedHosts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 253, "pattern": "^[a-zA-Z0-9.-]+$" }
+        },
+        "currentCursor": { "type": ["string", "null"], "maxLength": 2000 },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxPages", "maxRecords", "maxRequests", "timeoutMs", "maxResponseBytes", "maxTotalBytes", "minimumRequestIntervalMs"],
+          "properties": {
+            "maxPages": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "maxRecords": { "type": "integer", "minimum": 1, "maximum": 5000 },
+            "maxRequests": { "type": "integer", "minimum": 1, "maximum": 500 },
+            "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 120000 },
+            "maxResponseBytes": { "type": "integer", "minimum": 1024, "maximum": 2000000 },
+            "maxTotalBytes": { "type": "integer", "minimum": 1024, "maximum": 20000000 },
+            "minimumRequestIntervalMs": { "type": "integer", "minimum": 250, "maximum": 3600000 }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["approvalStatus", "reusePermission", "conditionalConstraintsEnforced", "allowedMethods", "attribution"],
+          "properties": {
+            "approvalStatus": { "enum": ["approved", "approved_with_constraints"] },
+            "reusePermission": { "enum": ["permitted", "conditional"] },
+            "conditionalConstraintsEnforced": { "type": "boolean" },
+            "allowedMethods": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "enum": ["GET", "HEAD"] } },
+            "attribution": { "type": "string", "maxLength": 2000 },
+            "retentionDays": { "type": ["integer", "null"], "minimum": 1, "maximum": 3650 }
+          }
+        },
+        "adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["adapterId", "format", "recordSelector", "fields"],
+          "properties": {
+            "adapterId": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": "^[a-zA-Z0-9._:-]+$" },
+            "format": { "enum": ["html", "xml"] },
+            "recordSelector": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "fields": {
+              "type": "object",
+              "minProperties": 2,
+              "additionalProperties": false,
+              "properties": {
+                "externalId": { "$ref": "#/$defs/selector" },
+                "title": { "$ref": "#/$defs/selector" },
+                "description": { "$ref": "#/$defs/selector" },
+                "sourceCategoryTerm": { "$ref": "#/$defs/selector" },
+                "countryCode": { "$ref": "#/$defs/selector" },
+                "publisher": { "$ref": "#/$defs/selector" },
+                "region": { "$ref": "#/$defs/selector" },
+                "city": { "$ref": "#/$defs/selector" },
+                "sourceDeadlineText": { "$ref": "#/$defs/selector" },
+                "timeZone": { "$ref": "#/$defs/selector" },
+                "status": { "$ref": "#/$defs/selector" },
+                "currency": { "$ref": "#/$defs/selector" },
+                "amount": { "$ref": "#/$defs/selector" },
+                "publishedAt": { "$ref": "#/$defs/selector" },
+                "closingAt": { "$ref": "#/$defs/selector" },
+                "organization": { "$ref": "#/$defs/selector" },
+                "referenceNumber": { "$ref": "#/$defs/selector" },
+                "canonicalUrl": { "$ref": "#/$defs/selector" },
+                "pagination": { "$ref": "#/$defs/selector" },
+                "links": { "$ref": "#/$defs/selector" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selector"],
+      "properties": {
+        "selector": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "attribute": { "type": ["string", "null"], "maxLength": 80 },
+        "required": { "type": "boolean", "default": false }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion", "sourceId", "jobId", "ingestionRunId",
+        "connectorId", "collectorFramework", "collectorVersion",
+        "startedAt", "completedAt", "requestCount", "pagesVisited",
+        "recordsDiscovered", "recordsRejected", "warnings", "errors",
+        "nextCursor", "records"
+      ],
+      "properties": {
+        "contractVersion": { "const": "1.0" },
+        "sourceId": { "$ref": "#/$defs/uuid" },
+        "jobId": { "$ref": "#/$defs/uuid" },
+        "ingestionRunId": { "$ref": "#/$defs/uuid" },
+        "connectorId": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "collectorFramework": { "enum": ["crawlee", "cheerio", "scrapy", "scrapling"] },
+        "collectorVersion": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "requestCount": { "type": "integer", "minimum": 0 },
+        "pagesVisited": { "type": "integer", "minimum": 0 },
+        "recordsDiscovered": { "type": "integer", "minimum": 0 },
+        "recordsRejected": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "array", "maxItems": 200, "items": { "type": "string", "maxLength": 1000 } },
+        "errors": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/error" } },
+        "nextCursor": { "type": ["string", "null"], "maxLength": 2000 },
+        "records": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/record" } }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "url": { "type": ["string", "null"], "maxLength": 2048 },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "externalRecordId", "sourceUrl", "canonicalUrl", "httpStatus",
+        "contentType", "fetchedAt", "publishedAt", "etag", "lastModified",
+        "payloadType", "payload", "payloadChecksum", "extracted",
+        "extractionConfidence", "warnings"
+      ],
+      "properties": {
+        "externalRecordId": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "sourceUrl": { "$ref": "#/$defs/httpsUrl" },
+        "canonicalUrl": { "anyOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }] },
+        "httpStatus": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+        "contentType": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "fetchedAt": { "type": "string", "format": "date-time" },
+        "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+        "etag": { "type": ["string", "null"], "maxLength": 500 },
+        "lastModified": { "type": ["string", "null"], "maxLength": 500 },
+        "payloadType": { "enum": ["json", "html", "xml", "csv_row", "text", "document_reference"] },
+        "payload": { "type": ["object", "string"], "maxLength": 2000000 },
+        "documentUrl": { "anyOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }] },
+        "payloadChecksum": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "extracted": { "type": "object", "additionalProperties": { "type": ["string", "null"] } },
+        "extractionConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "warnings": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 500 } }
+      }
+    }
+  }
+}

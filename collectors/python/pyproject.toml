@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oppsift-collectors"
+version = "0.1.0"
+description = "Isolated, policy-gated Python collector runtime for OppSift"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "Scrapy>=2.13,<3",
+  "scrapling==0.5.1",
+  "jsonschema>=4.23,<5",
+]
+
+[project.scripts]
+oppsift-collect = "oppsift_collectors.runner:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

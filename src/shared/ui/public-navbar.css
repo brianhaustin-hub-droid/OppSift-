@@ -1,0 +1,194 @@
+.public-navbar {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  left: 0;
+  right: 0;
+  transition: background-color var(--transition-slow), box-shadow var(--transition-slow);
+  background: transparent;
+}
+
+.public-navbar--scrolled {
+  background: rgb(16 27 45 / 95%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 8%);
+}
+
+.public-navbar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  max-width: var(--content-width-wide);
+  margin: 0 auto;
+  padding: var(--space-5) var(--page-gutter);
+}
+
+.public-navbar .brand-logo--md {
+  width: 10.75rem;
+  height: 3.6rem;
+  flex: 0 0 auto;
+}
+
+.public-navbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: auto;
+}
+
+.public-nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: rgba(229, 237, 247, 0.8);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.public-nav-link:hover,
+.public-nav-link--active {
+  color: #ffffff;
+  background: rgb(255 255 255 / 8%);
+}
+
+.public-navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.public-navbar__cta {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-brand-teal);
+  color: #101b2d;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+  white-space: nowrap;
+}
+
+.public-navbar__cta:hover {
+  background: #0f766e;
+  color: #ffffff;
+  box-shadow: var(--shadow-glow-teal);
+}
+
+.public-navbar__mobile-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+}
+
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 1.125rem;
+}
+
+.hamburger span {
+  display: block;
+  height: 1.5px;
+  border-radius: 2px;
+  background: rgba(229, 237, 247, 0.9);
+  transition: transform var(--transition-interactive), opacity var(--transition-interactive);
+  transform-origin: center;
+}
+
+.hamburger--open span:nth-child(1) {
+  transform: translateY(5.5px) rotate(45deg);
+}
+
+.hamburger--open span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.hamburger--open span:nth-child(3) {
+  transform: translateY(-5.5px) rotate(-45deg);
+}
+
+.public-navbar__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: rgb(0 0 0 / 60%);
+  border: 0;
+  cursor: pointer;
+}
+
+.public-navbar__mobile-nav {
+  position: fixed;
+  z-index: 99;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(22rem, 90vw);
+  padding: 5rem var(--space-6) var(--space-6);
+  background: #101b2d;
+  border-left: 1px solid rgb(255 255 255 / 8%);
+}
+
+.public-nav-link--mobile {
+  font-size: var(--font-size-base);
+  padding: var(--space-3) var(--space-4);
+}
+
+.public-navbar__mobile-auth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-6);
+  border-top: 1px solid rgb(255 255 255 / 10%);
+}
+
+.public-navbar__mobile-signin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: var(--radius-md);
+  color: rgba(229, 237, 247, 0.85);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  text-decoration: none;
+}
+
+.public-navbar__mobile-nav .public-navbar__cta {
+  justify-content: center;
+  padding: var(--space-3);
+  font-size: var(--font-size-base);
+}
+
+@media (max-width: 56rem) {
+  .public-navbar__nav,
+  .public-navbar__actions {
+    display: none;
+  }
+
+  .public-navbar__mobile-toggle {
+    display: flex;
+  }
+}

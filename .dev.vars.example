@@ -1,0 +1,12 @@
+# OppSift currently uses Neon Managed Better Auth and Neon Data API from the
+# Vite client. Their public URLs belong in .env.local (see .env.example).
+# Do not put database credentials, OAuth secrets, or auth signing keys here.
+#
+# Worker secrets (set with `npx wrangler secret put <NAME>`):
+#   SAM_GOV_API_KEY   - free key from https://api.sam.gov; unlocks the live
+#                       SAM.gov Opportunities API. Optional: without it the
+#                       SAM.gov source logs a clear blocker while Grants.gov,
+#                       TED, World Bank, and Contracts Finder keep syncing.
+#   COLLECTOR_RUNNER_URL, COLLECTOR_RUNNER_HMAC_KEY - private collector
+#                       runner endpoint and HMAC secret for non-native sources.
+# Never commit real key values to this file or to wrangler.toml [vars].

@@ -1,0 +1,39 @@
+@import "./shell/global-shell.css";
+@import "../features/dashboard/dashboard.css";
+@import "../features/opportunities/opportunity-components.css";
+@import "../features/opportunities/opportunity-intelligence.css";
+@import "../features/discovery/discovery.css";
+@import "../shared/ui/feedback.css";
+@import "./auth/auth.css";
+@import "./organizations/organizations.css";
+@import "./diagnostics/backend-status.css";
+
+.platform-icon {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.mobile-menu-button {
+  flex: 0 0 auto;
+}
+
+.topbar-theme-toggle .platform-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.topbar-popover--workspace {
+  display: block;
+}
+
+@media (max-width: 38rem) {
+  .topbar-popover--workspace {
+    display: none;
+  }
+}

@@ -1,0 +1,4 @@
+# OppSift is a client-rendered SPA, so every path must load the app shell and
+# let the History API router resolve it. Without this rule a direct visit to
+# /login or /opportunity/:id returns 404 from Cloudflare Pages.
+/* /index.html 200

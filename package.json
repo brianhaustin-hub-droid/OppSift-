@@ -1,0 +1,50 @@
+{
+  "name": "oppsift",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run --testTimeout=15000",
+    "test:watch": "vitest",
+    "test:auth:live": "node scripts/live-auth-check.mjs",
+    "worker:deploy": "node scripts/deploy-ingestion-worker.mjs",
+    "typecheck": "tsc -b --pretty",
+    "migrate": "node scripts/apply-pending-migrations.mjs",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "^1.0.4",
+    "@neon/config": "^1.11.3",
+    "@neon/env": "^1.6.15",
+    "@neon/neon-js": "^0.10.2",
+    "@vitejs/plugin-react": "^5.0.0",
+    "linkedom": "^0.18.15",
+    "postgres": "^4.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@eslint/js": "^9.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.0",
+    "globals": "^16.0.0",
+    "jsdom": "^26.0.0",
+    "typescript": "~5.9.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^7.0.0",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.0.0"
+  }
+}

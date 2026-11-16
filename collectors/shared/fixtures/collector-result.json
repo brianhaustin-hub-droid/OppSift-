@@ -1,0 +1,40 @@
+{
+  "contractVersion": "1.0",
+  "sourceId": "123e4567-e89b-42d3-a456-426614174002",
+  "jobId": "123e4567-e89b-42d3-a456-426614174000",
+  "ingestionRunId": "123e4567-e89b-42d3-a456-426614174001",
+  "connectorId": "fixture-notices",
+  "collectorFramework": "cheerio",
+  "collectorVersion": "cheerio@1.2.0",
+  "startedAt": "2026-03-01T10:00:00Z",
+  "completedAt": "2026-03-01T10:00:01Z",
+  "requestCount": 1,
+  "pagesVisited": 1,
+  "recordsDiscovered": 1,
+  "recordsRejected": 0,
+  "warnings": [],
+  "errors": [],
+  "nextCursor": null,
+  "records": [
+    {
+      "externalRecordId": "notice-1",
+      "sourceUrl": "https://public.example.org/notices/one",
+      "canonicalUrl": "https://public.example.org/notices/one",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fetchedAt": "2026-03-01T10:00:00Z",
+      "publishedAt": "2026-03-01T00:00:00Z",
+      "etag": null,
+      "lastModified": null,
+      "payloadType": "html",
+      "payload": "",
+      "payloadChecksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "extracted": {
+        "externalId": "notice-1",
+        "title": "Solar framework"
+      },
+      "extractionConfidence": 1,
+      "warnings": []
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "contractVersion": "1.0",
+  "jobId": "123e4567-e89b-42d3-a456-426614174000",
+  "ingestionRunId": "123e4567-e89b-42d3-a456-426614174001",
+  "sourceId": "123e4567-e89b-42d3-a456-426614174002",
+  "connectorId": "fixture-notices",
+  "collectorFramework": "cheerio",
+  "sourceBaseUrl": "https://public.example.org/notices",
+  "allowedHosts": ["public.example.org"],
+  "currentCursor": null,
+  "limits": {
+    "maxPages": 4,
+    "maxRecords": 20,
+    "maxRequests": 10,
+    "timeoutMs": 2000,
+    "maxResponseBytes": 100000,
+    "maxTotalBytes": 500000,
+    "minimumRequestIntervalMs": 250
+  },
+  "constraints": {
+    "approvalStatus": "approved",
+    "reusePermission": "permitted",
+    "conditionalConstraintsEnforced": false,
+    "allowedMethods": ["GET"],
+    "attribution": "Fixture source",
+    "retentionDays": 30
+  },
+  "adapter": {
+    "adapterId": "fixture-listing",
+    "format": "html",
+    "recordSelector": ".notice",
+    "fields": {
+      "externalId": { "selector": ".id", "required": true },
+      "title": { "selector": ".detail", "required": true },
+      "description": { "selector": ".description" },
+      "sourceCategoryTerm": { "selector": ".category" },
+      "countryCode": { "selector": ".country" },
+      "publisher": { "selector": ".publisher" },
+      "publishedAt": { "selector": ".published" },
+      "canonicalUrl": { "selector": ".detail", "attribute": "href" },
+      "pagination": { "selector": "a.next", "attribute": "href" }
+    }
+  }
+}

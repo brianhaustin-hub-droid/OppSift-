@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "OppSift: typecheck tests lint build",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/d",
+				"/s",
+				"/c",
+				"\"C:\\Users\\User\\AppData\\Local\\Programs\\node-v26.13.0-win-x64\\npm.cmd\" run typecheck && \"C:\\Users\\User\\AppData\\Local\\Programs\\node-v26.13.0-win-x64\\npm.cmd\" test && \"C:\\Users\\User\\AppData\\Local\\Programs\\node-v26.13.0-win-x64\\npm.cmd\" run lint && \"C:\\Users\\User\\AppData\\Local\\Programs\\node-v26.13.0-win-x64\\npm.cmd\" run build"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
