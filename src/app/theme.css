@@ -1,87 +1,110 @@
 :root {
   color-scheme: light;
 
-  /* ── Brand colours ──────────────────────────────────────────── */
-  --color-brand-navy: #101b2d;
-  --color-brand-teal: #0d9488;
-  --color-brand-gold: #f2b84b;
-  --color-brand-slate: #64748b;
-  --color-brand-charcoal: #0b1220;
-  --color-brand-electric-blue: #2563eb;
-  --color-brand-warm-white: #f6f8fb;
-  --color-brand-cyan: #08c9ef;
-  --color-brand-green: #22d778;
+  /* ── Brand identity (approved 2026-11) ────────────────────────── */
+  --color-brand-deep-burgundy: #251019;
+  --color-brand-executive-burgundy: #541B32;
+  --color-brand-burgundy-accent: #A33B59;
+  --color-brand-rose: #E8A4B5;
+  --color-brand-soft-rose: #FFF1F2;
+  --color-brand-deep-navy: #0B1F3A;
+  --color-brand-intelligence-blue: #164E8B;
+  --color-brand-technology-blue: #38BDF8;
+  --color-brand-pale-blue: #E0F2FE;
+  --color-brand-white: #FFFFFF;
+  /* Legacy token aliases kept so existing components reskin safely */
+  --color-brand-navy: var(--color-brand-executive-burgundy);
+  --color-brand-teal: var(--color-brand-burgundy-accent);
+  --color-brand-gold: var(--color-brand-rose);
+  --color-brand-slate: #64748B;
+  --color-brand-charcoal: var(--color-brand-deep-burgundy);
+  --color-brand-electric-blue: var(--color-brand-intelligence-blue);
+  --color-brand-warm-white: #F8FAFC;
+  --color-brand-cyan: var(--color-brand-technology-blue);
+  --color-brand-green: #2E9E63;
 
   /* ── Action / interactive ───────────────────────────────────── */
-  --color-action: var(--color-brand-teal);
-  --color-action-text: #0f766e;
-  --color-action-foreground: #101b2d;
-  --color-action-hover: #0f766e;
-  --color-action-hover-foreground: #ffffff;
+  --color-action: var(--color-brand-executive-burgundy);
+  --color-action-text: #541B32;
+  --color-action-foreground: #FFFFFF;
+  --color-action-hover: #3E1423;
+  --color-action-hover-foreground: #FFFFFF;
 
   /* ── Accent ─────────────────────────────────────────────────── */
-  --color-accent-gold: #f2b84b;
-  --color-accent-gold-muted: #fef3c7;
-  --color-accent-gold-text: #92400e;
+  --color-accent-gold: var(--color-brand-rose);
+  --color-accent-gold-muted: #FFF1F2;
+  --color-accent-gold-text: #A33B59;
 
-  /* ── Surfaces ────────────────────────────────────────────────── */
-  --color-background: #f6f8fb;
-  --color-surface: #ffffff;
-  --color-surface-raised: #ffffff;
-  --color-surface-muted: #f1f5f9;
-  --color-surface-dark: #101b2d;
-  --color-surface-dark-raised: #152238;
+  /* ── Surfaces (light) ──────────────────────────────────────── */
+  --color-background: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-muted: #F1F5F9;
+  --color-surface-dark: var(--color-brand-deep-navy);
+  --color-surface-dark-raised: #132F52;
 
-  /* ── Text ────────────────────────────────────────────────────── */
-  --color-text-primary: #101b2d;
-  --color-text-secondary: #64748b;
-  --color-text-secondary-accessible: #5b687c;
-  --color-text-on-dark: #e5edf7;
-  --color-text-on-dark-secondary: #94a3b8;
+  /* ── Sidebar (premium burgundy gradient, dominant) ──────────── */
+  --sidebar-background: linear-gradient(172deg, #A33B59 0%, #541B32 46%, #251019 100%);
+  --sidebar-background-solid: #541B32;
+  --sidebar-border: rgb(232 164 181 / 22%);
+  --sidebar-text: #FFF1F2;
+  --sidebar-muted: rgb(255 241 242 / 64%);
+  --sidebar-active-background: rgb(255 241 242 / 14%);
+  --sidebar-active-border: #E8A4B5;
+  --sidebar-hover: rgb(255 241 242 / 8%);
+
+  /* ── Text (light) ────────────────────────────────────────────── */
+  --color-text-primary: #172033;
+  --color-text-secondary: #64748B;
+  --color-text-secondary-accessible: #55637A;
+  --color-text-on-dark: #F8FAFC;
+  --color-text-on-dark-secondary: #CBD5E1;
 
   /* ── Borders & controls ─────────────────────────────────────── */
-  --color-border: #e2e8f0;
-  --color-border-dark: #263449;
-  --color-control-border: #64748b;
+  --color-border: #E2E8F0;
+  --color-border-dark: #22364F;
+  --color-control-border: #94A3B8;
 
   /* ── Soft palette ────────────────────────────────────────────── */
-  --color-soft-teal: #ccfbf1;
-  --color-soft-navy: #e8eef5;
-  --color-soft-gold: #fef9ec;
+  --color-soft-teal: var(--color-brand-soft-rose);
+  --color-soft-navy: var(--color-brand-pale-blue);
+  --color-soft-gold: #FFF1F2;
+  --color-soft-burgundy: #FFF1F2;
+  --color-soft-blue: #E0F2FE;
 
   /* ── State colours ───────────────────────────────────────────── */
-  --color-focus-ring: #0d9488;
-  --color-on-action: #101b2d;
-  --color-on-accent: #101b2d;
-  --color-success: #15803d;
-  --color-success-surface: #f0fdf4;
-  --color-warning: #b45309;
-  --color-warning-surface: #fffbeb;
-  --color-error: #b91c1c;
-  --color-error-surface: #fef2f2;
-  --color-error-foreground: #ffffff;
-  --color-error-hover: #991b1b;
-  --color-error-hover-foreground: #ffffff;
-  --color-information: #2563eb;
-  --color-information-surface: #eff6ff;
-  --color-neutral: #475569;
-  --color-neutral-surface: #f1f5f9;
-  --color-premium: #7c3aed;
-  --color-overlay: rgb(11 18 32 / 64%);
+  --color-focus-ring: var(--color-brand-technology-blue);
+  --color-on-action: #FFFFFF;
+  --color-on-accent: #172033;
+  --color-success: #1F8A4C;
+  --color-success-surface: #E9F9EE;
+  --color-warning: #B45309;
+  --color-warning-surface: #FFF7E6;
+  --color-error: #B91C1C;
+  --color-error-surface: #FEECEC;
+  --color-error-foreground: #FFFFFF;
+  --color-error-hover: #991B1B;
+  --color-error-hover-foreground: #FFFFFF;
+  --color-information: var(--color-brand-intelligence-blue);
+  --color-information-surface: #E0F2FE;
+  --color-neutral: #64748B;
+  --color-neutral-surface: #E2E8F0;
+  --color-premium: var(--color-brand-burgundy-accent);
+  --color-overlay: rgb(37 16 25 / 62%);
 
   /* ── Coverage / market status colours ───────────────────────── */
-  --color-status-target: #0d9488;
-  --color-status-target-surface: #ccfbf1;
-  --color-status-research: #2563eb;
-  --color-status-research-surface: #eff6ff;
-  --color-status-configured: #7c3aed;
-  --color-status-configured-surface: #f5f3ff;
-  --color-status-connected: #15803d;
-  --color-status-connected-surface: #f0fdf4;
-  --color-status-verified: #f2b84b;
-  --color-status-verified-surface: #fef9ec;
-  --color-status-pending: #64748b;
-  --color-status-pending-surface: #f1f5f9;
+  --color-status-target: var(--color-brand-intelligence-blue);
+  --color-status-target-surface: #E0F2FE;
+  --color-status-research: var(--color-brand-intelligence-blue);
+  --color-status-research-surface: #E0F2FE;
+  --color-status-configured: #541B32;
+  --color-status-configured-surface: #FFF1F2;
+  --color-status-connected: #1F8A4C;
+  --color-status-connected-surface: #E9F9EE;
+  --color-status-verified: #541B32;
+  --color-status-verified-surface: #FFF1F2;
+  --color-status-pending: #64748B;
+  --color-status-pending-surface: #E2E8F0;
 
   /* ── Spacing scale ───────────────────────────────────────────── */
   --space-0: 0;
@@ -101,8 +124,9 @@
 
   /* ── Typography ──────────────────────────────────────────────── */
   --font-family-sans:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
+  --font-family-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -132,12 +156,12 @@
   --radius-pill: 999px;
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --shadow-xs: 0 1px 1px rgb(16 27 45 / 3%);
-  --shadow-card: 0 1px 2px rgb(16 27 45 / 4%);
-  --shadow-raised: 0 1rem 2.5rem rgb(16 27 45 / 8%);
-  --shadow-overlay: 0 1.5rem 4rem rgb(16 27 45 / 22%);
-  --shadow-glow-teal: 0 0 1.5rem rgb(13 148 136 / 20%);
-  --shadow-glow-gold: 0 0 1.5rem rgb(242 184 75 / 25%);
+  --shadow-xs: 0 1px 1px rgb(11 31 58 / 4%);
+  --shadow-card: 0 1px 2px rgb(11 31 58 / 6%);
+  --shadow-raised: 0 1rem 2.5rem rgb(11 31 58 / 12%);
+  --shadow-overlay: 0 1.5rem 4rem rgb(11 31 58 / 28%);
+  --shadow-glow-teal: 0 0 1.5rem rgb(84 27 50 / 18%);
+  --shadow-glow-gold: 0 0 1.5rem rgb(232 164 181 / 20%);
 
   /* ── Focus ───────────────────────────────────────────────────── */
   --focus-outline: 2px solid var(--color-focus-ring);
@@ -171,68 +195,90 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-brand-teal: #0d9488;
-  --color-action: #2dd4bf;
-  --color-action-text: #2dd4bf;
-  --color-action-foreground: #0b1220;
-  --color-action-hover: #5eead4;
-  --color-action-hover-foreground: #0b1220;
-  --color-accent-gold: #f2b84b;
-  --color-accent-gold-muted: #2d2008;
-  --color-accent-gold-text: #fbbf24;
-  --color-background: #0b1220;
-  --color-surface: #111c2e;
-  --color-surface-raised: #152238;
-  --color-surface-muted: #17243a;
-  --color-surface-dark: #0b1220;
-  --color-surface-dark-raised: #0d1627;
-  --color-text-primary: #e5edf7;
-  --color-text-secondary: #94a3b8;
-  --color-text-secondary-accessible: #94a3b8;
-  --color-text-on-dark: #e5edf7;
-  --color-text-on-dark-secondary: #94a3b8;
-  --color-border: #263449;
-  --color-border-dark: #263449;
-  --color-control-border: #64748b;
-  --color-soft-teal: #123b3a;
-  --color-soft-navy: #131f31;
-  --color-soft-gold: #2a1f0a;
-  --color-focus-ring: #2dd4bf;
-  --color-on-action: #0b1220;
-  --color-on-accent: #101b2d;
-  --color-success: #4ade80;
-  --color-success-surface: #102a24;
-  --color-warning: #fbbf24;
-  --color-warning-surface: #332714;
-  --color-error: #f87171;
-  --color-error-surface: #351c25;
-  --color-error-foreground: #0b1220;
-  --color-error-hover: #fca5a5;
-  --color-error-hover-foreground: #0b1220;
-  --color-information: #60a5fa;
-  --color-information-surface: #172b45;
-  --color-neutral: #cbd5e1;
-  --color-neutral-surface: #1c2a3e;
-  --color-premium: #c4b5fd;
-  --color-overlay: rgb(0 0 0 / 72%);
+  /* Brand accents shift lighter for contrast on dark surfaces */
+  --color-brand-executive-burgundy: #A33B59;
+  --color-action: #A33B59;
+  --color-action-text: #E8A4B5;
+  --color-action-foreground: #FFFFFF;
+  --color-action-hover: #C25E7D;
+  --color-action-hover-foreground: #FFFFFF;
+  --color-accent-gold: #E8A4B5;
+  --color-accent-gold-muted: #2A1620;
+  --color-accent-gold-text: #E8A4B5;
+
+  /* Surfaces (dark charcoal / navy) */
+  --color-background: #101114;
+  --color-surface: #171923;
+  --color-surface-raised: #1C2433;
+  --color-surface-muted: #1C2433;
+  --color-surface-dark: #0B1F3A;
+  --color-surface-dark-raised: #132F52;
+
+  /* Sidebar keeps the burgundy gradient in both themes */
+  --sidebar-background: linear-gradient(172deg, #A33B59 0%, #541B32 46%, #251019 100%);
+  --sidebar-background-solid: #541B32;
+  --sidebar-border: rgb(232 164 181 / 26%);
+  --sidebar-text: #FFF1F2;
+  --sidebar-muted: rgb(255 241 242 / 66%);
+  --sidebar-active-background: rgb(255 241 242 / 16%);
+  --sidebar-active-border: #E8A4B5;
+  --sidebar-hover: rgb(255 241 242 / 9%);
+
+  /* Text (dark) */
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-secondary-accessible: #CBD5E1;
+  --color-text-on-dark: #F8FAFC;
+  --color-text-on-dark-secondary: #CBD5E1;
+
+  /* Borders & controls */
+  --color-border: #2A3140;
+  --color-border-dark: #22364F;
+  --color-control-border: #3A4356;
+
+  /* Soft palette */
+  --color-soft-teal: #2A1620;
+  --color-soft-navy: #132F52;
+  --color-soft-gold: #2A1620;
+  --color-soft-burgundy: #2A1620;
+  --color-soft-blue: #132F52;
+
+  --color-focus-ring: #38BDF8;
+  --color-on-action: #171923;
+  --color-on-accent: #171923;
+  --color-success: #4ADE80;
+  --color-success-surface: #102A1C;
+  --color-warning: #FBBF24;
+  --color-warning-surface: #33260A;
+  --color-error: #F87171;
+  --color-error-surface: #331216;
+  --color-error-foreground: #171923;
+  --color-error-hover: #FCA5A5;
+  --color-error-hover-foreground: #171923;
+  --color-information: #38BDF8;
+  --color-information-surface: #132F52;
+  --color-neutral: #CBD5E1;
+  --color-neutral-surface: #1C2433;
+  --color-premium: #E8A4B5;
+  --color-overlay: rgb(0 0 0 / 70%);
 
   /* Coverage states dark */
-  --color-status-target: #2dd4bf;
-  --color-status-target-surface: #123b3a;
-  --color-status-research: #60a5fa;
-  --color-status-research-surface: #172b45;
-  --color-status-configured: #c4b5fd;
-  --color-status-configured-surface: #2e1d5e;
-  --color-status-connected: #4ade80;
-  --color-status-connected-surface: #102a24;
-  --color-status-verified: #f2b84b;
-  --color-status-verified-surface: #2d2008;
-  --color-status-pending: #94a3b8;
-  --color-status-pending-surface: #1c2a3e;
+  --color-status-target: #38BDF8;
+  --color-status-target-surface: #132F52;
+  --color-status-research: #38BDF8;
+  --color-status-research-surface: #132F52;
+  --color-status-configured: #E8A4B5;
+  --color-status-configured-surface: #2A1620;
+  --color-status-connected: #4ADE80;
+  --color-status-connected-surface: #102A1C;
+  --color-status-verified: #E8A4B5;
+  --color-status-verified-surface: #2A1620;
+  --color-status-pending: #CBD5E1;
+  --color-status-pending-surface: #1C2433;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 18%);
-  --shadow-raised: 0 1rem 2.5rem rgb(0 0 0 / 28%);
-  --shadow-overlay: 0 1.5rem 4rem rgb(0 0 0 / 48%);
-  --shadow-glow-teal: 0 0 1.5rem rgb(45 212 191 / 15%);
-  --shadow-glow-gold: 0 0 1.5rem rgb(242 184 75 / 15%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 22%);
+  --shadow-raised: 0 1rem 2.5rem rgb(0 0 0 / 34%);
+  --shadow-overlay: 0 1.5rem 4rem rgb(0 0 0 / 52%);
+  --shadow-glow-teal: 0 0 1.5rem rgb(163 59 89 / 22%);
+  --shadow-glow-gold: 0 0 1.5rem rgb(232 164 181 / 16%);
 }

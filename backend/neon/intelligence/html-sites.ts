@@ -6,6 +6,49 @@ function text(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+function resolveHref(href: string | null | undefined, baseUrl: string, fallbackPath = "/"): string {
+  const raw = (href ?? "").replace(/&amp;/gu, "&").trim();
+  try {
+    return new URL(raw || fallbackPath, baseUrl).toString();
+  } catch {
+    try {
+      return new URL(fallbackPath, baseUrl).toString();
+    } catch {
+      return baseUrl;
+    }
+  }
+}
+
+function parseFlexibleDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const v = value.trim();
+  if (!v) return null;
+  const direct = Date.parse(v);
+  if (!Number.isNaN(direct)) return new Date(direct).toISOString();
+  // dd/mm/yyyy or dd-mm-yyyy or dd.mm.yyyy
+  const m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (m) {
+    const day = Number(m[1]);
+    const month = Number(m[2]) - 1;
+    const year = Number(m[3].length === 2 ? `20${m[3]}` : m[3]);
+    const hour = Number(m[4] ?? "0");
+    const minute = Number(m[5] ?? "0");
+    const d = new Date(Date.UTC(year, month, day, hour, minute));
+    if (!Number.isNaN(d.getTime())) return d.toISOString();
+  }
+  return null;
+}
+
+function slugifyId(prefix: string, seed: string): string {
+  const slug = seed
+    .toLowerCase()
+    .replace(/https?:\/\//g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 140);
+  return `${prefix}-${slug || "item"}`;
+}
+
 function deadlineStatus(deadline: string | null, now: Date): "open" | "closed" | "unknown" {
   if (!deadline) return "unknown";
   const timestamp = Date.parse(deadline);
@@ -207,6 +250,11 @@ export const beninSite: HtmlSiteConfig = {
 /** Senegal - marchespublics.sn public procurement notices. */
 export const senegalSite: HtmlSiteConfig = {
   listUrl: "https://marchespublics.sn/",
+  useBrowser: true,
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
   selector: "article, .post, .views-row, table tbody tr, a[href*='avis'], a[href*='marche']",
   extract(row, _document, baseUrl) {
     const link = row.querySelector("a[href]");
@@ -227,7 +275,12 @@ export const senegalSite: HtmlSiteConfig = {
 
 /** Gambia - gppagal.gov.gm public procurement notices. */
 export const gambiaSite: HtmlSiteConfig = {
-  listUrl: "https://gppagal.gov.gm/",
+  listUrl: "https://gppagal.gov.gm/tenders",
+  useBrowser: true,
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
   selector: "article, .post, .views-row, table tbody tr, a[href*='tender'], a[href*='notice']",
   extract(row, _document, baseUrl) {
     const link = row.querySelector("a[href]");
@@ -249,6 +302,11 @@ export const gambiaSite: HtmlSiteConfig = {
 /** Niger - armp.ne public procurement notices. */
 export const nigerSite: HtmlSiteConfig = {
   listUrl: "https://armp.ne/",
+  useBrowser: true,
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
   selector: "article, .post, .views-row, table tbody tr, a[href*='avis'], a[href*='marche']",
   extract(row, _document, baseUrl) {
     const link = row.querySelector("a[href]");
@@ -270,6 +328,11 @@ export const nigerSite: HtmlSiteConfig = {
 /** Burkina Faso - armp.gov.bf public procurement notices. */
 export const burkinaFasoSite: HtmlSiteConfig = {
   listUrl: "https://armp.gov.bf/",
+  useBrowser: true,
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
   selector: "article, .post, .views-row, table tbody tr, a[href*='avis'], a[href*='marche']",
   extract(row, _document, baseUrl) {
     const link = row.querySelector("a[href]");
@@ -290,7 +353,12 @@ export const burkinaFasoSite: HtmlSiteConfig = {
 
 /** Botswana - ppra.co.bw public procurement notices. */
 export const botswanaSite: HtmlSiteConfig = {
-  listUrl: "https://ppra.co.bw/",
+  listUrl: "https://ppra.co.bw/tenders",
+  useBrowser: true,
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
   selector: "article, .post, .views-row, table tbody tr, a[href*='tender'], a[href*='notice']",
   extract(row, _document, baseUrl) {
     const link = row.querySelector("a[href]");
@@ -337,29 +405,44 @@ export const namibiaSite: HtmlSiteConfig = {
  */
 export const madagascarSite: HtmlSiteConfig = {
   listUrl: "http://armp.mg:82/marches_publics",
+  useBrowser: true,
   headers: {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   },
-  selector: "table tbody tr, .table tbody tr, .list-group-item, article, .card, .row .col, div[class*='marche'], a[href*='marche'], a[href*='avis']",
+  selector: "tr, .list-group-item, .card, article, li, .row",
   extract(row, _document, baseUrl) {
+    const raw = text(row.textContent) ?? "";
+    if (raw.length < 20) return null;
+    if (/accueil|connexion|contact|recherche|menu|login|ENTITE\s+OBJET\s+DATE/i.test(raw) && !/Ref\s*:|Mode\s*:|N[°o]/i.test(raw)) return null;
+
     const link = row.querySelector("a[href]");
     const href = text(link?.getAttribute("href"));
     const cells = [...row.querySelectorAll("td")];
-    let titleText = text(link?.textContent) ?? text(row.querySelector("h1, h2, h3, h4, .title, strong")?.textContent);
-    if (!titleText && cells.length >= 1) titleText = text(cells[0]?.textContent) ?? text(cells[1]?.textContent);
-    if (!titleText) titleText = text(row.textContent);
-    if (!titleText || titleText.length < 6) return null;
-    if (/accueil|connexion|contact|recherche|menu|login/i.test(titleText)) return null;
+    const refMatch = raw.match(/Ref\s*:\s*([^\n\r]+)/i);
+    const numMatch = raw.match(/N[°o]\s*([^\n\r]+)/i);
+    const modeMatch = raw.match(/Mode\s*:\s*([^\n\r]+)/i);
+    const referenceNumber = text(refMatch?.[1]) ?? text(numMatch?.[1]) ?? (cells.length ? text(cells[0]?.textContent) : null);
+
+    let titleText = text(link?.textContent);
+    if (!titleText) {
+      const lines = raw.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+      titleText = lines.find((l) => l.length >= 10 && !/^ref\s*:|^mode\s*:|^n[°o]|^du\s*:|^au\s*:|^entite$|^objet$|^date$/i.test(l)) ?? null;
+    }
+    if (!titleText && cells.length >= 2) titleText = text(cells[1]?.textContent) ?? text(cells[2]?.textContent);
+    if (!titleText || titleText.length < 8) return null;
+    if (/^source des donn/i.test(titleText)) return null;
+
     const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
-    const referenceNumber = cells.length ? (text(cells[0]?.textContent)?.slice(0, 200) ?? null) : null;
     const externalId = `mg-${(referenceNumber ?? titleText).toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    const closingMatch = raw.match(/Au\s*:\s*(\d{4}-\d{2}-\d{2}|\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+    const sourceDeadlineText = text(closingMatch?.[1]);
     const parsed: ParsedSourceOpportunity = {
       externalId,
       title: titleText.slice(0, 1000),
       description: null,
-      sourceCategoryTerm: "Avis d'appel d'offres",
-      referenceNumber,
+      sourceCategoryTerm: text(modeMatch?.[1]) ?? "Avis d'appel d'offres",
+      referenceNumber: referenceNumber?.slice(0, 200) ?? null,
       countryCode: "MG",
       region: null,
       city: null,
@@ -367,7 +450,7 @@ export const madagascarSite: HtmlSiteConfig = {
       procuringOrganization: null,
       publisher: "Autorité de Régulation des Marchés Publics (ARMP) Madagascar",
       publishedAt: null,
-      sourceDeadlineText: null,
+      sourceDeadlineText: sourceDeadlineText?.slice(0, 200) ?? null,
       closingAt: null,
       timeZone: "Indian/Antananarivo",
       status: "unknown",
@@ -375,9 +458,9 @@ export const madagascarSite: HtmlSiteConfig = {
       canonicalUrl: null,
       currency: null,
       amount: null,
-      originalValues: { title: titleText, url: sourceUrl },
+      originalValues: { title: titleText, referenceNumber, sourceDeadlineText, url: sourceUrl },
     };
-    return { externalId, sourceUrl, parsed, payload: { title: titleText, url: sourceUrl } };
+    return { externalId, sourceUrl, parsed, payload: { title: titleText, referenceNumber, sourceDeadlineText, url: sourceUrl } };
   },
 };
 
@@ -385,121 +468,96 @@ export const madagascarSite: HtmlSiteConfig = {
  * Malawi — ppdamlawi.org public procurement notices.
  */
 export const malawiSite: HtmlSiteConfig = {
-  listUrl: "https://ppda.mw/",
-  headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html,application/xhtml+xml" },
-  selector: "article",
+  listUrl: "https://ppda.mw/procurement-notices/",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  useBrowser: true,
+  selector: "article, .elementor-post, .post, .views-row, table tbody tr, li, a[href*='notice'], a[href*='tender'], a[href*='procurement']",
   extract(row, _document, baseUrl) {
-    const title = text(row.querySelector("h1, h2, h3")?.textContent);
-    if (!title) return null;
-    const sourceUrl = new URL(baseUrl).toString();
+    const link = row.querySelector("a[href]");
+    const href = text(link?.getAttribute("href"));
+    const title = text(link?.textContent) ?? text(row.querySelector("h1, h2, h3, .elementor-post__title, .entry-title")?.textContent);
+    if (!title || title.length < 8) return null;
+    if (/^read more$|^home$|^about/i.test(title)) return null;
+    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
+    if (!/notice|tender|procurement|bid|advert/i.test(`${title} ${sourceUrl}`)) return null;
+    const externalId = `mw-${title.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
     const parsed: ParsedSourceOpportunity = {
-      externalId: `mw-${title.slice(0, 80)}`,
-      title,
+      externalId,
+      title: title.slice(0, 1000),
       description: null,
-      sourceCategoryTerm: "Invitation for Bids",
+      sourceCategoryTerm: "Procurement Notice",
       referenceNumber: null,
       countryCode: "MW",
       region: null,
       city: null,
       issuingInstitution: null,
       procuringOrganization: null,
-      publisher: "Malawi Public Procurement ... Authority",
+      publisher: "Public Procurement and Disposal of Assets Authority (Malawi)",
       publishedAt: null,
       sourceDeadlineText: null,
       closingAt: null,
-      timeZone: null,
+      timeZone: "Africa/Blantyre",
       status: "unknown",
       sourceUrl,
       canonicalUrl: null,
       currency: null,
       amount: null,
-      originalValues: {},
+      originalValues: { title, url: sourceUrl },
     };
-    return { externalId: parsed.externalId, sourceUrl, parsed, payload: { title } };
+    return { externalId, sourceUrl, parsed, payload: { title, url: sourceUrl } };
   },
 };
 
 /**
- * Mozambique — sisac.mf.gov.mz public procurement notices.
+ * Mozambique — UFSA public procurement notices (concursos).
  */
 export const mozambiqueSite: HtmlSiteConfig = {
-  listUrl: "https://www.ufsa.gov.mz/",
-  headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html,application/xhtml+xml" },
-  selector: "article",
+  listUrl: "https://www.ufsa.gov.mz/concursos_abertos.php",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  useBrowser: true,
+  selector: "table tbody tr, .concursos tr, article, .post, li, a[href*='concurso'], a[href*='aviso']",
   extract(row, _document, baseUrl) {
-    const title = text(row.querySelector("h1, h2, h3")?.textContent);
-    if (!title) return null;
-    const sourceUrl = new URL(baseUrl).toString();
+    const link = row.querySelector("a[href]");
+    const href = text(link?.getAttribute("href"));
+    const cells = [...row.querySelectorAll("td")];
+    const title = text(link?.textContent) ?? text(cells[1]?.textContent) ?? text(cells[0]?.textContent) ?? text(row.querySelector("h1, h2, h3")?.textContent);
+    if (!title || title.length < 8) return null;
+    if (/^home$|principal|menu/i.test(title)) return null;
+    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
+    const externalId = `mz-${title.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
     const parsed: ParsedSourceOpportunity = {
-      externalId: `mz-${title.slice(0, 80)}`,
-      title,
-      description: null,
-      sourceCategoryTerm: "Invitation for Bids",
-      referenceNumber: null,
+      externalId,
+      title: title.slice(0, 1000),
+      description: cells.length > 2 ? (text(cells[2]?.textContent)?.slice(0, 2000) ?? null) : null,
+      sourceCategoryTerm: "Concurso Aberto",
+      referenceNumber: cells.length ? (text(cells[0]?.textContent)?.slice(0, 200) ?? null) : null,
       countryCode: "MZ",
       region: null,
       city: null,
       issuingInstitution: null,
       procuringOrganization: null,
-      publisher: "Mozambique public procurement information system",
+      publisher: "Unidade Funcional de Supervisão das Aquisições (UFSA), Mozambique",
       publishedAt: null,
       sourceDeadlineText: null,
       closingAt: null,
-      timeZone: null,
-      status: "unknown",
+      timeZone: "Africa/Maputo",
+      status: "open",
       sourceUrl,
       canonicalUrl: null,
       currency: null,
       amount: null,
-      originalValues: {},
+      originalValues: { title, url: sourceUrl },
     };
-    return { externalId: parsed.externalId, sourceUrl, parsed, payload: { title } };
+    return { externalId, sourceUrl, parsed, payload: { title, url: sourceUrl } };
   },
 };
 
-function slugifyId(prefix: string, value: string): string {
-  return `${prefix}-${value.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-+|-+$/gu, "").slice(0, 80)}`;
-}
-
-function parseFlexibleDate(value: string | null): string | null {
-  if (!value) return null;
-  const raw = value.trim();
-  if (!raw) return null;
-  const iso = Date.parse(raw);
-  if (!Number.isNaN(iso)) return new Date(iso).toISOString();
-  const dmy = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/u.exec(raw);
-  if (dmy) {
-    const [, d, m, y] = dmy;
-    const year = y.length === 2 ? Number(`20${y}`) : Number(y);
-    const dt = new Date(Date.UTC(year, Number(m) - 1, Number(d)));
-    return Number.isNaN(dt.getTime()) ? null : dt.toISOString();
-  }
-  const dMonY = /^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/u.exec(raw);
-  if (dMonY) {
-    const [, d, mon, y, hh, mm] = dMonY;
-    const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-    const mi = months.indexOf(mon.toLowerCase().slice(0, 3));
-    if (mi >= 0) {
-      const dt = new Date(Date.UTC(Number(y), mi, Number(d), Number(hh ?? 0), Number(mm ?? 0)));
-      return Number.isNaN(dt.getTime()) ? null : dt.toISOString();
-    }
-  }
-  return null;
-}
-
-function resolveHref(href: string | null | undefined, baseUrl: string, fallbackPath: string): string {
-  const clean = text(href)?.replace(/&amp;/gu, "&");
-  if (!clean || clean === "#" || clean.toLowerCase().startsWith("javascript:")) {
-    return new URL(fallbackPath, baseUrl).toString();
-  }
-  try {
-    return new URL(clean, baseUrl).toString();
-  } catch {
-    return new URL(fallbackPath, baseUrl).toString();
-  }
-}
-
-/** Kenya Railways Corporation — public tenders listing (TablePress). */
 export const kenyaKrcSite: HtmlSiteConfig = {
   listUrl: "https://krc.co.ke/tenders/",
   selector: "table.tablepress tbody tr, table#tablepress-1 tbody tr",
@@ -700,25 +758,44 @@ export const kenyaKerraSite: HtmlSiteConfig = {
 /** KURA — tenders/documents page. */
 export const kenyaKuraSite: HtmlSiteConfig = {
   listUrl: "https://kura.go.ke/tender-documents-2",
+  useBrowser: true,
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml",
+  },
   selector: "table tbody tr, article, .post, .entry, .document-icon-row, .dg-documents a, ul li a, .entry-content a[href]",
   extract(row, _document, baseUrl) {
-    const link = row.matches?.("a") ? row : row.querySelector("a[href]") ?? (row as Element);
-    if (!(link as Element)?.getAttribute?.("href") && !row.querySelector("a[href]")) return null;
+    const isAnchor = (row as Element).tagName?.toLowerCase() === "a";
+    const link = (isAnchor ? (row as Element) : row.querySelector("a[href]")) as Element | null;
     const href = text(link?.getAttribute("href"));
-    const titleText = text(link?.textContent) ?? text(row.querySelector("h1,h2,h3,h4,.title,.entry-title")?.textContent) ?? text(row.textContent);
-    if (!titleText || titleText.length < 8) return null;
-    if (/^download$/i.test(titleText)) return null;
     const cells = [...row.querySelectorAll("td")];
-    const referenceNumber = cells.length ? text(cells[0]?.textContent) : null;
-    const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent) ?? (cells.length > 1 ? text(cells[cells.length - 2]?.textContent) : null);
+    // KURA tender tables: [No., Tender No.(link), Description, ...]
+    const tenderNo = cells.length >= 2 ? (text(cells[1]?.querySelector("a")?.textContent) ?? text(cells[1]?.textContent)) : (text(link?.textContent) ?? null);
+    const desc = cells.length >= 3 ? text(cells[2]?.textContent) : null;
+    const refCandidate = cells.length >= 2 ? (text(cells[1]?.textContent) ?? null) : null;
+    let titleText = desc && desc.length >= 8 ? desc : (tenderNo && tenderNo.length >= 8 ? tenderNo : (text(link?.textContent) ?? text(row.querySelector("h1,h2,h3,h4,.title,.entry-title")?.textContent)));
+    if (!titleText && cells.length) titleText = cells.map((c) => text(c.textContent)).filter(Boolean).join(" - ") || null;
+    if (!titleText) titleText = text(row.textContent);
+    if (!titleText || titleText.length < 8) return null;
+    const titleTrim = titleText.trim();
+    if (/^(home|about|contact|news|events|gallery|documents|departments|services|faqs?|jobs?|careers?|expired tenders|video gallery|policy documents|press releases|roads manual|traffic safety park|job opportunities)$/i.test(titleTrim)) return null;
+    if (/^download$/i.test(titleTrim)) return null;
     const sourceUrl = resolveHref(href, baseUrl, "/tender-documents-2");
+    const hay = `${titleTrim} ${tenderNo ?? ""} ${refCandidate ?? ""} ${sourceUrl}`;
+    const looksLikeTender = /KURA\/[A-Z0-9\/-]+/i.test(hay) || /tender|procure|rfq|rfp|bid|quotation|eoi|expression|addendum|clarification|notice|award|\.pdf/i.test(hay);
+    if (!looksLikeTender) return null;
+    // Skip header/label rows
+    if (/^(no\.?|tender no\.?|tender description|length|budget|eligibility|inspection)/i.test(titleTrim)) return null;
+    const referenceNumber = (refCandidate && /KURA|REF|NO/i.test(refCandidate)) ? refCandidate.slice(0, 200) : (tenderNo?.slice(0, 200) ?? null);
+    const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent) ?? (cells.length > 6 ? text(cells[6]?.textContent) : null);
     const closingAt = parseFlexibleDate(closingText);
-    const externalId = slugifyId("ke-kura", referenceNumber ?? `${titleText}-${sourceUrl}`);
+    const finalTitle = (desc && desc.length >= 8 ? `${tenderNo ? tenderNo + " - " : ""}${desc}` : titleTrim).slice(0, 1000);
+    const externalId = slugifyId("ke-kura", referenceNumber ?? `${finalTitle}-${sourceUrl}`);
     const parsed: ParsedSourceOpportunity = {
       externalId,
-      title: titleText.slice(0, 1000),
-      description: null,
-      sourceCategoryTerm: "Tender",
+      title: finalTitle,
+      description: desc?.slice(0, 2000) ?? null,
+      sourceCategoryTerm: /addendum|clarification/i.test(hay) ? "Addendum/Clarification" : "Tender Notice",
       referenceNumber,
       countryCode: "KE",
       region: null,
@@ -735,9 +812,9 @@ export const kenyaKuraSite: HtmlSiteConfig = {
       canonicalUrl: null,
       currency: null,
       amount: null,
-      originalValues: { referenceNumber, closingText, documentLink: href },
+      originalValues: { referenceNumber, tenderNo, description: desc, closingText, documentLink: href },
     };
-    return { externalId, sourceUrl, parsed, payload: { referenceNumber, title: titleText, closingText, url: sourceUrl } };
+    return { externalId, sourceUrl, parsed, payload: { referenceNumber, tenderNo, title: finalTitle, closingText, url: sourceUrl } };
   },
 };
 
@@ -793,6 +870,7 @@ export const kenyaKaaSite: HtmlSiteConfig = {
 /** MyGov Kenya (GAA) — all tenders listing. */
 export const kenyaMygovSite: HtmlSiteConfig = {
   listUrl: "https://www.mygov.go.ke/index.php/all-tenders",
+  useBrowser: true,
   headers: {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -933,6 +1011,314 @@ export const kenyaIfmisSite: HtmlSiteConfig = {
   },
 };
 
+/**
+ * Factory for Kenyan county government tender sources (best-effort HTML scraping).
+ * All 13 counties below were live-verified on 2026-11-17 via webfetch against their
+ * official `.go.ke` domains; see docs/source-catalog/kenya-deep-source-inventory.md.
+ */
+interface KenyaCountySiteOptions {
+  /** Lowercase county slug used in external IDs, e.g. "kajiado". */
+  slug: string;
+  /** Display county name, e.g. "Kajiado". */
+  county: string;
+  /** Verified official website URL (list page). */
+  listUrl: string;
+}
+
+function makeKenyaCountySite(options: KenyaCountySiteOptions): HtmlSiteConfig {
+  const { slug, county, listUrl } = options;
+  const publisher = `${county} County`;
+  const procuringOrganization = `County Government of ${county}`;
+  return {
+    listUrl,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+    selector: "article, .post, .tender-item, .card, table tbody tr, .entry, .views-row, .wp-block-post, a[href*='tender'], a[href*='Tender'], a[href*='.pdf'], a[href*='/download/']",
+    extract(row, _document, baseUrl) {
+      const isAnchor = (row as Element).tagName?.toLowerCase() === "a";
+      const link = (isAnchor ? (row as Element) : (row.querySelector("h1 a[href], h2 a[href], h3 a[href], h4 a[href], a[href*='tender'], a[href*='Tender'], a[href*='.pdf'], a[href*='/download/'], a[href]"))) as Element | null;
+      const href = text(link?.getAttribute("href"));
+      let titleText = text(row.querySelector("h1,h2,h3,h4,.entry-title,.title,.tender-title")?.textContent)
+        ?? text(link?.getAttribute("title"))
+        ?? text(link?.textContent)
+        ?? text(row.textContent);
+      if (!titleText || titleText.length < 8) return null;
+      const titleTrim = titleText.trim();
+      // Skip obvious navigation/menu items
+      if (/^(home|about|contact|news|events|gallery|documents|departments|services|faqs?|jobs?|careers?|downloads?|tenders?|resources|media|staff mail|e-?services|projects?|careers\/job opportunities?|public notices?|press releases?|speeches|galleries)$/i.test(titleTrim)) return null;
+      const sourceUrl = resolveHref(href, baseUrl, "/");
+      const hay = `${titleTrim} ${sourceUrl}`;
+      // Require tender/procurement signal
+      if (!/tender|procure|rfq|rfp|bid|quotation|eoi|expression of interest|notice|addendum|request for proposal|invitation|advert/i.test(hay)) return null;
+      if (/\/tenders?\/?$/.test(sourceUrl) && !/tender|procure|rfq|rfp|bid|quotation|eoi/i.test(titleTrim)) return null;
+      const cells = [...row.querySelectorAll("td")];
+      const referenceNumber = cells.length ? text(cells[0]?.textContent) : null;
+      const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent) ?? (cells.length > 2 ? text(cells[2]?.textContent) : null);
+      const closingAt = parseFlexibleDate(closingText);
+      const externalId = slugifyId(`ke-${slug}`, referenceNumber ?? `${titleTrim}-${sourceUrl}`);
+      const parsed: ParsedSourceOpportunity = {
+        externalId,
+        title: titleText.slice(0, 1000),
+        description: null,
+        sourceCategoryTerm: "Tender Notice",
+        referenceNumber,
+        countryCode: "KE",
+        region: county,
+        city: county,
+        issuingInstitution: null,
+        procuringOrganization,
+        publisher,
+        publishedAt: null,
+        sourceDeadlineText: closingText?.slice(0, 500) ?? null,
+        closingAt,
+        timeZone: closingAt ? "Africa/Nairobi" : null,
+        status: deadlineStatus(closingAt, new Date()),
+        sourceUrl,
+        canonicalUrl: null,
+        currency: null,
+        amount: null,
+        originalValues: { referenceNumber, closingText, documentLink: href },
+      };
+      return { externalId, sourceUrl, parsed, payload: { referenceNumber, title: titleText, closingText, url: sourceUrl } };
+    },
+  };
+}
+
+/** Kajiado County — live-verified 2026-11-17 (https://kajiado.go.ke/, Tenders > Tender Adverts). */
+export const kenyaKajiadoSite = makeKenyaCountySite({ slug: "kajiado", county: "Kajiado", listUrl: "https://kajiado.go.ke/" });
+
+/** Kericho County — live-verified 2026-11-17 (https://kericho.go.ke/, 62 Tender Documents). */
+export const kenyaKerichoSite = makeKenyaCountySite({ slug: "kericho", county: "Kericho", listUrl: "https://kericho.go.ke/" });
+
+/** Bomet County — live-verified 2026-11-17 (https://bomet.go.ke/, Tenders under Resource Centre). */
+export const kenyaBometSite = makeKenyaCountySite({ slug: "bomet", county: "Bomet", listUrl: "https://bomet.go.ke/" });
+
+/** Kakamega County — live-verified 2026-11-17 (https://kakamega.go.ke/, Tenders in top nav). */
+export const kenyaKakamegaSite = makeKenyaCountySite({ slug: "kakamega", county: "Kakamega", listUrl: "https://kakamega.go.ke/" });
+
+/** Vihiga County — live-verified 2026-11-17 (https://vihiga.go.ke/, 26 Water Project Tenders open). */
+export const kenyaVihigaSite = makeKenyaCountySite({ slug: "vihiga", county: "Vihiga", listUrl: "https://vihiga.go.ke/" });
+
+/** Bungoma County — live-verified 2026-11-17 (https://bungoma.go.ke/, Tenders + Jobs in header). */
+export const kenyaBungomaSite = makeKenyaCountySite({ slug: "bungoma", county: "Bungoma", listUrl: "https://bungoma.go.ke/" });
+
+/** Busia County — live-verified 2026-11-17 (https://www.busiacounty.go.ke/, Tenders under Resources). */
+export const kenyaBusiaSite = makeKenyaCountySite({ slug: "busia", county: "Busia", listUrl: "https://www.busiacounty.go.ke/" });
+
+/** Siaya County — live-verified 2026-11-17 (https://siaya.go.ke/, Advertised/Awarded Tenders, eGP link). */
+export const kenyaSiayaSite = makeKenyaCountySite({ slug: "siaya", county: "Siaya", listUrl: "https://siaya.go.ke/" });
+
+/** Kisumu County — live-verified 2026-11-17 (https://kisumu.go.ke/, Tenders library + Registered Suppliers). */
+export const kenyaKisumuSite = makeKenyaCountySite({ slug: "kisumu", county: "Kisumu", listUrl: "https://kisumu.go.ke/" });
+
+/** Homa Bay County — live-verified 2026-11-17 (https://homabay.go.ke/, Tenders under Resources). */
+export const kenyaHomaBaySite = makeKenyaCountySite({ slug: "homabay", county: "Homa Bay", listUrl: "https://homabay.go.ke/" });
+
+/** Migori County — live-verified 2026-11-17 (https://migori.go.ke/, Tenders menu + live tender banner). */
+export const kenyaMigoriSite = makeKenyaCountySite({ slug: "migori", county: "Migori", listUrl: "https://migori.go.ke/" });
+
+/** Kisii County — live-verified 2026-11-17 (https://kisii.go.ke/, Tender Notice in Resources). */
+export const kenyaKisiiSite = makeKenyaCountySite({ slug: "kisii", county: "Kisii", listUrl: "https://kisii.go.ke/" });
+
+/** Nyamira County — live-verified 2026-11-17 (https://nyamira.go.ke/, Tender Documents 58). */
+export const kenyaNyamiraSite = makeKenyaCountySite({ slug: "nyamira", county: "Nyamira", listUrl: "https://nyamira.go.ke/" });
+
+/** Uasin Gishu County — live-verified 2026-11-17 (https://uasingishu.go.ke/, Tenders in header quick links). */
+export const kenyaUasinGishuSite = makeKenyaCountySite({ slug: "uasingishu", county: "Uasin Gishu", listUrl: "https://uasingishu.go.ke/" });
+
+/** Machakos County — live-verified 2026-11-17 (https://machakos.go.ke/, E-Services + procurement pages). */
+export const kenyaMachakosSite = makeKenyaCountySite({ slug: "machakos", county: "Machakos", listUrl: "https://machakos.go.ke/" });
+
+/** Kilifi County — live-verified 2026-11-17 (https://kilifi.go.ke/, minimal homepage, procurement under Resources). */
+export const kenyaKilifiSite = makeKenyaCountySite({ slug: "kilifi", county: "Kilifi", listUrl: "https://kilifi.go.ke/" });
+
+/** Kwale County — live-verified 2026-11-17 (https://kwale.go.ke/, live tender table with IFMIS negotiation numbers). */
+export const kenyaKwaleSite = makeKenyaCountySite({ slug: "kwale", county: "Kwale", listUrl: "https://kwale.go.ke/" });
+
+/** Meru County — live-verified 2026-11-17 (https://meru.go.ke/, Projects & Programs / SAGAs). */
+export const kenyaMeruSite = makeKenyaCountySite({ slug: "meru", county: "Meru", listUrl: "https://meru.go.ke/" });
+
+/** Embu County — live-verified 2026-11-17 (https://embu.go.ke/, Opportunities > Tenders). */
+export const kenyaEmbuSite = makeKenyaCountySite({ slug: "embu", county: "Embu", listUrl: "https://embu.go.ke/" });
+
+/** Narok County — live-verified 2026-11-17 (https://narok.go.ke/, Tender Documents under Resources). */
+export const kenyaNarokSite = makeKenyaCountySite({ slug: "narok", county: "Narok", listUrl: "https://narok.go.ke/" });
+
+/** Nyeri County — verified 2026-11-17 (https://www.nyeri.go.ke/cgntenders/, live CGN tender table; homepage blocks direct fetch, tenders page is the verified entry point). */
+export const kenyaNyeriSite = makeKenyaCountySite({ slug: "nyeri", county: "Nyeri", listUrl: "https://www.nyeri.go.ke/cgntenders/" });
+
+/**
+ * REREC — live-verified 2026-11-17 (https://rerec.co.ke/tenders/; 836 tender notices,
+ * 1136 tender documents; live "INVITATION TO TENDER" rows dated Nov 2026). Table rows
+ * carry the tender title, published date and a Download link.
+ */
+export const kenyaRerecSite: HtmlSiteConfig = {
+  listUrl: "https://rerec.co.ke/tenders/",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  selector: "table tbody tr, .tender-item, article, .card, .views-row, a[href*='tender'], a[href*='Tender'], a[href*='.pdf'], a[href*='download']",
+  extract(row, _document, baseUrl) {
+    const link = row.querySelector("a[href]");
+    const href = text(link?.getAttribute("href"));
+    const cells = [...row.querySelectorAll("td")];
+    let titleText = text(link?.textContent) ?? text(row.querySelector("h1,h2,h3,h4,.title")?.textContent);
+    if (!titleText && cells.length >= 2) titleText = text(cells[1]?.textContent) ?? text(cells[0]?.textContent);
+    if (!titleText) titleText = text(row.textContent);
+    if (!titleText || titleText.length < 8) return null;
+    const titleTrim = titleText.trim();
+    if (!/tender|procure|bid|quotation|eoi|notice|award|invitation/i.test(titleTrim)) return null;
+    const referenceNumber = cells.length ? text(cells[0]?.textContent) : null;
+    const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent) ?? (cells.length > 2 ? text(cells[2]?.textContent) : null);
+    const sourceUrl = resolveHref(href, baseUrl, "/tenders/");
+    const closingAt = parseFlexibleDate(closingText);
+    const externalId = slugifyId("ke-rerec", referenceNumber ?? `${titleTrim}-${sourceUrl}`);
+    const parsed: ParsedSourceOpportunity = {
+      externalId,
+      title: titleText.slice(0, 1000),
+      description: null,
+      sourceCategoryTerm: "Tender Notice",
+      referenceNumber,
+      countryCode: "KE",
+      region: null,
+      city: null,
+      issuingInstitution: null,
+      procuringOrganization: "Rural Electrification and Renewable Energy Corporation (REREC)",
+      publisher: "REREC",
+      publishedAt: null,
+      sourceDeadlineText: closingText?.slice(0, 500) ?? null,
+      closingAt,
+      timeZone: closingAt ? "Africa/Nairobi" : null,
+      status: deadlineStatus(closingAt, new Date()),
+      sourceUrl,
+      canonicalUrl: null,
+      currency: null,
+      amount: null,
+      originalValues: { referenceNumber, closingText, documentLink: href },
+    };
+    return { externalId, sourceUrl, parsed, payload: { referenceNumber, title: titleTrim, closingText, url: sourceUrl } };
+  },
+};
+
+/**
+ * Ministry of Health Kenya — live-verified 2026-11-17 (https://www.health.go.ke/;
+ * Tenders under Adverts). Generic tender-link extraction on the official MoH site.
+ */
+export const kenyaMohSite: HtmlSiteConfig = {
+  listUrl: "https://www.health.go.ke/",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  selector: "article, .post, .tender-item, .card, table tbody tr, .entry, .views-row, .wp-block-post, a[href*='tender'], a[href*='Tender'], a[href*='.pdf'], a[href*='/download/']",
+  extract(row, _document, baseUrl) {
+    const isAnchor = (row as Element).tagName?.toLowerCase() === "a";
+    const link = (isAnchor ? (row as Element) : (row.querySelector("h1 a[href], h2 a[href], h3 a[href], h4 a[href], a[href*='tender'], a[href*='Tender'], a[href*='.pdf'], a[href*='/download/'], a[href]"))) as Element | null;
+    const href = text(link?.getAttribute("href"));
+    let titleText = text(row.querySelector("h1,h2,h3,h4,.entry-title,.title,.tender-title")?.textContent)
+      ?? text(link?.getAttribute("title"))
+      ?? text(link?.textContent)
+      ?? text(row.textContent);
+    if (!titleText || titleText.length < 8) return null;
+    const titleTrim = titleText.trim();
+    if (/^(home|about|contact|news|events|gallery|documents|departments|services|faqs?|jobs?|careers?|downloads?|tenders?|resources|media|staff mail|e-?services|projects?|public notices?|press releases?)$/i.test(titleTrim)) return null;
+    const sourceUrl = resolveHref(href, baseUrl, "/");
+    const hay = `${titleTrim} ${sourceUrl}`;
+    if (!/tender|procure|rfq|rfp|bid|quotation|eoi|expression of interest|notice|addendum|request for proposal|invitation|advert/i.test(hay)) return null;
+    if (/\/tenders?\/?$/.test(sourceUrl) && !/tender|procure|rfq|rfp|bid|quotation|eoi/i.test(titleTrim)) return null;
+    const cells = [...row.querySelectorAll("td")];
+    const referenceNumber = cells.length ? text(cells[0]?.textContent) : null;
+    const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent) ?? (cells.length > 2 ? text(cells[2]?.textContent) : null);
+    const closingAt = parseFlexibleDate(closingText);
+    const externalId = slugifyId("ke-moh", referenceNumber ?? `${titleTrim}-${sourceUrl}`);
+    const parsed: ParsedSourceOpportunity = {
+      externalId,
+      title: titleText.slice(0, 1000),
+      description: null,
+      sourceCategoryTerm: "Tender Notice",
+      referenceNumber,
+      countryCode: "KE",
+      region: null,
+      city: null,
+      issuingInstitution: null,
+      procuringOrganization: "Ministry of Health, Kenya",
+      publisher: "Ministry of Health, Kenya",
+      publishedAt: null,
+      sourceDeadlineText: closingText?.slice(0, 500) ?? null,
+      closingAt,
+      timeZone: closingAt ? "Africa/Nairobi" : null,
+      status: deadlineStatus(closingAt, new Date()),
+      sourceUrl,
+      canonicalUrl: null,
+      currency: null,
+      amount: null,
+      originalValues: { referenceNumber, closingText, documentLink: href },
+    };
+    return { externalId, sourceUrl, parsed, payload: { referenceNumber, title: titleTrim, closingText, url: sourceUrl } };
+  },
+};
+
+/**
+ * ICT Authority Kenya — live-verified 2026-11-17 (https://icta.go.ke/; Tenders menu +
+ * procurement notices; ict.go.ke unreachable, official domain is icta.go.ke).
+ */
+export const kenyaIctaSite: HtmlSiteConfig = {
+  listUrl: "https://icta.go.ke/",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  selector: "article, .post, .tender-item, .card, table tbody tr, .entry, .views-row, .wp-block-post, a[href*='tender'], a[href*='Tender'], a[href*='.pdf'], a[href*='/download/']",
+  extract(row, _document, baseUrl) {
+    const isAnchor = (row as Element).tagName?.toLowerCase() === "a";
+    const link = (isAnchor ? (row as Element) : (row.querySelector("h1 a[href], h2 a[href], h3 a[href], h4 a[href], a[href*='tender'], a[href*='Tender'], a[href*='.pdf'], a[href*='/download/'], a[href]"))) as Element | null;
+    const href = text(link?.getAttribute("href"));
+    let titleText = text(row.querySelector("h1,h2,h3,h4,.entry-title,.title,.tender-title")?.textContent)
+      ?? text(link?.getAttribute("title"))
+      ?? text(link?.textContent)
+      ?? text(row.textContent);
+    if (!titleText || titleText.length < 8) return null;
+    const titleTrim = titleText.trim();
+    if (/^(home|about|contact|news|events|gallery|documents|departments|services|faqs?|jobs?|careers?|downloads?|tenders?|resources|media|staff mail|e-?services|projects?|public notices?|press releases?|careers)$/.test(titleTrim.toLowerCase())) return null;
+    const sourceUrl = resolveHref(href, baseUrl, "/");
+    const hay = `${titleTrim} ${sourceUrl}`;
+    if (!/tender|procure|rfq|rfp|bid|quotation|eoi|expression of interest|notice|addendum|request for proposal|invitation|advert/i.test(hay)) return null;
+    if (/\/tenders?\/?$/.test(sourceUrl) && !/tender|procure|rfq|rfp|bid|quotation|eoi/i.test(titleTrim)) return null;
+    const cells = [...row.querySelectorAll("td")];
+    const referenceNumber = cells.length ? text(cells[0]?.textContent) : null;
+    const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent) ?? (cells.length > 2 ? text(cells[2]?.textContent) : null);
+    const closingAt = parseFlexibleDate(closingText);
+    const externalId = slugifyId("ke-icta", referenceNumber ?? `${titleTrim}-${sourceUrl}`);
+    const parsed: ParsedSourceOpportunity = {
+      externalId,
+      title: titleText.slice(0, 1000),
+      description: null,
+      sourceCategoryTerm: "Tender Notice",
+      referenceNumber,
+      countryCode: "KE",
+      region: null,
+      city: null,
+      issuingInstitution: null,
+      procuringOrganization: "ICT Authority, Kenya",
+      publisher: "ICT Authority, Kenya",
+      publishedAt: null,
+      sourceDeadlineText: closingText?.slice(0, 500) ?? null,
+      closingAt,
+      timeZone: closingAt ? "Africa/Nairobi" : null,
+      status: deadlineStatus(closingAt, new Date()),
+      sourceUrl,
+      canonicalUrl: null,
+      currency: null,
+      amount: null,
+      originalValues: { referenceNumber, closingText, documentLink: href },
+    };
+    return { externalId, sourceUrl, parsed, payload: { referenceNumber, title: titleTrim, closingText, url: sourceUrl } };
+  },
+};
+
 /** AGPO Kenya — opportunities/tenders listing (best-effort). */
 export const kenyaAgpoSite: HtmlSiteConfig = {
   useBrowser: true,
@@ -1031,22 +1417,37 @@ export const kenyaNairobiSite: HtmlSiteConfig = {
 /** Mombasa County — procurement/tenders (best-effort). */
 export const kenyaMombasaSite: HtmlSiteConfig = {
   listUrl: "https://web.mombasa.go.ke/tenders/",
+  useBrowser: true,
   headers: {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   },
-  selector: "table tbody tr, article, .post, .tender, .entry, .views-row, .wp-block-post, .download-item, .elementor-widget-container a, .entry-content a, a[href*='download'], a[href*='tender'], a[href*='Tender'], a[href*='.pdf']",
+  selector: ".wpdm-item, .package-card, .card, article, .post, .tender-item, table tbody tr, a[href*='/download/'], a[href*='.pdf']",
   extract(row, _document, baseUrl) {
-    const link = row.querySelector("a[href]");
+    const isAnchor = (row as Element).tagName?.toLowerCase() === "a";
+    // Prefer explicit tender/download links; avoid nav/header links
+    const link = (isAnchor ? (row as Element) : (row.querySelector("a[href*='/download/'], a[href*='.pdf'], h3 a[href], h2 a[href], .wpdm-download-link, a[href]"))) as Element | null;
     const href = text(link?.getAttribute("href"));
-    const titleText = text(link?.textContent) ?? text(row.querySelector("h1,h2,h3,h4,.entry-title,.title")?.textContent) ?? text(row.textContent);
+    let titleText = text(row.querySelector("h1,h2,h3,h4,.entry-title,.title,.package-title,.wpdm_package_title")?.textContent)
+      ?? text(link?.getAttribute("title"))
+      ?? text(link?.textContent)
+      ?? text(row.textContent);
     if (!titleText || titleText.length < 8) return null;
+    const titleTrim = titleText.trim();
+    // Skip obvious navigation/menu items and non-tender cards
+    if (/^(home|about|contact|news|events|gallery|documents|departments|services|faqs?|jobs?|careers?|expired tenders|video gallery|policy documents|press releases|roads manual|traffic safety park|downloads?|tenders?)$/i.test(titleTrim)) return null;
+    if (/^(about cgm|office of|cookie policy|e-services|digital services)$/i.test(titleTrim)) return null;
+    const sourceUrl = resolveHref(href, baseUrl, "/tenders/");
+    const hay = `${titleTrim} ${sourceUrl}`;
+    // Require tender/procurement signal or a download detail page/PDF
+    if (!/tender|procure|rfq|rfp|bid|quotation|eoi|expression of interest|notice|addendum|request for proposal|invitation/i.test(hay) && !/\/download\/|\.pdf/i.test(hay)) return null;
+    // Avoid generic category/navigation URLs
+    if (/\/tenders\/?$/.test(sourceUrl) && !/tender|procure|rfq|rfp|bid|quotation|eoi/i.test(titleTrim)) return null;
     const cells = [...row.querySelectorAll("td")];
     const referenceNumber = cells.length ? text(cells[0]?.textContent) : null;
     const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent) ?? (cells.length > 2 ? text(cells[2]?.textContent) : null);
-    const sourceUrl = resolveHref(href, baseUrl, "/tenders/");
     const closingAt = parseFlexibleDate(closingText);
-    const externalId = slugifyId("ke-mombasa", referenceNumber ?? `${titleText}-${sourceUrl}`);
+    const externalId = slugifyId("ke-mombasa", referenceNumber ?? `${titleTrim}-${sourceUrl}`);
     const parsed: ParsedSourceOpportunity = {
       externalId,
       title: titleText.slice(0, 1000),
@@ -1072,4 +1473,98 @@ export const kenyaMombasaSite: HtmlSiteConfig = {
     };
     return { externalId, sourceUrl, parsed, payload: { referenceNumber, title: titleText, closingText, url: sourceUrl } };
   },
+};
+
+/**
+ * Best-effort tender-list scraper for the national/agency sources verified on
+ * 2026-11-17 in Ghana, Egypt and Morocco (see the matching *-deep-source-inventory.md
+ * docs in docs/source-catalog/). These notices are mostly table rows or anchor lists
+ * with a reference number, an object/title and a closing date; French and Arabic
+ * tender signals are included.
+ */
+interface MainMarketSiteOptions {
+  slug: string;
+  publisher: string;
+  listUrl: string;
+  countryCode: "GH" | "EG" | "MA";
+  timeZone: "Africa/Accra" | "Africa/Cairo" | "Africa/Casablanca";
+}
+
+function makeMainMarketTenderSite(options: MainMarketSiteOptions): HtmlSiteConfig {
+  const { slug, publisher, listUrl, countryCode, timeZone } = options;
+  return {
+    listUrl,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+    selector: "table tbody tr, article, .tender-item, .entry, .views-row, li, a[href*='tender'], a[href*='Tender'], a[href*='appel'], a[href*='offre'], a[href*='avis'], a[href*='.pdf'], a[href*='download']",
+    extract(row, _document, baseUrl) {
+      const isAnchor = (row as Element).tagName?.toLowerCase() === "a";
+      const link = isAnchor ? (row as Element) : (row.querySelector("a[href*='tender'], a[href*='Tender'], a[href*='appel'], a[href*='offre'], a[href*='avis'], a[href*='.pdf'], a[href*='download'], h1 a[href], h2 a[href], h3 a[href], a[href]")) as Element | null;
+      const href = text(link?.getAttribute("href"));
+      const cells = [...row.querySelectorAll("td")];
+      const titleText = text(row.querySelector("h1,h2,h3,h4,.entry-title,.title,.tender-title")?.textContent)
+        ?? text(link?.getAttribute("title"))
+        ?? text(link?.textContent)
+        ?? text(cells.length > 1 ? cells[1].textContent : null)
+        ?? text(row.textContent);
+      if (!titleText || titleText.length < 8) return null;
+      const titleTrim = titleText.trim();
+      if (/^(home|about|contact|news|tenders?|appels? d'offres?|avis|consultations|résultats|results|documents|services|login|se connecter)$/i.test(titleTrim)) return null;
+      const sourceUrl = resolveHref(href, baseUrl, "/");
+      const hay = `${titleTrim} ${sourceUrl}`;
+      if (!/tender|procure|rfq|rfp|bid|quotation|eoi|invitation|notice|advert|appel|offre|consultation|avis|مناقص|عطاء|إعلان/i.test(hay)) return null;
+      const referenceNumber = cells.length ? text(cells[0]?.textContent)?.slice(0, 200) ?? null : null;
+      const closingText = text(row.querySelector("time,.date,.closing-date")?.textContent)
+        ?? (cells.length > 2 ? text(cells[2]?.textContent) : null);
+      const closingAt = parseFlexibleDate(closingText);
+      const externalId = slugifyId(slug, referenceNumber ?? `${titleTrim}-${sourceUrl}`);
+      const parsed: ParsedSourceOpportunity = {
+        externalId,
+        title: titleTrim.slice(0, 1000),
+        description: null,
+        sourceCategoryTerm: "Tender Notice",
+        referenceNumber,
+        countryCode,
+        region: null,
+        city: null,
+        issuingInstitution: null,
+        procuringOrganization: publisher,
+        publisher,
+        publishedAt: null,
+        sourceDeadlineText: closingText?.slice(0, 500) ?? null,
+        closingAt,
+        timeZone: closingAt ? timeZone : null,
+        status: deadlineStatus(closingAt, new Date()),
+        sourceUrl,
+        canonicalUrl: null,
+        currency: null,
+        amount: null,
+        originalValues: { referenceNumber, closingText, documentLink: href },
+      };
+      return { externalId, sourceUrl, parsed, payload: { referenceNumber, title: titleTrim, closingText, url: sourceUrl } };
+    },
+  };
+}
+
+/** Ghana — verified 2026-11-17; see ghana-deep-source-inventory.md. */
+export const ghanaGhanepsSite = makeMainMarketTenderSite({ slug: "gh-ghaneps", publisher: "Ghana Electronic Procurement System", listUrl: "https://www.ghaneps.gov.gh/", countryCode: "GH", timeZone: "Africa/Accra" });
+export const ghanaPpaSite = makeMainMarketTenderSite({ slug: "gh-ppa", publisher: "Public Procurement Authority, Ghana", listUrl: "https://tenders.ppa.gov.gh/tenders", countryCode: "GH", timeZone: "Africa/Accra" });
+export const ghanaMofSite = makeMainMarketTenderSite({ slug: "gh-mof", publisher: "Ministry of Finance, Ghana", listUrl: "https://www.mofep.gov.gh/", countryCode: "GH", timeZone: "Africa/Accra" });
+export const ghanaMohSite = makeMainMarketTenderSite({ slug: "gh-moh", publisher: "Ministry of Health, Ghana", listUrl: "https://www.moh.gov.gh/", countryCode: "GH", timeZone: "Africa/Accra" });
+export const ghanaNpaSite = makeMainMarketTenderSite({ slug: "gh-npa", publisher: "National Petroleum Authority, Ghana", listUrl: "https://npa.gov.gh/", countryCode: "GH", timeZone: "Africa/Accra" });
+
+/** Egypt — verified 2026-11-17; see egypt-deep-source-inventory.md. */
+export const egyptGagsSite = makeMainMarketTenderSite({ slug: "eg-gags", publisher: "General Authority for Government Services, Egypt", listUrl: "https://gags.gov.eg/", countryCode: "EG", timeZone: "Africa/Cairo" });
+export const egyptEpsGagsSite = makeMainMarketTenderSite({ slug: "eg-epsgags", publisher: "Public e-Procurement System (GAGS), Egypt", listUrl: "https://eps-gags.gov.eg/", countryCode: "EG", timeZone: "Africa/Cairo" });
+export const egyptGcsSite = makeMainMarketTenderSite({ slug: "eg-gcs", publisher: "General Contracting Portal, Egypt", listUrl: "https://gcs.digitalegypt.gov.eg/", countryCode: "EG", timeZone: "Africa/Cairo" });
+export const egyptSczoneSite = makeMainMarketTenderSite({ slug: "eg-sczone", publisher: "Suez Canal Economic Zone", listUrl: "https://sczone.eg/tenders", countryCode: "EG", timeZone: "Africa/Cairo" });
+export const egyptMisrPetroleumSite = makeMainMarketTenderSite({ slug: "eg-misr-petroleum", publisher: "Misr Petroleum Company", listUrl: "https://www.misrpetroleum.com.eg/tenders.html", countryCode: "EG", timeZone: "Africa/Cairo" });
+export const egyptAcudSite = makeMainMarketTenderSite({ slug: "eg-acud", publisher: "Administrative Capital for Urban Development", listUrl: "https://acud.eg/", countryCode: "EG", timeZone: "Africa/Cairo" });
+
+/** Morocco — verified 2026-11-17; see morocco-deep-source-inventory.md. */
+export const moroccoPmmpSite: HtmlSiteConfig = {
+  ...makeMainMarketTenderSite({ slug: "ma-pmmp", publisher: "Portail Marocain des Marchés Publics", listUrl: "https://www.marchespublics.gov.ma/bdc/entreprise/consultation/", countryCode: "MA", timeZone: "Africa/Casablanca" }),
+  selector: "table tbody tr, .list-group-item, article, a[href*='consultation']",
 };

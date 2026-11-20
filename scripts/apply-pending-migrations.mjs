@@ -4,7 +4,9 @@ import postgres from "postgres";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const MIGRATIONS_DIR = path.join(ROOT, "backend", "neon", "migrations");
-const STATUS_FILE = path.join(MIGRATIONS_DIR, "migration-status.json");
+const STATUS_FILE = process.env.MIGRATION_STATUS_FILE
+  ? path.resolve(ROOT, process.env.MIGRATION_STATUS_FILE)
+  : path.join(MIGRATIONS_DIR, "migration-status.json");
 const BACKUP_DIR = path.join(ROOT, "scripts", "migration-backups");
 
 const SNAPSHOT_TABLES = [
@@ -17,6 +19,7 @@ const SNAPSHOT_TABLES = [
 ];
 
 function readDatabaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   const envFile = fs.readFileSync(path.join(ROOT, ".env.local"), "utf8");
   for (const line of envFile.split(/\r?\n/)) {
     const match = line.match(/^\s*DATABASE_URL\s*=\s*(.*)$/);

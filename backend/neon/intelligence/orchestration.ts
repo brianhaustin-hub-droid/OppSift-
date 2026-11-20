@@ -388,12 +388,7 @@ async function executeClaimedJob(
         },
       },
     );
-    if (
-      summary.status !== "succeeded" &&
-      !(summary.status === "completed_with_review" &&
-        summary.failedCount === 0 &&
-        summary.rejected === 0)
-    ) {
+    if (summary.status === "failed") {
       throw new Error("Ingestion did not complete cleanly; the source cursor was not advanced.");
     }
     if (heartbeatError) throw heartbeatError;

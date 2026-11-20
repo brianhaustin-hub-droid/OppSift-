@@ -31,6 +31,7 @@ export type OpportunityFilters = {
   category: OpportunityCategory | "all";
   countryCodes: readonly string[];
   query: string;
+  status?: string;
 };
 
 export type OpportunityFeedResult = {
@@ -125,6 +126,9 @@ export async function fetchLiveOpportunities(
   if (!neonClient) return { error: "", opportunities: [] };
 
   let request = neonClient.from("opportunities").select(SELECTED_COLUMNS);
+  // Live opportunities first by default; closed/awarded records are kept in
+  // the database but should not crowd out current opportunities in the feed.
+  request = request.eq("status", filters.status ?? "open");
   if (filters.category !== "all") request = request.eq("category_code", filters.category);
   if (filters.countryCodes.length > 0) {
     request = request.in("country_code", [...filters.countryCodes]);
@@ -138,7 +142,9 @@ export async function fetchLiveOpportunities(
   }
 
   try {
-    const result = await request.order("closing_at", { nullsFirst: false }).limit(200);
+    const result = await request
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(200);
     if (result.error) return { error: result.error.message, opportunities: [] };
     return { error: "", opportunities: readRows(result.data) };
   } catch (error) {

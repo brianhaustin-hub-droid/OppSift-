@@ -137,9 +137,9 @@ describe("diagnose: source registry contract validation", () => {
     expect(url).toBeTruthy();
     const sql = postgres(url!, { max: 1, connect_timeout: 30 });
     try {
-      const rows = await sql.unsafe<Record<string, unknown>>(sourceSelect);
+      const rows = await sql.unsafe(sourceSelect) as any[];
       const failures: { id: string; name: string; issues: string[] }[] = [];
-      for (const row of rows) {
+      for (const row of rows as any[]) {
         const parsed = mapSource(row);
         if (!parsed.success) {
           failures.push({

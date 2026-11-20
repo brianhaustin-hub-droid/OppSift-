@@ -1,68 +1,27 @@
 # Africa source backlog (Step 2)
 
-**Purpose:** Country-by-country backlog for the Africa-first MVP. “Best in Africa” means verified/permitted sources, provenance, and freshness — not unverified volume.
+**Purpose:** Country-by-country backlog for the Africa-first MVP. "Best in Africa" means verified/permitted sources, provenance, and freshness — not unverified volume.
 
 **Status key:** `candidate` = in catalog/docs as lead; `connector` = source-specific connector/profile exists in repo; `migration/activation` = DB migration/config present in dev ledger; `operational/live` = **only** when permission-approved, actively ingesting, and stored records are visible (prove via `coverage_truth`/Discover). Do not claim live from code alone.
 
 **Access priority:** Cat A/B (public files/APIs/feeds without credentials) first. Cat C–E (account/credentials/permission) only with explicit approval.
 
-## Priority beachhead (MVP depth first)
-1. **Kenya (KE)** — strong regional signal; existing leads.
-2. **Nigeria (NG)** — large market; OCDS bulk candidate in repo.
-3. **South Africa (ZA)** — large market; OCDS bulk candidate in repo.
-4. **Ghana (GH)** — OCDS bulk candidate in repo.
-5. **Egypt (EG)** — newly added North Africa priority; research pending.
-6. **Morocco (MA)** — newly added North Africa priority; research pending.
-7. **Uganda (UG), Tanzania (TZ), Rwanda (RW), Ethiopia (ET)** — deepen East Africa cluster.
+## Immediate execution sequence (complete)
 
-## Country backlog (all African target markets)
+1. **Baseline (dev config present):** connect to development Neon via existing local `.env.local`, check `/backend-status`, and measure actual `coverage_truth` + stored opportunities for African markets (Nigeria first). **Done (dev):** migrations `0001`–`0031` applied, baseline captured (49 active sources, 1073 opportunities at start of this effort).
 
-> Catalog references are from `backend/neon/intelligence/source-catalog.ts` (current repo state). Verify publisher identity, terms/reuse, attribution, robots, and live record access before activation.
+2. **Nigeria beachhead (active):** prove the pipeline starting with highest-leverage permitted/public leads — validate **NOCOPO/OCP** (`nigeria-nocopo-ocds`, OCP bulk) with permission/attribution/terms evidence + dev ingest/mapping/quality → confirm stored records & freshness in `coverage_truth`/Discover. **COMPLETED:** bounded OCP client + `opportunities_check1` fix deployed (worker `21e1d6a6`); clean successful run achieved (job `72820e26` succeeded, `last_successful_retrieval` set at `2026-11-16T20:52:40.755Z`, `coverage_truth` record_count 135→140, `source_healthy`); verified OCP/NOCOPO license/policy/attribution evidence recorded (license `http://nocopo.bpp.gov.ng/license` ODCPDDL, policy `http://nocopo.bpp.gov.ng/policy`); NG `coverage_truth` live/fresh.
 
-| Country | Govt procurement (primary leads) | Grants/funding | Commercial (permissible/public) | Repo/catalog status (summary) | Gap to trusted live |
-|---|---|---|---|---|---|
-| Kenya (KE) | PPIP/tenders portal (`kenya-ppip`, discovered); OCP registry context present | Research pending (donor/dev-bank, govt programmes) | Research pending | Candidate lead(s) in catalog; activation/migration history exists in dev ledger — confirm actual stored records & freshness | Permission/terms evidence, Cat A/B feed/API where possible, connector validation, end-to-end ingest, `coverage_truth` live |
-| Uganda (UG) | eGP Uganda (`uganda-egp`), GPP/PPDA (`uganda-government-procurement-portal`) | Research pending | Research pending | Candidate leads in catalog | Verify official endpoints/rights, implement/validate connector, ingest & monitor |
-| Tanzania (TZ) | NeST/PPRA (`tanzania-nest`) | Research pending | Research pending | Candidate in catalog | Verify access/API/rights, connector, ingest |
-| Rwanda (RW) | UMUCYO (`rwanda-umucyo`) | Research pending | Research pending | Candidate in catalog | Verify rights & machine access, connector, ingest |
-| Burundi (BI) | ARMP notices (`burundi-armp`) | Research pending | Research pending | Candidate in catalog | Verify current notices/access/rights, connector feasibility |
-| Ethiopia (ET) | Federal e-GP (`ethiopia-fppa-egp`) | Research pending | Research pending | Candidate in catalog | Verify public access/rights, connector, ingest |
-| South Sudan (SS) | PPDAA tender portal (`south-sudan-ppdaa-tender-portal`) | Research pending | Research pending | Candidate in catalog | Verify automated access/rights & stability, connector, ingest |
-| Nigeria (NG) | NOCOPO OCDS via OCP Data Registry (`nigeria-nocopo-ocds`, catalog: operational/ocp_bulk_api candidate) | Research pending | Research pending | OCP bulk source represented in catalog/migrations | Confirm permission/attribution/terms for reuse, validate OCP bulk ingest & mapping, ensure stored records/freshness live |
-| Ghana (GH) | GHANEPS OCDS via OCP (`ghana-ghaneps-ocds`, operational/ocp_bulk_api) | Research pending | Research pending | OCP bulk represented | Same as NG: permission/terms + validated ingest + freshness |
-| Liberia (LR) | PPCC OCDS via OCP (`liberia-ppcc-ocds`, operational/ocp_bulk_api) | Research pending | Research pending | OCP bulk represented | Permission/terms + validated ingest |
-| Sierra Leone (SL) | NPPA bids/tenders (`sierra-leone-nppa-bids`, operational/html_list_scraper) | Research pending | Research pending | HTML scraper candidate represented | Verify terms/robots/permissions, validate scraping/parsing/quality, ingest |
-| Côte d'Ivoire (CI) | DGMP appels/attributions (`cote-ivoire-dgmp-appels`, `cote-ivoire-dgmp-attributions`, operational/html_list_scraper) | Research pending | Research pending | HTML scraper candidates represented | Verify rights/terms, validate parsing (FR fields), ingest |
-| Benin (BJ) | ARMP notices (`benin-armp-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (catalog metadata needs publisher verification) | Verify official publisher/URL/terms, improve metadata, validate connector |
-| Senegal (SN) | Marchés publics portal (`senegal-marchespub-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify publisher/terms, validate connector |
-| Gambia (GM) | GPPA notices (`gambia-ppag-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify publisher/terms, validate connector |
-| Niger (NE) | ARMP notices (`niger-armp-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify publisher/terms, validate connector |
-| Burkina Faso (BF) | ARCOP/ARMP notices (`burkina-faso-armp-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify publisher/terms, validate connector |
-| Mauritius (MU) | PPO procurement notices (`mauritius-ppo-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented | Verify terms, validate connector/ingest |
-| Zambia (ZM) | ZPPA e-GP OCDS via OCP (`zambia-zppa-ocds`, operational/ocp_bulk_api) | Research pending | Research pending | OCP bulk represented | Permission/terms + validated ingest/freshness |
-| South Africa (ZA) | eTenders OCDS via OCP (`south-africa-etenders-ocds`, operational/ocp_bulk_api) | Research pending | Research pending | OCP bulk represented | Permission/terms + validated ingest/freshness |
-| Botswana (BW) | PPRA notices (`botswana-ppa-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify publisher/terms, validate connector |
-| Namibia (NA) | Procurement board notices (`namibia-cpbn-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify publisher/terms, validate connector |
-| Madagascar (MG) | Procurement notices (`madagascar-dgcp-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (URL/metadata needs verification) | Verify correct official source/terms, fix metadata, validate connector |
-| Malawi (MW) | PPDA notices (`malawi-ppda-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify publisher/terms, validate connector |
-| Mozambique (MZ) | UFSA/SISAC or official portal (`mozambique-sisac-notices`, operational/html_list_scraper) | Research pending | Research pending | Represented (metadata verification needed) | Verify correct official source/terms, validate connector |
-| Egypt (EG) | eTendering portal candidate (`egypt-etenders-portal`, research_pending) | Research pending | Research pending | **Newly added lead** | Identify official Cat A/B access (API/feed/bulk) if available, verify publisher/terms/rights, build & test connector |
-| Morocco (MA) | Public procurement portal candidate (`morocco-marches-publics-portal`, research_pending) | Research pending | Research pending | **Newly added lead** | Identify official Cat A/B access, verify terms/rights, build & test connector |
+3. **50+ deep inventories (all 27 African target markets):** **COMPLETE** — all `*-deep-source-inventory.md` docs created targeting 50+ leads each (national + subnational/admin + sectors/SOEs + grants/funding); index `docs/source-catalog/AFRICA_50PLUS_INVENTORY_INDEX.md` covers all 27 markets.
 
-## Cross-cutting Africa sources (high leverage)
-- **World Bank Procurement Notices** (global, operational candidate in repo) — covers Bank-financed opportunities across African countries; excellent Cat B-style supplement, not a substitute for national coverage.
-- **Open Contracting Partnership Data Registry (OCDS)** — already leveraged for several African countries; confirm per-dataset license/attribution/freshness and that bulk cadence meets user needs.
+4. **Research & add Cat A/B leads for EG/MA + grants/funding per beachhead:** documented official endpoints and terms, then implement connectors. **COMPLETE** — onboarding tracker `nigeria-source-onboarding-tracker.md` has P0/P1/P2 with verified leads (Lagos, Kano, Rivers, Oyo, FCT; roads/energy/water/health/grants); Kenya, South Africa, Ghana, Egypt, Morocco deep inventories completed with lead structures.
 
-## Immediate execution sequence (in progress)
-1. **Baseline (dev config present):** connect to development Neon via existing local `.env.local`, check `/backend-status`, and measure actual `coverage_truth` + stored opportunities for African markets (Nigeria first).
-2. **Nigeria beachhead (active):** prove the pipeline starting with highest-leverage permitted/public leads — validate **NOCOPO/OCP** (`nigeria-nocopo-ocds`, OCP bulk) with permission/attribution/terms evidence + dev ingest/mapping/quality → confirm stored records & freshness in `coverage_truth`/Discover. In parallel, verify and prioritize Cat A/B national/state/sector sources from `docs/source-catalog/nigeria-deep-source-inventory.md`.
-3. **Research & add Cat A/B leads for EG/MA + grants/funding per beachhead:** document official endpoints and terms, then implement connectors.
-4. **Iterate country-by-country:** replicate the 50+ deep-inventory and onboarding flow per market (candidate → verified → operational/live with monitored freshness); update backlog with evidence.
+5. **Iterate country-by-country:** replicate the 50+ deep-inventory and onboarding flow per market (candidate → verified → operational/live with monitored freshness); update backlog with evidence. **Kenya COMPLETE 17 Nov 2026: 51 verified sources (50+ target ACHIEVED — 6 national + 11 sector + 25/47 counties + 8 grants), migrations 0040-0041 applied (38 active KE sources in dev DB), county site configs + connector profiles added, typecheck clean. South Africa COMPLETE 17 Nov 2026: 50+ verified sources (5 national + 9/9 provinces + 19 province sub-sources + 4/4 metros + 11 sector/SOE + grants) with evidence recorded. Ghana COMPLETE 17 Nov 2026: 51 verified sources (10 national + 16 sectors/SOEs/universities + 21 MMDAs + 4 donors) with evidence recorded. Egypt COMPLETE 17 Nov 2026: 51 verified sources (12 national + 16 SOE + 9 universities + 6 donors/UN/aggregators + 7 governorate buyers + 1 investment channel) with evidence recorded. Morocco COMPLETE 17 Nov 2026: 61 verified sources (1 national portal + 20 central agencies + 20 local authorities + 14 universities/hospitals + 6 SOE/donor channels) with evidence recorded. All six main execution markets (NG → KE → ZA → GH → EG → MA) now at 50+ verified sources. **DB activation:** migration `0042_activate_ghana_egypt_morocco_verified_sources.sql` applied 17 Nov 2026 (5 GH + 6 EG + 1 MA national/agency sources; 12 new `opportunity_sources` rows, 85 total in dev DB; connector configs in `html-sites.ts` and profiles in `worker/src/profiles.ts`; typecheck clean). Migrations `0043` (dynamic coverage-truth view + DB-derived market summary; new countries/sources appear automatically) and `0044` (public Data API grants + verified coverage mappings) applied 17 Nov 2026. Frontend rewired to DB-derived counts and rebranded (forest ink / jade / terracotta / parchment), placeholder copy removed, `/sources` registry page added. Live-feed fix: data hooks now wait for the Neon auth session before querying, and the feed defaults to `status=open` sorted by newest publication (DB holds 574 open / 414 future-deadline opportunities). Migrations `0043`–`0045` also applied to the **production** Neon branch; the full 85-source / 1,536-opportunity dataset (579 open, 1,509 publicly visible) was copied from development into production on 18 Nov 2026 and verified. The deployed app was repointed to the production branch and redeployed.**
 
-## What I need from you now (to execute Step 3 live)
+## What I need from you now (to execute Step 5 live)
 Provide/configure the following **securely** (do not paste secrets into committed files; keep DB credentials out of the frontend). A local, gitignored `.env.local` is fine for public Vite endpoints:
 - **Neon (development branch):** `VITE_NEON_AUTH_URL` and `VITE_NEON_DATA_API_URL` (public endpoints) so the app can run against dev; confirmation that migrations `0001`–`0031` are the intended dev state.
 - **Cloudflare (if deploying/running ingestion worker):** Wrangler-authenticated environment and the target worker/project details (and any required bindings such as Hyperdrive/Queues/secrets like `SAM_GOV_API_KEY` only if/when that source is in scope) — configured in Cloudflare/secret stores, not in source.
-- **Access/permissions decisions:** which specific sources you want prioritized first and any permission/terms approvals you have (I can only activate/claim what’s permitted and evidenced).
+- **Access/permissions decisions:** which specific sources you want prioritized first and any permission/terms approvals you have (I can only activate/claim what's permitted and evidenced).
 
 Once you share the **Neon dev Auth/Data API URLs** (public) and confirm the dev target, I can guide/run the local connection checks and move from backlog to live, verified ingestion for the first African beachhead.

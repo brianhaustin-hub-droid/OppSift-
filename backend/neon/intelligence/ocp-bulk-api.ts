@@ -204,79 +204,123 @@ export class OcpBulkClient {
       throw new Error("OCP bulk download failed.");
     }
 
-    const buffer = await response.arrayBuffer();
     const maximumBytes = this.options.maxResponseBytes ?? 10_000_000;
-    if (buffer.byteLength > maximumBytes) {
-      throw new Error("OCP bulk file exceeds the configured size limit.");
-    }
+    const maximumDecompressedBytes = this.options.maximumDecompressedBytes ?? 200_000_000;
 
-    // Stream-decompress while retaining only the lines this page needs.
-    // A bulk file decompresses to tens of megabytes; materializing the full
-    // text and splitting it into an array (the previous approach) was the
-    // CPU-limit killer on the queue consumer — every OCP job paid the full
-    // cost no matter the page size. The decompressor must still see every
-    // byte, but constant-memory line scanning keeps the JS-side cost flat:
-    // only the last (offset + limit) non-empty lines are retained, and the
-    // line counter still lets offset paging address the whole file.
-    const keep = offset + limit;
-    const retained: string[] = [];
+    // Stream-decompress and stop as early as possible: we only need the page
+    // window [offset, offset+limit) and whether any line exists after it (to
+    // compute nextOffset). This bounds work/memory per run instead of scanning
+    // the entire file every time, which is critical on Worker CPU/time limits.
+    const page: string[] = [];
     let totalLines = 0;
+    let hasMore = false;
+    let doneEarly = false;
+
+    const onLine = (raw: string): "continue" | "stop" => {
+      const line = raw.trim();
+      if (line.length === 0) return "continue";
+      const index = totalLines;
+      totalLines += 1;
+      if (index >= offset && index < offset + limit) {
+        page.push(line);
+      }
+      if (index >= offset + limit) {
+        hasMore = true;
+        return "stop";
+      }
+      return "continue";
+    };
+
+    const consumeText = (textBody: string) => {
+      let start = 0;
+      for (let i = 0; i <= textBody.length; i += 1) {
+        if (i === textBody.length || textBody.charCodeAt(i) === 10 /* \n */) {
+          const line = i > start && textBody.charCodeAt(i - 1) === 13 /* \r */
+            ? textBody.slice(start, i - 1)
+            : textBody.slice(start, i);
+          if (onLine(line) === "stop") {
+            doneEarly = true;
+            return;
+          }
+          start = i + 1;
+        }
+      }
+      // last segment handled by loop when i===length
+    };
+
+    let streamed = false;
     try {
-      const stream = new Response(buffer).body?.pipeThrough(new DecompressionStream("gzip"));
-      if (!stream) throw new Error("decompression stream unavailable");
-      const reader = stream.getReader();
+      const body = response.body;
+      if (!body) throw new Error("decompression stream unavailable");
+      const reader = body.pipeThrough(new DecompressionStream("gzip")).getReader();
       const decoder = new TextDecoder();
-      const maximumDecompressedBytes = this.options.maximumDecompressedBytes ?? 200_000_000;
       let decompressedBytes = 0;
       let carry = "";
-      const absorb = (chunk: string) => {
-        carry += chunk;
-        const parts = carry.split("\n");
-        carry = parts.pop() ?? "";
-        for (const part of parts) {
-          const line = part.trim();
-          if (line.length === 0) continue;
-          totalLines += 1;
-          retained.push(line);
-          if (retained.length > keep) retained.shift();
-        }
-      };
-      for (;;) {
+      outer: for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         decompressedBytes += value.byteLength;
         if (decompressedBytes > maximumDecompressedBytes) {
           throw new Error("OCP bulk file exceeds the configured size limit.");
         }
-        absorb(decoder.decode(value, { stream: true }));
+        carry += decoder.decode(value, { stream: true });
+        let start = 0;
+        for (let i = 0; i < carry.length; i += 1) {
+          if (carry.charCodeAt(i) === 10 /* \n */) {
+            const line = i > start && carry.charCodeAt(i - 1) === 13 ? carry.slice(start, i - 1) : carry.slice(start, i);
+            if (onLine(line) === "stop") { doneEarly = true; break outer; }
+            start = i + 1;
+          }
+        }
+        carry = carry.slice(start);
       }
-      absorb(decoder.decode());
+      if (!doneEarly) {
+        carry += decoder.decode();
+        if (carry.length > 0) {
+          // process final line (and any embedded newlines, unlikely)
+          if (onLine(carry.endsWith("\r") ? carry.slice(0, -1) : carry) === "stop") {
+            doneEarly = true;
+          }
+        }
+      }
+      if (doneEarly) {
+        await reader.cancel().catch(() => {});
+      }
+      streamed = true;
     } catch (error) {
-      // The server may return the file uncompressed (or the stream path is
-      // unavailable); fall back to whole-buffer decoding.
       if (
         error instanceof Error &&
         error.message.includes("exceeds the configured size limit")
       ) {
         throw error;
       }
-      const textBody = new TextDecoder().decode(buffer);
-      const lines = textBody.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-      totalLines = lines.length;
-      // Same invariant as the streaming path: the newest min(keep, total)
-      // non-empty lines in file order.
-      retained.push(...lines.slice(Math.max(0, lines.length - keep)));
+      if (!streamed) {
+        // Fallback: server may return uncompressed data or stream APIs may be
+        // unavailable. Read buffered body and apply the same early-stop logic.
+        page.length = 0;
+        totalLines = 0;
+        hasMore = false;
+        doneEarly = false;
+        const buffer = await response.clone().arrayBuffer().catch(async () => {
+          // original body may be disturbed; best-effort
+          throw error;
+        });
+        if (buffer.byteLength > maximumBytes) {
+          throw new Error("OCP bulk file exceeds the configured size limit.");
+        }
+        consumeText(new TextDecoder().decode(buffer));
+      } else {
+        throw error;
+      }
     }
+
     if (totalLines === 0) {
       throw new Error("OCP bulk file was empty.");
     }
 
-    // `retained` holds the newest min(keep, totalLines) lines in file order,
-    // covering global indices [totalLines - retained.length, totalLines);
-    // translate the requested global window into retained coordinates.
-    const endLocal = Math.max(0, retained.length - offset);
-    const startLocal = Math.max(0, endLocal - limit);
-    const slice = retained.slice(startLocal, endLocal).reverse();
+    // Preserve previous behavior: return records in reverse file order within
+    // the page window.
+    const slice = page.reverse();
 
     const now = this.dependencies.now?.() ?? new Date();
     const records: ParsedSourceOpportunity[] = [];
@@ -328,7 +372,7 @@ export class OcpBulkClient {
       throw new Error("OCP bulk records did not match the documented compiled-release format.");
     }
 
-    const nextOffset = offset + limit < totalLines ? offset + limit : null;
-    return { records, rawRecords, total: totalLines, nextOffset };
+    const nextOffset = hasMore ? offset + limit : null;
+    return { records, rawRecords, total: hasMore ? offset + limit + 1 : totalLines, nextOffset };
   }
 }

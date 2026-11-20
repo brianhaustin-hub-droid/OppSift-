@@ -77,13 +77,44 @@ export function createHtmlListSourceConnector(
           headers: { Accept: "text/html", "User-Agent": "OppSift/1.0", ...site.headers },
         });
         if (!response.ok) {
-          throw new Error("HTML listing source returned a non-successful response.");
+          // Some sites block plain fetch; try browser rendering when available.
+          if (site.useBrowser && options.browser && [401, 403, 429, 503].includes(response.status)) {
+            try {
+              const mod = await import("@cloudflare/puppeteer");
+              const puppeteer = (mod as any).default ?? mod;
+              const browser = await puppeteer.launch(options.browser as any);
+              try {
+                const page = await browser.newPage();
+                if (site.headers) await page.setExtraHTTPHeaders(site.headers);
+                await page.goto(site.listUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+                await new Promise((r) => setTimeout(r, 2500));
+                html = await page.content();
+              } finally {
+                await browser.close();
+              }
+            } catch (e) {
+              throw new Error(`HTML listing source returned HTTP ${response.status} for ${site.listUrl}; browser fallback failed: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          } else {
+            throw new Error(`HTML listing source returned HTTP ${response.status} ${response.statusText || ""} for ${site.listUrl}`.trim());
+          }
+        } else {
+          try {
+            html = await response.text();
+          } catch {
+            throw new Error("HTML listing source returned no text content.");
+          }
         }
-        try {
-          html = await response.text();
-        } catch {
-          throw new Error("HTML listing source returned no text content.");
-        }
+      }
+
+      // Guard against extremely large pages (e.g. CI attribution) that can
+      // cause parse/memory/lease issues. Parse the head portion for listings.
+      if (!html) {
+        return { records: [], nextCursor: null };
+      }
+      const MAX_HTML_CHARS = 1_500_000;
+      if (html.length > MAX_HTML_CHARS) {
+        html = html.slice(0, MAX_HTML_CHARS);
       }
 
       const { document } = parseHTML(html);

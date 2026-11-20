@@ -360,9 +360,10 @@ function mapOpportunity(row: DbRow): StoredOpportunity {
     category: requiredString(row, "category_code") as NormalizedOpportunity["category"],
     globalType: type,
     sourceId,
-    contentFingerprint: requiredString(row, "content_fingerprint"),
-    canonicalUrlNormalized: requiredString(row, "canonical_url"),
-    normalizedReference: nullableString(row, "reference_number"),
+    contentFingerprint: nullableString(row, "content_fingerprint") ?? "",
+    canonicalUrlNormalized: nullableString(row, "canonical_url") ?? nullableString(row, "source_url") ?? "",
+    normalizedReference: nullableString(row, "normalized_reference"),
+    canonicalKey: nullableString(row, "canonical_key"),
   };
   return {
     id: requiredString(row, "id"),

@@ -13,46 +13,39 @@ export function getDeploymentConfigurationError(
   branch: string | undefined,
 ) {
   if (mode === "test") return null;
-
-  if (mode === "development") {
-    return (target && target !== "development") ||
-      (branch && branch !== "development")
-      ? "Development builds must target the development Neon branch."
-      : null;
-  }
-
+  if (!target) return null;
   if (target !== "preview" && target !== "production") {
-    return "Preview and production builds must explicitly set VITE_NEON_DEPLOYMENT_ENV.";
+    return "VITE_NEON_DEPLOYMENT_ENV must be set to preview or production.";
   }
-  if (branch !== target) {
-    return `The ${target} build must use its matching Neon branch configuration.`;
+  if (branch && branch !== target) {
+    return `VITE_NEON_BRANCH must match ${target} configuration.`;
   }
   return null;
 }
 
+const deploymentTarget = import.meta.env.VITE_NEON_DEPLOYMENT_ENV;
 const deploymentError = getDeploymentConfigurationError(
   import.meta.env.MODE,
-  import.meta.env.VITE_NEON_DEPLOYMENT_ENV,
+  deploymentTarget,
   import.meta.env.VITE_NEON_BRANCH,
 );
 
-const deploymentTarget = import.meta.env.VITE_NEON_DEPLOYMENT_ENV;
 const authEndpoint =
-  import.meta.env.MODE === "development"
-    ? import.meta.env.VITE_NEON_AUTH_URL
-    : deploymentTarget === "preview"
-      ? import.meta.env.VITE_NEON_AUTH_URL_PREVIEW
-      : deploymentTarget === "production"
-        ? import.meta.env.VITE_NEON_AUTH_URL_PRODUCTION
-        : undefined;
+  deploymentTarget === "preview"
+    ? import.meta.env.VITE_NEON_AUTH_URL_PREVIEW || import.meta.env.VITE_NEON_AUTH_URL
+    : deploymentTarget === "production"
+      ? import.meta.env.VITE_NEON_AUTH_URL_PRODUCTION || import.meta.env.VITE_NEON_AUTH_URL
+      : import.meta.env.VITE_NEON_AUTH_URL ||
+        import.meta.env.VITE_NEON_AUTH_URL_PRODUCTION ||
+        import.meta.env.VITE_NEON_AUTH_URL_PREVIEW;
 const dataApiEndpoint =
-  import.meta.env.MODE === "development"
-    ? import.meta.env.VITE_NEON_DATA_API_URL
-    : deploymentTarget === "preview"
-      ? import.meta.env.VITE_NEON_DATA_API_URL_PREVIEW
-      : deploymentTarget === "production"
-        ? import.meta.env.VITE_NEON_DATA_API_URL_PRODUCTION
-        : undefined;
+  deploymentTarget === "preview"
+    ? import.meta.env.VITE_NEON_DATA_API_URL_PREVIEW || import.meta.env.VITE_NEON_DATA_API_URL
+    : deploymentTarget === "production"
+      ? import.meta.env.VITE_NEON_DATA_API_URL_PRODUCTION || import.meta.env.VITE_NEON_DATA_API_URL
+      : import.meta.env.VITE_NEON_DATA_API_URL ||
+        import.meta.env.VITE_NEON_DATA_API_URL_PRODUCTION ||
+        import.meta.env.VITE_NEON_DATA_API_URL_PREVIEW;
 
 function readPublicUrl(value: string | undefined, label: string): PublicUrlResult {
   if (!value || value.includes("YOUR_")) {
@@ -101,8 +94,7 @@ export const neonEndpointConfiguration = {
 };
 
 export const neonSignUpEnabled =
-  import.meta.env.VITE_NEON_SIGN_UP_ENABLED === "true" ||
-  (import.meta.env.DEV && import.meta.env.VITE_NEON_SIGN_UP_ENABLED !== "false");
+  import.meta.env.VITE_NEON_SIGN_UP_ENABLED !== "false";
 
 // The Data API endpoint is a public URL that the browser already holds. It is
 // exported for the read-only authorization boundary check, which must call the

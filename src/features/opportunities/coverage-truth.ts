@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { neonClient } from "../../app/auth/neon-client";
+import { useAuthReady } from "./auth-ready";
 
 // Coverage truth (migration 0029): a derived view over actual ingestion data.
 // Status is never hand-maintained:
@@ -16,6 +17,9 @@ export type CoverageTruthRow = {
   status: CoverageStatus;
   lastSuccessAt: string | null;
   recordCount: number;
+  sourceCount: number;
+  activeSourceCount: number;
+  verifiedSourceCount: number;
 };
 
 export type CoverageTruthResult = {
@@ -28,6 +32,9 @@ type CoverageTruthRaw = {
   status: string;
   last_success_at: string | null;
   record_count: number | null;
+  source_count: number | null;
+  active_source_count: number | null;
+  verified_source_count: number | null;
 };
 
 function isCoverageStatus(value: string): value is CoverageStatus {
@@ -35,6 +42,7 @@ function isCoverageStatus(value: string): value is CoverageStatus {
 }
 
 export function useCoverageTruth(): CoverageTruthResult {
+  const authReady = useAuthReady();
   const [result, setResult] = useState<CoverageTruthResult>({
     error: null,
     rows: new Map(),
@@ -43,7 +51,7 @@ export function useCoverageTruth(): CoverageTruthResult {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (neonClient === null) {
+      if (neonClient === null || !authReady) {
         if (!cancelled) {
           setResult({
             error: "Coverage truth is unavailable without Neon configuration.",
@@ -55,10 +63,10 @@ export function useCoverageTruth(): CoverageTruthResult {
       try {
         const { data, error } = await neonClient
           .from("coverage_truth")
-          .select("code, status, last_success_at, record_count");
+          .select("code, status, last_success_at, record_count, source_count, active_source_count, verified_source_count");
         if (cancelled) return;
         if (error) {
-          setResult({ error: String(error), rows: new Map() });
+          setResult({ error: (error as { message?: string })?.message ?? "Coverage request failed.", rows: new Map() });
           return;
         }
         const rows = new Map<string, CoverageTruthRow>();
@@ -69,12 +77,15 @@ export function useCoverageTruth(): CoverageTruthResult {
             status: raw.status,
             lastSuccessAt: raw.last_success_at,
             recordCount: raw.record_count ?? 0,
+            sourceCount: raw.source_count ?? 0,
+            activeSourceCount: raw.active_source_count ?? 0,
+            verifiedSourceCount: raw.verified_source_count ?? 0,
           });
         }
         setResult({ error: null, rows });
       } catch (error) {
         if (!cancelled) {
-          setResult({ error: String(error), rows: new Map() });
+          setResult({ error: (error as { message?: string })?.message ?? "Coverage request failed.", rows: new Map() });
         }
       }
     }
@@ -82,7 +93,7 @@ export function useCoverageTruth(): CoverageTruthResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authReady]);
 
   return result;
 }

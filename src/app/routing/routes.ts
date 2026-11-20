@@ -78,7 +78,7 @@ export const routes: readonly RouteDefinition[] = [
     href: "/my-opportunities",
     label: "My Opportunities",
     title: "My Opportunities",
-    description: "Track and prepare pursuits in a browser-only preview workspace.",
+    description: "Track and prepare pursuits in your workspace.",
     group: "manage",
     status: "available",
   },
@@ -218,6 +218,7 @@ export const routes: readonly RouteDefinition[] = [
 export type PublicPage =
   | "home"
   | "markets"
+  | "sources"
   | "platform"
   | "opportunities"
   | "solutions"
@@ -272,6 +273,7 @@ function isOpportunitySection(value: string): value is OpportunitySection {
 const publicRoutes: Readonly<Record<string, PublicPage>> = {
   "/": "home",
   "/markets": "markets",
+  "/sources": "sources",
   "/platform": "platform",
   "/product": "platform",
   "/opportunities": "opportunities",

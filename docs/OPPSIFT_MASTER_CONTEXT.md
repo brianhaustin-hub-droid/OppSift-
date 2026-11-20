@@ -297,6 +297,103 @@ source's original terms.
 - `/admin` and its operational subroutes stay permission-restricted until
   server-side authorization and data APIs exist.
 
+## Controlled frontend reset (2026-11-18)
+
+The entire presentation layer was removed to prepare for Google Stitch screens. The route identities, auth guards and application infrastructure are preserved; every route currently renders a minimal placeholder. See `docs/OPPSIFT_STITCH_INTEGRATION_PLAN.md`, `docs/OPPSIFT_SCREEN_MAP.md`, `docs/OPPSIFT_OTHER_SCREENS_REPORT.md`.
+
+### Removed (44 files)
+Public website screens and public navbar/footer; auth screens (login/register/forgot/reset/verify/signed-in/setup-notice); workspace screens (dashboard, discovery, opportunity detail, my-opportunities, intelligence, alerts, analytics); organisations screens; backend-status screen; shell (GlobalSidebar/GlobalTopbar); screen-specific CSS; their tests.
+
+### Preserved (infrastructure)
+Routing (`routes.ts`, `router.tsx`, `route-titles.ts`); authentication (`AuthProvider`, `neon-client`, `OAuthButtons`, `OtpInput`, `password-policy`, `otp-resend-cooldown`, `AuthScreenPlaceholder` boundary); providers (`AuthProvider`, `OrganizationProvider`); services (`opportunity-feed.ts`, `coverage-truth.ts`, `market-summary.ts`, `auth-ready.ts`, `country-registry.ts`, `organization-service.ts`, `user-profile-service.ts`, `backend-health.ts`); backend intelligence (`backend/neon/`); Cloudflare config; theme.css (approved Burgundy identity). Route inventory, guards and `getPageTitle()` preserved.
+
+### Temporary boundaries
+`ScreenPlaceholder` (public/workspace) and `AuthScreenPlaceholder` (auth). No production metrics or mock content rendered.
+
+### Verification
+- `tsc -b --pretty`: clean
+- `eslint src`: 0 errors (5 pre-existing warnings)
+- `vite build`: clean
+- `vitest run src`: **76/76 pass** (12 files; old screen tests removed — infrastructure tests only)
+
+### Outstanding / blockers to Stitch
+Stitch screens not generated; every route is a placeholder; auth screens unavailable until Stitch integration; static `source-catalog.ts` unused by UI; administration still absent; no integrations/billing/pricing/onboarding/notifications. Do not deploy the incomplete state.
+
+## Design system v2 — burgundy identity (2026-11-18)
+
+The approved official identity replaces the forest-ink/jade direction with
+**Burgundy Executive** (dominant) supported by **Global Intelligence** (blue).
+
+### Approved palette
+
+- Deep Burgundy `#251019`, Executive Burgundy `#541B32`, Burgundy Accent `#A33B59`,
+  Rose `#E8A4B5`, Soft Rose `#FFF1F2` (dominant brand surfaces, sidebar, active
+  navigation, primary actions).
+- Deep Navy `#0B1F3A`, Intelligence Blue `#164E8B`, Technology Blue `#38BDF8`,
+  Pale Blue `#E0F2FE`, White `#FFFFFF` (dashboard structure, data visualisation,
+  charts, secondary buttons, focus rings).
+- Dark surfaces `#101114 / #171923 / #1C2433`; light surfaces
+  `#FFFFFF / #F8FAFC / #F1F5F9`. Dark text `#F8FAFC`; secondary `#CBD5E1`.
+  Light text `#172033`; secondary `#64748B`.
+- Burgundy dominates; blue provides structure only. Green/amber/red are reserved
+  for genuine status.
+
+### Theme decisions
+
+- `src/app/theme.css` is the single token source. Both dark and light themes
+  define the full semantic set; `data-theme` on `<html>` persists the user's
+  choice via the existing theme system.
+- Typography: Plus Jakarta Sans (UI) + Fraunces (display).
+- The sidebar uses a burgundy gradient (`#A33B59 → #541B32 → #251019`) in both
+  themes with rose-tinted active states; it is the strongest brand element.
+- The public marketing pages keep their existing structure but consume the new
+  tokens (soft rose/pale blue accents replace jade/teal).
+
+### Dashboard implementation details (chunk 1 only)
+
+- Welcome/context strip + global search (existing shell) and `Global Opportunity
+  Intelligence` heading.
+- Metrics grid is restyled as individual bordered tiles with a burgundy
+  intelligence-blue accent rotation and display-serif numerals.
+- Added a **Quick actions** row (Explore / Saved searches / Saved opportunities /
+  Alerts / Markets / Analytics).
+- Market-scope card is now framed as **Country intelligence** and reads
+  `coverage_truth` + `market_intelligence_summary` from the production Neon
+  branch (applied via migrations 0043–0045), never a hardcoded count.
+- Added a full-width **Data freshness** strip (navy → intelligence-blue
+  gradient) showing verified sources, connector-ready sources, live markets and
+  records stored, derived from `market_intelligence_summary`.
+- Distribution bars use a burgundy gradient. Existing discovery/dashboard data
+  paths (`fetchLiveOpportunities`, `useCoverageTruth`, `useMarketSummary`) are
+  unchanged and consume real database rows; demo counts were not introduced.
+
+### Files changed
+
+- `src/app/theme.css` (new identity tokens)
+- `src/app/shell/global-shell.css` (burgundy sidebar + rose active nav)
+- `src/features/dashboard/DashboardPage.tsx` (quick actions, freshness strip,
+  live market-summary wiring)
+- `src/features/dashboard/dashboard.css` (tile, quick-action, freshness, bar
+  styles; responsive)
+- `src/features/public/public-pages.css`, `index.html` (wordmark/theme-color)
+- `src/features/public/MarketsPage.tsx` (lint fix only)
+
+### Verification (this chunk)
+
+- `tsc -b --pretty`: clean
+- `vitest run src`: **120/120 pass**
+- `eslint src`: 0 errors (8 pre-existing warnings)
+- `vite build`: clean
+- Screens visually checked: `/` (dark) in-app; `/dashboard` requires an
+  authenticated session (shows the sign-in gate locally) — not screenshot
+  verified in this environment.
+- Outstanding defects: screenshot automation unavailable in this environment;
+  dashboard authenticated view not visually verified here.
+- Outstanding work / next chunk: restyle the remaining public and workspace
+  screens to the burgundy identity; `OPPSIFT_DESIGN_SYSTEM.md` and
+  `OPPSIFT_FINAL_SCREEN_INVENTORY.md` should be updated to the approved
+  identity in the next chunk.
+
 ## Completed milestones
 
 - React/Vite/Cloudflare Pages application foundation and responsive shell.

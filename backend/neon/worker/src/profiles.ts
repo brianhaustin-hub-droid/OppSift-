@@ -46,6 +46,42 @@ import {
   kenyaAgpoSite,
   kenyaNairobiSite,
   kenyaMombasaSite,
+  kenyaKajiadoSite,
+  kenyaKerichoSite,
+  kenyaBometSite,
+  kenyaKakamegaSite,
+  kenyaVihigaSite,
+  kenyaBungomaSite,
+  kenyaBusiaSite,
+  kenyaSiayaSite,
+  kenyaKisumuSite,
+  kenyaHomaBaySite,
+  kenyaMigoriSite,
+  kenyaKisiiSite,
+  kenyaNyamiraSite,
+  kenyaUasinGishuSite,
+  kenyaMachakosSite,
+  kenyaKilifiSite,
+  kenyaKwaleSite,
+  kenyaMeruSite,
+  kenyaEmbuSite,
+  kenyaNarokSite,
+  kenyaNyeriSite,
+  kenyaRerecSite,
+  kenyaMohSite,
+  kenyaIctaSite,
+  ghanaGhanepsSite,
+  ghanaPpaSite,
+  ghanaMofSite,
+  ghanaMohSite,
+  ghanaNpaSite,
+  egyptGagsSite,
+  egyptEpsGagsSite,
+  egyptGcsSite,
+  egyptSczoneSite,
+  egyptMisrPetroleumSite,
+  egyptAcudSite,
+  moroccoPmmpSite,
 } from "../../intelligence/html-sites";
 
 /** Grants.gov doc types that represent an open funding opportunity. */
@@ -53,6 +89,29 @@ const GRANTS_GOV_OPEN_DOC_TYPES = ["synopsis", "forecast", "grant"];
 
 /** Launch countries whose public procurement the TED feed covers. */
 const TED_COUNTRIES = ["DE", "FR", "NL", "IE", "IT", "ES", "SE", "PL", "DK", "BE"];
+
+/** Profile factory for the GH/EG/MA sources verified 2026-11-17 (migration 0042). */
+function mainMarketProfile(
+  site: Parameters<typeof createHtmlListSourceConnector>[1],
+  countryCode: string,
+): SourceExecutionProfile {
+  return {
+    kind: "native" as const,
+    priority: 250,
+    mappings: (source) => [{
+      sourceId: source.id,
+      countryCode,
+      sourceTerm: "Tender Notice",
+      category: "government" as const,
+      globalType: "tender",
+    }],
+    createConnector(source, options) {
+      return createHtmlListSourceConnector(source, site, {
+        currentCursor: options.currentCursor,
+      });
+    },
+  };
+}
 
 /** SAM.gov "type" values that represent a federal procurement notice. */
 const SAM_GOV_NOTICE_TYPES = [
@@ -196,7 +255,7 @@ export function getSourceExecutionProfiles(
       createConnector(source, options) {
         return createOcpBulkSourceConnector(source, {
           publicationId: 64,
-          fileName: "2025.jsonl.gz",
+          fileName: "2022.jsonl.gz",
           countryCode: "NG",
           timeZone: "Africa/Lagos",
           currentCursor: options.currentCursor,
@@ -850,6 +909,393 @@ export function getSourceExecutionProfiles(
         });
       },
     }],
+    // Kenya county procurement sources — live-verified 2026-11-17
+    // (docs/source-catalog/kenya-deep-source-inventory.md, section 2 county table).
+    ["planned-ke-kajiado-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaKajiadoSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-kericho-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaKerichoSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-bomet-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaBometSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-kakamega-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaKakamegaSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-vihiga-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaVihigaSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-bungoma-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaBungomaSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-busia-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaBusiaSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-siaya-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaSiayaSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-kisumu-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaKisumuSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-homabay-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaHomaBaySite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-migori-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaMigoriSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-kisii-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaKisiiSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-nyamira-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaNyamiraSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    // Kenya sources live-verified 2026-11-17 (migration 0041): 8 counties + 3 sector agencies.
+    ["planned-ke-uasingishu-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaUasinGishuSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-machakos-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaMachakosSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-kilifi-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaKilifiSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-kwale-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaKwaleSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-meru-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaMeruSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-embu-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaEmbuSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-narok-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaNarokSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-nyeri-county-procurement", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaNyeriSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-rerec-tenders", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaRerecSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-moh-tenders", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaMohSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["planned-ke-icta-tenders", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "KE",
+        sourceTerm: "Tender Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, kenyaIctaSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
     ["ted-published-notices", {
       kind: "native" as const,
       priority: 30,
@@ -919,5 +1365,18 @@ export function getSourceExecutionProfiles(
         });
       },
     }],
+    // Ghana, Egypt and Morocco national/agency sources live-verified 2026-11-17 (migration 0042).
+    ["planned-gh-ghaneps", mainMarketProfile(ghanaGhanepsSite, "GH")],
+    ["planned-gh-ppa", mainMarketProfile(ghanaPpaSite, "GH")],
+    ["planned-gh-mof", mainMarketProfile(ghanaMofSite, "GH")],
+    ["planned-gh-moh", mainMarketProfile(ghanaMohSite, "GH")],
+    ["planned-gh-npa", mainMarketProfile(ghanaNpaSite, "GH")],
+    ["planned-eg-gags", mainMarketProfile(egyptGagsSite, "EG")],
+    ["planned-eg-epsgags", mainMarketProfile(egyptEpsGagsSite, "EG")],
+    ["planned-eg-gcs", mainMarketProfile(egyptGcsSite, "EG")],
+    ["planned-eg-sczone", mainMarketProfile(egyptSczoneSite, "EG")],
+    ["planned-eg-misr-petroleum", mainMarketProfile(egyptMisrPetroleumSite, "EG")],
+    ["planned-eg-acud", mainMarketProfile(egyptAcudSite, "EG")],
+    ["planned-ma-pmmp", mainMarketProfile(moroccoPmmpSite, "MA")],
   ]);
 }

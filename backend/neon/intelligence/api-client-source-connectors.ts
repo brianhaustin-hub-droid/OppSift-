@@ -684,6 +684,7 @@ export function createOcpBulkSourceConnector(
     fetcher?: typeof fetch;
     now?: () => Date;
     pageSize?: number;
+    maximumPages?: number;
   },
 ): SourceConnector {
   const client = new OcpBulkClient(source, {
@@ -696,7 +697,7 @@ export function createOcpBulkSourceConnector(
   return createBufferedConnector({
     source,
     initialCursor: options.currentCursor,
-    maximumPages: 1,
+    maximumPages: options.maximumPages ?? 10,
     async loadPage(cursor, signal) {
       const state = decodeCursor(cursor, "ocp_bulk");
       const now = options.now?.() ?? new Date();

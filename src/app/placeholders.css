@@ -1,0 +1,55 @@
+.integration-placeholder {
+  display: flex;
+  min-height: 60vh;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--page-gutter);
+  color: var(--color-text-primary);
+}
+
+.integration-placeholder--auth {
+  min-height: 100vh;
+}
+
+.integration-placeholder__eyebrow {
+  margin: 0;
+  color: var(--color-action-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.integration-placeholder h1 {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-4xl));
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.integration-placeholder__route {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.integration-placeholder__note {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--color-text-secondary-accessible);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+.integration-placeholder__status {
+  margin: var(--space-2) 0 0;
+  color: var(--color-action-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

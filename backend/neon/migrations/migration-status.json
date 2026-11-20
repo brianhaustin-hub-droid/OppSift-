@@ -278,6 +278,132 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-15T17:47:42.495Z"
+    },
+    {
+      "version": "0032",
+      "file": "0032_activate_kenya_candidate_sources.sql",
+      "dependsOn": [
+        "0031"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:09:22.000Z"
+    },
+    {
+      "version": "0033",
+      "file": "0033_user_onboarding_and_preferences.sql",
+      "dependsOn": [
+        "0032"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:09:24.000Z"
+    },
+    {
+      "version": "0034",
+      "file": "0034_saved_searches_and_alerts.sql",
+      "dependsOn": [
+        "0033"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:09:26.000Z"
+    },
+    {
+      "version": "0035",
+      "file": "0035_applications_pipeline.sql",
+      "dependsOn": [
+        "0034"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:09:28.000Z"
+    },
+    {
+      "version": "0036",
+      "file": "0036_product_analytics_and_support.sql",
+      "dependsOn": [
+        "0035"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:09:30.000Z"
+    },
+    {
+      "version": "0037",
+      "file": "0037_app_domain_rpcs.sql",
+      "dependsOn": [
+        "0036"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:13:19.595Z"
+    },
+    {
+      "version": "0038",
+      "file": "0038_app_domain_rpcs_more.sql",
+      "dependsOn": [
+        "0037"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:13:20.604Z"
+    },
+    {
+      "version": "0039",
+      "file": "0039_saved_opportunities_and_profile_rpcs.sql",
+      "dependsOn": [
+        "0038"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-16T19:13:21.434Z"
+    },
+    {
+      "version": "0040",
+      "file": "0040_activate_kenya_verified_county_sources.sql",
+      "dependsOn": [
+        "0039"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-17T12:05:05.374Z"
+    },
+    {
+      "version": "0041",
+      "file": "0041_activate_kenya_verified_sources.sql",
+      "dependsOn": [
+        "0040"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-17T12:18:45.530Z"
+    },
+    {
+      "version": "0042",
+      "file": "0042_activate_ghana_egypt_morocco_verified_sources.sql",
+      "dependsOn": [
+        "0041"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-17T13:31:32.835Z"
+    },
+    {
+      "version": "0043",
+      "file": "0043_dynamic_coverage_truth.sql",
+      "dependsOn": [
+        "0042"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-17T14:01:39.169Z"
+    },
+    {
+      "version": "0044",
+      "file": "0044_public_dashboard_reads.sql",
+      "dependsOn": [
+        "0043"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-17T14:54:57.244Z"
+    },
+    {
+      "version": "0045",
+      "file": "0045_align_opportunities_schema.sql",
+      "dependsOn": [
+        "0044"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-18T06:05:00.000Z"
     }
   ]
 }
