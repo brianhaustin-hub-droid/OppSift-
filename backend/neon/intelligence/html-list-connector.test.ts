@@ -1,6 +1,10 @@
+import { parseHTML } from "linkedom";
 import { describe, expect, it, vi } from "vitest";
 import type { SourceRegistryRecord } from "./contracts";
-import { createHtmlListSourceConnector } from "./html-list-connector";
+import {
+  createHtmlListSourceConnector,
+  type HtmlSiteConfig,
+} from "./html-list-connector";
 import { southSudanSite } from "./html-sites";
 import { indiaSite } from "./html-sites";
 import { philippinesSite } from "./html-sites";
@@ -167,5 +171,103 @@ describe("India CPPP HTML-list connector", () => {
       status: "closed",
       sourceUrl: "https://eprocure.gov.in/epublish/app?component=%24DirectLink&page=Home&service=direct&session=T&sp=SVWZaXpo2tWssMAr2cYYT7A%3D%3D",
     });
+  });
+});
+describe("HTML listing discovery regressions", () => {
+  // linkedom does not synthesise a <tbody> the way browsers do, and real pages
+  // are inconsistent about authoring one. A selector that assumes `tbody`
+  // silently matched nothing, so every run discovered zero records.
+  const tableSite: HtmlSiteConfig = {
+    listUrl: "https://listings.example.test/current",
+    selector: "table tr",
+    extract(row, _document, baseUrl) {
+      const link = row.querySelector("a[href]");
+      const title = link?.textContent?.trim() ?? "";
+      if (!link || title.length < 6) return null;
+      const sourceUrl = new URL(link.getAttribute("href") ?? "", baseUrl).toString();
+      const externalId = new URL(sourceUrl).pathname.split("/").filter(Boolean).pop() ?? "";
+      const closingAt = row.querySelector("time[datetime]")?.getAttribute("datetime") ?? null;
+      return {
+        externalId,
+        sourceUrl,
+        parsed: {
+          externalId,
+          title,
+          description: null,
+          sourceCategoryTerm: "Open tender",
+          referenceNumber: null,
+          countryCode: "GB",
+          region: null,
+          city: null,
+          issuingInstitution: null,
+          procuringOrganization: null,
+          publisher: "Example listings portal",
+          publishedAt: null,
+          sourceDeadlineText: null,
+          closingAt,
+          timeZone: closingAt ? "Europe/London" : null,
+          status: "open" as const,
+          sourceUrl,
+          canonicalUrl: null,
+          currency: null,
+          amount: null,
+          originalValues: { title },
+        },
+      };
+    },
+  };
+
+  const row = (id: string) => `<tr>
+      <td><a href="/notice/${id}">Roof repair framework agreement ${id}</a></td>
+      <td><time datetime="2026-12-01T12:00:00Z">1 December 2026</time></td>
+    </tr>`;
+
+  it("discovers rows from tables with and without an explicit tbody", async () => {
+    // No <tbody> in the source markup (rows follow </thead> directly).
+    const withoutTbody = `<html><body><table>
+        <thead><tr><th>Title</th><th>Deadline</th></tr></thead>
+        ${row("notice-1")}
+      </table></body></html>`;
+    expect(withoutTbody).not.toContain("<tbody");
+    // Documents the linkedom behaviour the selector must tolerate.
+    expect(parseHTML(withoutTbody).document.querySelectorAll("table > tbody > tr")).toHaveLength(0);
+
+    const withTbody = `<html><body><table>
+        <thead><tr><th>Title</th><th>Deadline</th></tr></thead>
+        <tbody>${row("notice-2")}</tbody>
+      </table></body></html>`;
+
+    for (const [html, expectedId] of [
+      [withoutTbody, "notice-1"],
+      [withTbody, "notice-2"],
+    ] as const) {
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(html, { headers: { "content-type": "text/html" } }),
+      );
+      const connector = createHtmlListSourceConnector(approvedSource(), tableSite, { fetcher });
+      await connector.prepare?.(collectionRunId);
+      expect(await connector.discover()).toEqual([expectedId]);
+      const parsed = await connector.parse(await connector.retrieve(expectedId));
+      expect(parsed).toMatchObject({ closingAt: "2026-12-01T12:00:00Z" });
+    }
+  });
+
+  it("fails the collection when the selector matches but nothing is extractable", async () => {
+    // The links still match `a[href*='/bid/']`, but the titles are empty, so
+    // extraction yields nothing. That is parser drift, not "zero live bids",
+    // and must surface as a failed run rather than a successful empty one.
+    const drifted = `<html><body><div class="listing">
+        <a href="/bid/486/construction-flood-control-structures">
+          <div class="sec-txt"><h4>   </h4></div>
+        </a>
+      </div></body></html>`;
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(drifted, { headers: { "content-type": "text/html" } }),
+    );
+    const connector = createHtmlListSourceConnector(approvedSource(), southSudanSite, { fetcher });
+
+    await expect(connector.prepare?.(collectionRunId)).rejects.toThrow(
+      "matched 1 element(s) but produced no valid opportunity records",
+    );
   });
 });

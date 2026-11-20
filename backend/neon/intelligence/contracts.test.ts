@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeDedupeKey,
   countryConfigSchema,
   normalizeOpportunity,
   parsedSourceOpportunitySchema,
@@ -253,5 +254,111 @@ describe("global intelligence data contracts", () => {
         publishedAt: "2026-04-01T00:00:00Z",
       }).success,
     ).toBe(false);
+  });
+});
+
+/**
+ * Reference implementation of the identity derivation documented in
+ * `backend/neon/migrations/0031_canonical_dedupe_key.sql`. Kept independent of
+ * the production helper so a silent change to either side fails the test.
+ */
+function referenceDedupeKey(identity: string) {
+  let hash = 0xcbf29ce484222325n;
+  const mask = 0xffffffffffffffffn;
+  // charCodeAt (not codePointAt) on purpose: the backfill script hashes UTF-16
+  // code units, so a non-BMP title must hash identically in both places.
+  for (let index = 0; index < identity.length; index += 1) {
+    hash ^= BigInt(identity.charCodeAt(index));
+    hash = (hash * 0x100000001b3n) & mask;
+  }
+  return `dk1_${hash.toString(16).padStart(16, "0")}`;
+}
+
+describe("notice identity keys", () => {
+  const identity = {
+    countryCode: "GB",
+    buyerName: "Example public institution",
+    title: "Framework for solar equipment",
+    closingAt: "2026-03-31T11:00:00Z",
+  };
+
+  it("derives a stable dk1 key that matches the persisted contract", () => {
+    // Migration 0031 CHECK (dedupe_key ~ '^dk1_[a-f0-9]{16}$') and the serving
+    // path must agree on this exact shape.
+    expect(computeDedupeKey(identity)).toBe(
+      referenceDedupeKey(
+        "GB|framework for solar equipment|example public institution|2026-03-31",
+      ),
+    );
+    expect(computeDedupeKey(identity)).toMatch(/^dk1_[a-f0-9]{16}$/u);
+    expect(computeDedupeKey({ ...identity })).toBe(computeDedupeKey(identity));
+  });
+
+  it("ignores formatting noise but not real identity changes", () => {
+    // NFKC + case + punctuation + repeated whitespace are not identity.
+    expect(
+      computeDedupeKey({
+        ...identity,
+        title: "  FRAMEWORK   for solar—equipment ",
+        buyerName: "Example  Public Institution.",
+      }),
+    ).toBe(computeDedupeKey(identity));
+    // Time of day within the same UTC date bucket is not identity either.
+    expect(
+      computeDedupeKey({ ...identity, closingAt: "2026-03-31T23:59:00Z" }),
+    ).toBe(computeDedupeKey(identity));
+
+    // Different country, buyer, title or closing day is a different notice.
+    for (const changed of [
+      { countryCode: "KE" },
+      { buyerName: "Another institution" },
+      { title: "Framework for wind equipment" },
+      { closingAt: "2026-04-01T00:00:00Z" },
+    ]) {
+      expect(computeDedupeKey({ ...identity, ...changed })).not.toBe(
+        computeDedupeKey(identity),
+      );
+    }
+  });
+
+  it("returns null instead of a colliding key when identity is incomplete", () => {
+    expect(computeDedupeKey({ ...identity, countryCode: null })).toBeNull();
+    expect(computeDedupeKey({ ...identity, title: null })).toBeNull();
+    expect(computeDedupeKey({ ...identity, buyerName: null })).toBeNull();
+    // Punctuation-only values normalize to empty and must not merge notices.
+    expect(computeDedupeKey({ ...identity, title: "---" })).toBeNull();
+    // A missing deadline is bucketed as "none", not treated as unknown identity.
+    expect(computeDedupeKey({ ...identity, closingAt: null })).toBe(
+      referenceDedupeKey(
+        "GB|framework for solar equipment|example public institution|none",
+      ),
+    );
+  });
+
+  it("hashes non-BMP titles exactly like the backfill script", () => {
+    // Deseret small letter U+10437 is a letter, so NFKC normalization keeps it
+    // and the key must hash its UTF-16 surrogate pair, not the code point.
+    expect(
+      computeDedupeKey({ ...identity, title: "\u{10437} supply framework" }),
+    ).toBe(
+      referenceDedupeKey(
+        "GB|\u{10437} supply framework|example public institution|2026-03-31",
+      ),
+    );
+  });
+
+  it("never emits the superseded ck1: or md5 schemes", () => {
+    const key = computeDedupeKey(identity) ?? "";
+    expect(key.startsWith("ck1:")).toBe(false);
+    expect(key).not.toMatch(/^[a-f0-9]{32}$/u);
+  });
+
+  it("propagates the key as canonicalKey through normalization", () => {
+    const normalized = normalizeOpportunity(
+      sourceId,
+      parsedSourceOpportunitySchema.parse(parsedOpportunity),
+      [mapping],
+    );
+    expect(normalized?.opportunity.canonicalKey).toBe(computeDedupeKey(identity));
   });
 });

@@ -144,6 +144,7 @@ const opportunitySelect = `
     o.original_currency_code,
     o.published_amount,
     o.eligibility,
+    o.dedupe_key,
     o.first_discovered_at,
     o.updated_at,
     r.id AS source_record_id,
@@ -363,6 +364,9 @@ function mapOpportunity(row: DbRow): StoredOpportunity {
     contentFingerprint: requiredString(row, "content_fingerprint"),
     canonicalUrlNormalized: requiredString(row, "canonical_url"),
     normalizedReference: nullableString(row, "reference_number"),
+    // Stored as opportunities.dedupe_key (migration 0031); `canonicalKey` is
+    // the domain name used throughout the ingestion pipeline.
+    canonicalKey: nullableString(row, "dedupe_key"),
   };
   return {
     id: requiredString(row, "id"),
@@ -695,7 +699,6 @@ export class NeonIngestionRepository implements IngestionRepository {
           `SELECT id FROM public.opportunities WHERE id = $1 FOR UPDATE`,
           [opportunityId],
         );
-        const buyerName = opportunity.procuringOrganization ?? opportunity.issuingInstitution ?? opportunity.publisher ?? null;
         await transaction.query(
           `UPDATE public.opportunities SET
              title = $2, description = $3, category_code = $4,
@@ -708,10 +711,10 @@ export class NeonIngestionRepository implements IngestionRepository {
                WHEN $19::numeric IS NULL THEN NULL ELSE 'published'
              END,
              eligibility = $20::jsonb, data_quality_status = $21,
-             buyer_name = $22, canonical_key = $23,
+             dedupe_key = $22,
              source_verified_at = now(), updated_at = now()
            WHERE id = $1`,
-          [opportunityId, ...opportunityValues, buyerName, opportunity.canonicalKey],
+          [opportunityId, ...opportunityValues, opportunity.canonicalKey],
         );
         await transaction.query(
           `UPDATE public.opportunity_source_records SET
@@ -744,7 +747,7 @@ export class NeonIngestionRepository implements IngestionRepository {
           // both miss the match and insert duplicates.
           await transaction.query(
             "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
-            [`ck1:${opportunity.countryCode}`, opportunity.canonicalKey],
+            [`dk1:${opportunity.countryCode}`, opportunity.canonicalKey],
           );
         }
         const canonicalMatch = await transaction.query<DbRow>(
@@ -757,7 +760,7 @@ export class NeonIngestionRepository implements IngestionRepository {
              AND opportunity.opportunity_type_code = $4
              AND (
                opportunity.canonical_url = $1
-               OR ($5::text IS NOT NULL AND opportunity.canonical_key = $5)
+               OR ($5::text IS NOT NULL AND opportunity.dedupe_key = $5)
              )
            ORDER BY opportunity.first_discovered_at, opportunity.id
            LIMIT 1
@@ -800,7 +803,6 @@ export class NeonIngestionRepository implements IngestionRepository {
           sourceRecordId = requiredString(newSourceRecord, "id");
           outcome = "updated";
         } else {
-          const buyerName = opportunity.procuringOrganization ?? opportunity.issuingInstitution ?? opportunity.publisher ?? null;
           const inserted = await transaction.query<DbRow>(
           `INSERT INTO public.opportunities (
              title, description, category_code, opportunity_type_code,
@@ -808,15 +810,15 @@ export class NeonIngestionRepository implements IngestionRepository {
              procuring_organization, publisher, reference_number,
              published_at, closing_at, time_zone, status, canonical_url,
              original_currency_code, published_amount, amount_basis,
-             eligibility, data_quality_status, source_verified_at, canonical_key, buyer_name
+             eligibility, data_quality_status, source_verified_at, dedupe_key
            ) VALUES (
              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
              $11, $12, $13, $14, $15, $16, $17, $18,
              CASE WHEN $18::numeric IS NULL THEN NULL ELSE 'published' END,
-             $19::jsonb, $20, now(), $21, $22
+             $19::jsonb, $20, now(), $21
            )
            RETURNING id`,
-            [...opportunityValues, opportunity.canonicalKey, buyerName],
+            [...opportunityValues, opportunity.canonicalKey],
           );
           const newOpportunity = inserted.rows[0];
           if (!newOpportunity) throw new IngestionRepositoryError("Opportunity insert returned no row.");

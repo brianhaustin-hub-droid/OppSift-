@@ -74,7 +74,9 @@ function makeConfiguration(
     maxPagesPerRun: 10,
     requestTimeoutMs: dependencies.requestTimeoutMs ?? 35_000,
     maxResponseBytes: dependencies.maxResponseBytes ?? 10_000_000,
-    maxRetries: 6,
+    // connectorConfigurationSchema caps maxRetries at 5; a higher value made
+    // this client throw on construction and no Kenya PPIP job could run.
+    maxRetries: 5,
     minimumRetryDelayMs: 3_000,
     maximumRetryDelayMs: 45_000,
     allowedContentTypes: ["application/json"],

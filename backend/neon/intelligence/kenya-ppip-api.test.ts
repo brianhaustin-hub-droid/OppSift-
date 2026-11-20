@@ -115,3 +115,58 @@ describe("Kenya PPIP connector bridge", () => {
     expect(raw.externalRecordId).toBe("311587");
   });
 });
+describe("Kenya PPIP resilience configuration", () => {
+  it("builds a client whose configuration satisfies the connector schema", () => {
+    // maxRetries: 6 violates connectorConfigurationSchema's 0-5 cap and made
+    // construction throw, so no Kenya PPIP collection could run at all.
+    expect(() => new KenyaPpipApiClient(approvedSource(), { now: fixedNow })).not.toThrow();
+  });
+
+  it("retries transient server errors instead of abandoning the page", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new Response("busy", { status: 503 }))
+        .mockResolvedValueOnce(new Response("busy", { status: 503 }))
+        .mockResolvedValue(Response.json(pageFixture));
+      const client = new KenyaPpipApiClient(approvedSource(), { fetcher, now: fixedNow });
+
+      const pending = client.search({ page: 1 });
+      // Backoff is 3s then 6s (minimumRetryDelayMs * 2 ** attempt).
+      for (let second = 0; second < 12; second += 1) {
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+
+      const result = await pending;
+      expect(fetcher).toHaveBeenCalledTimes(3);
+      expect(result.records).toHaveLength(1);
+      expect(result.nextPage).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("derives deadline status from the collection clock, not the wall clock", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json(pageFixture));
+    const connector = createKenyaPpipSourceConnector(approvedSource(), {
+      fetcher,
+      now: fixedNow,
+      maximumPages: 1,
+    });
+    await connector.prepare?.(collectionRunId);
+    const parsed = await connector.parse(await connector.retrieve("311587"));
+    // Fixture deadline is 2026-11-16; fixedNow is 2026-11-13 (still open).
+    expect(parsed).toMatchObject({ status: "open" });
+
+    const laterFetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json(pageFixture));
+    const laterConnector = createKenyaPpipSourceConnector(approvedSource(), {
+      fetcher: laterFetcher,
+      now: () => new Date("2026-11-20T00:00:00.000Z"),
+      maximumPages: 1,
+    });
+    await laterConnector.prepare?.(collectionRunId);
+    const later = await laterConnector.parse(await laterConnector.retrieve("311587"));
+    expect(later).toMatchObject({ status: "closed" });
+  });
+});

@@ -265,6 +265,76 @@ describe("Neon ingestion repository against isolated PostgreSQL", () => {
       .toMatchObject({ opportunity: { title: "Updated solar equipment framework" } });
   });
 
+  it("persists the dk1 notice-identity key and merges cross-url duplicates", async () => {
+    const title = "Cross-url duplicate notice";
+    const countByTitle = async () => {
+      const result = await context.executor.query<{ count: number }>(
+        "SELECT count(*)::int AS count FROM public.opportunities WHERE title = $1",
+        [title],
+      );
+      return result.rows[0]?.count ?? 0;
+    };
+
+    const primary = normalized(sourceOneId, sourceOneMapping, {
+      externalId: "cross-url-1",
+      title,
+      sourceUrl: "https://procurement.example.test/notices/cross-url-1",
+      canonicalUrl: "https://procurement.example.test/opportunities/cross-url-1",
+    });
+    // Migration 0031 constrains the column to `dk1_` + 16 hex characters.
+    expect(primary.canonicalKey).toMatch(/^dk1_[a-f0-9]{16}$/u);
+    expect(await repository.save(primary, [], [])).toBe("created");
+
+    const storedKeys = await context.executor.query<{ dedupe_key: string | null }>(
+      "SELECT dedupe_key FROM public.opportunities WHERE title = $1",
+      [title],
+    );
+    expect(storedKeys.rows).toHaveLength(1);
+    expect(storedKeys.rows[0]?.dedupe_key).toBe(primary.canonicalKey);
+
+    // The key must survive the read path too (mapOpportunity -> canonicalKey).
+    expect(await repository.findSourceRecord(sourceOneId, "cross-url-1"))
+      .toMatchObject({ opportunity: { canonicalKey: primary.canonicalKey } });
+
+    // The same notice at a DIFFERENT url from another source must attach to the
+    // existing opportunity instead of creating a cross-url duplicate.
+    const mirror = normalized(sourceTwoId, sourceTwoMapping, {
+      externalId: "cross-url-2",
+      title,
+      sourceUrl: "https://mirror.example.test/notices/9001",
+      canonicalUrl: "https://mirror.example.test/opportunities/9001",
+      publisher: "Second publisher",
+    });
+    expect(mirror.canonicalKey).toBe(primary.canonicalKey);
+    expect(await repository.save(mirror, [], [])).toBe("updated");
+    expect(await countByTitle()).toBe(1);
+
+    // A different closing-date bucket is a different notice identity: false
+    // merges are worse than duplicates (0031), so it must not attach.
+    const laterDeadline = normalized(sourceTwoId, sourceTwoMapping, {
+      externalId: "cross-url-3",
+      title,
+      closingAt: "2026-04-30T11:00:00Z",
+      sourceDeadlineText: "30 April 2026, 12:00 BST",
+      sourceUrl: "https://mirror.example.test/notices/9002",
+      canonicalUrl: "https://mirror.example.test/opportunities/9002",
+    });
+    expect(laterDeadline.canonicalKey).not.toBe(primary.canonicalKey);
+    expect(await repository.save(laterDeadline, [], [])).toBe("created");
+    expect(await countByTitle()).toBe(2);
+
+    // The database, not just the TypeScript contract, enforces the key format:
+    // the superseded `ck1_`/md5 scheme can never be written.
+    await expect(
+      context.executor.query(
+        "UPDATE public.opportunities SET dedupe_key = 'ck1_0123456789abcdef' WHERE title = $1",
+        [title],
+      ),
+    ).rejects.toThrow(/dedupe_key/u);
+    // Connection still usable after the constraint rejection.
+    expect(await countByTitle()).toBe(2);
+  });
+
   it("tracks run counts and source health together", async () => {
     const runId = await repository.beginRun(sourceOneId, new Date().toISOString());
     await repository.finishRun({

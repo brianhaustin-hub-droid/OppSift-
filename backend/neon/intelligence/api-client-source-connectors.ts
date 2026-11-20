@@ -645,7 +645,13 @@ export function createKenyaPpipSourceConnector(
     maximumPages?: number;
   } = {},
 ): SourceConnector {
-  const client = new KenyaPpipApiClient(source, { fetcher: options.fetcher });
+  // Forward the collection clock: the client derives tender status
+  // (open/closed) from it, so dropping it here made outcomes depend on the
+  // wall clock instead of the injected clock used for the cursor window.
+  const client = new KenyaPpipApiClient(source, {
+    fetcher: options.fetcher,
+    now: options.now,
+  });
   return createBufferedConnector({
     source,
     initialCursor: options.currentCursor,

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { z } from "zod";
 
 export const opportunityCategories = [
@@ -301,6 +300,10 @@ export type NormalizedOpportunity = ParsedSourceOpportunity & {
   contentFingerprint: string;
   canonicalUrlNormalized: string;
   normalizedReference: string | null;
+  /**
+   * Cross-URL notice-identity key, derived by `computeDedupeKey`.
+   * Persisted to `public.opportunities.dedupe_key` (migration 0031).
+   */
   canonicalKey: string | null;
 };
 
@@ -327,26 +330,45 @@ function normalizeReference(value: string | null) {
   return value?.normalize("NFKC").toUpperCase().replace(/[\s-]+/g, "") || null;
 }
 
-// Canonical key per AGENTS.md: md5(lower(buyer)||'|'||lower(title)||'|'||UTC date)
-// UTC date must use UTC timezone to avoid session-dependent keys.
-// Returns null when buyer or title is missing (unkeyable row).
-function computeCanonicalKey(record: {
+// Notice-identity dedupe key, persisted to public.opportunities.dedupe_key
+// (migration 0031, which enforces CHECK dedupe_key ~ '^dk1_[a-f0-9]{16}$').
+// Domain name in TypeScript is `canonicalKey`; both names refer to the same
+// value. The algorithm is fixed by 0031 and mirrored by
+// scripts/backfill-dedupe-keys.mjs: NFKC-normalised title and buyer, the UTC
+// closing-date bucket, and the country code, hashed with the FNV-1a 16-hex
+// fingerprint. Versioned prefix `dk1_` so the derivation can change later.
+// Returns null when the row cannot be keyed conservatively (0031: only when
+// title, buyer and country are all present; false merges are worse than
+// duplicates).
+export function normalizeDedupeText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+export function computeDedupeKey(record: {
+  countryCode: string | null;
   buyerName: string | null;
-  title: string;
+  title: string | null;
   closingAt: string | null;
 }): string | null {
-  const buyer = record.buyerName?.trim();
-  const title = record.title?.trim();
-  if (!buyer || !title) return null;
-  let closingDate = "";
-  if (record.closingAt) {
-    const d = new Date(record.closingAt);
-    if (!Number.isNaN(d.getTime())) {
-      closingDate = d.toISOString().slice(0, 10); // UTC date
-    }
-  }
-  const identity = `${buyer.toLowerCase()}|${title.toLowerCase()}|${closingDate}`;
-  return createHash("md5").update(identity, "utf8").digest("hex");
+  if (!record.countryCode || !record.title || !record.buyerName) return null;
+  const normalizedTitle = normalizeDedupeText(record.title);
+  const normalizedBuyer = normalizeDedupeText(record.buyerName);
+  if (!normalizedTitle || !normalizedBuyer) return null;
+  const closingBucket = record.closingAt
+    ? record.closingAt.slice(0, 10) // UTC date bucket
+    : "none";
+  const identity = [
+    record.countryCode,
+    normalizedTitle,
+    normalizedBuyer,
+    closingBucket,
+  ].join("|");
+  return `dk1_${fingerprint(identity)}`;
 }
 
 function fingerprint(input: string) {
@@ -438,7 +460,8 @@ export function normalizeOpportunity(
       contentFingerprint: fingerprint(identity),
       canonicalUrlNormalized,
       normalizedReference,
-      canonicalKey: computeCanonicalKey({
+      canonicalKey: computeDedupeKey({
+        countryCode,
         buyerName,
         title: record.title,
         closingAt: record.closingAt,

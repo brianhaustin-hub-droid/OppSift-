@@ -24,11 +24,16 @@ export type HtmlSiteConfig = {
   headers?: Record<string, string>;
   /** When true, render the page with a headless browser (if provided) instead of plain fetch. */
   useBrowser?: boolean;
-  /** Extract a parsed opportunity from one listing element. */
+  /**
+   * Extract a parsed opportunity from one listing element.
+   * `now` is the collection clock, injected so deadline-derived status stays
+   * deterministic in tests. Implementations may ignore it.
+   */
   extract(
     element: Element,
     document: Document,
     baseUrl: string,
+    now: Date,
   ): Omit<HtmlListItem, "payload"> & { payload?: Record<string, unknown> } | null;
 };
 
@@ -41,6 +46,8 @@ export function createHtmlListSourceConnector(
     /** Cloudflare Browser Rendering binding (env.BROWSER) for JS-heavy pages. */
     browser?: unknown;
     maximumPages?: number;
+    /** Collection clock used for deadline-derived status. Defaults to now. */
+    now?: () => Date;
   } = {},
 ): SourceConnector {
   return createBufferedConnector({
@@ -88,9 +95,16 @@ export function createHtmlListSourceConnector(
 
       const { document } = parseHTML(html);
       const elements = [...document.querySelectorAll(site.selector)];
+      // Fail loudly when the configured selector matches nothing. A stale
+      // selector (site redesign, wrong <tbody> assumption) would otherwise be
+      // recorded as a successful run that discovered zero opportunities and
+      // the source would silently stop producing records.
       if (elements.length === 0) {
-        return { records: [], nextCursor: null };
+        throw new Error(
+          `HTML listing source found no matching items for selector "${site.selector}" at ${site.listUrl}.`,
+        );
       }
+      const extractionClock = options.now?.() ?? new Date();
 
       const records: Array<{
         externalId: string;
@@ -101,7 +115,12 @@ export function createHtmlListSourceConnector(
       for (const element of elements) {
         let item: ReturnType<HtmlSiteConfig["extract"]>;
         try {
-          item = site.extract(element, document as unknown as Document, new URL(site.listUrl).origin);
+          item = site.extract(
+            element,
+            document as unknown as Document,
+            new URL(site.listUrl).origin,
+            extractionClock,
+          );
         } catch {
           continue;
         }
@@ -114,6 +133,14 @@ export function createHtmlListSourceConnector(
           payload: item.payload ?? item.parsed.originalValues ?? parsed.data,
           parsed: parsed.data,
         });
+      }
+      // Selector matched but nothing survived extraction/validation: the page
+      // structure or the parser has drifted. Report it as a failed collection
+      // instead of a successful empty run.
+      if (records.length === 0) {
+        throw new Error(
+          `HTML listing source matched ${elements.length} element(s) but produced no valid opportunity records for ${site.listUrl}.`,
+        );
       }
       return { records, nextCursor: null };
     },
