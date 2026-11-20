@@ -565,7 +565,7 @@ export const sourceCatalog: readonly SourceCatalogRecord[] = [
     format: ["unknown"],
     stage: "discovered",
     connector: "none",
-    apiKey: "GldQqSxTN1Zm3aYoAoNSLttB4y2u9uqU",
+    apiKey: null,
     lastSuccessfulRetrieval: null,
     retrievedSampleCount: 0,
     sampleKind: null,

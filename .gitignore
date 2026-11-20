@@ -10,5 +10,9 @@ coverage/
 .dev.vars.*
 !.dev.vars.example
 .wrangler/
+*.wrangler.generated.*.toml
+tmp_*.sql
+scripts/_ke_*.sql
+scripts/migration-backups/
 *.tsbuildinfo
 .neon
