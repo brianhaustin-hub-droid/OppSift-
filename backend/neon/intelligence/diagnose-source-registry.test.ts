@@ -114,14 +114,21 @@ function mapSource(row: Record<string, unknown>) {
   return sourceRegistryRecordSchema.safeParse(candidate);
 }
 
-describe("diagnose: source registry contract validation", () => {
+// This is a live diagnostic: it validates the *deployed* registry by querying
+// the database in .env.local. Without credentials it reports as skipped rather
+// than failing (or worse, passing without checking anything).
+const envFilePath = path.resolve(process.cwd(), ".env.local");
+const hasDatabaseUrl =
+  fs.existsSync(envFilePath)
+  && /^\s*(?:export\s+)?DATABASE_URL\s*=\s*\S/m.test(fs.readFileSync(envFilePath, "utf8"));
+
+describe.skipIf(!hasDatabaseUrl)("diagnose: source registry contract validation", () => {
   it(
     "validates every source row and reports the exact failures",
     { timeout: 120_000 },
     async () => {
-    const envPath = path.resolve(process.cwd(), ".env.local");
     const env: Record<string, string> = {};
-    for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    for (const line of fs.readFileSync(envFilePath, "utf8").split(/\r?\n/)) {
       const match = /^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*)$/.exec(line);
       if (!match) continue;
       let value = match[2].trim();
@@ -137,7 +144,9 @@ describe("diagnose: source registry contract validation", () => {
     expect(url).toBeTruthy();
     const sql = postgres(url!, { max: 1, connect_timeout: 30 });
     try {
-      const rows = await sql.unsafe<Record<string, unknown>>(sourceSelect);
+      // postgres.js types `unsafe<T>` as `T extends any[]` (the row *list*),
+      // so the generic must be the array type, not the row type.
+      const rows = await sql.unsafe<Record<string, unknown>[]>(sourceSelect);
       const failures: { id: string; name: string; issues: string[] }[] = [];
       for (const row of rows) {
         const parsed = mapSource(row);

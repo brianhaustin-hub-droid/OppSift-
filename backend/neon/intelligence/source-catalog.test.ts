@@ -12,11 +12,11 @@ describe("source research catalog", () => {
     const summary = getSourceCoverageSummary();
     const ids = sourceCatalog.map((source) => source.id);
 
-    expect(sourceCatalog).toHaveLength(67);
+    expect(sourceCatalog).toHaveLength(69);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(summary.sourceProducts).toBe(67);
-    expect(summary.countryCandidateReferences).toBe(89);
-    expect(summary.countriesWithCandidates).toBe(48);
+    expect(summary.sourceProducts).toBe(69);
+    expect(summary.countryCandidateReferences).toBe(91);
+    expect(summary.countriesWithCandidates).toBe(50);
     expect(summary.liveRetrievedSources).toBe(7);
     expect(summary.retrievedSamplesWithKnownCount).toBe(8);
     expect(summary.parsedSamples).toBe(0);
@@ -59,13 +59,13 @@ describe("source research catalog", () => {
     expect(sourceCatalog.every((source) => source.storedRecordCount === 0)).toBe(true);
   });
 
-  it("matches the approved 48-country scope and candidate counts without claiming coverage", () => {
+  it("matches the approved 50-country scope and candidate counts without claiming coverage", () => {
     const coverage = getCountrySourceCoverage(supportedCountries);
     const counts = Object.fromEntries(
       coverage.map((country) => [country.code, country.candidateSourceCount]),
     );
 
-    expect(coverage).toHaveLength(48);
+    expect(coverage).toHaveLength(50);
     expect(counts).toEqual({
       US: 5,
       GB: 2,
@@ -115,10 +115,12 @@ describe("source research catalog", () => {
       MG: 1,
       MW: 1,
       MZ: 1,
+      EG: 1,
+      MA: 1,
     });
     expect(
       coverage.filter((country) => country.status === "candidate_research_only"),
-    ).toHaveLength(48);
+    ).toHaveLength(50);
     expect(
       coverage.filter((country) => country.status === "not_researched"),
     ).toHaveLength(0);

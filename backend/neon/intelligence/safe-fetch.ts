@@ -6,6 +6,15 @@ export type SafeFetchOptions = {
   method?: "GET" | "HEAD" | "POST";
   body?: string;
   fetcher?: typeof fetch;
+  /**
+   * Replaces the real timer used between retry attempts. Callers that already
+   * own retry dependencies (see resilience.ts) pass theirs through so retries
+   * are deterministic in tests instead of blocking on wall-clock backoff.
+   * A custom sleep is responsible for its own cancellation semantics.
+   */
+  sleep?: (milliseconds: number) => Promise<void>;
+  /** Replaces Math.random for retry jitter (deterministic tests). */
+  random?: () => number;
 };
 
 export class SafeFetchError extends Error {
@@ -120,12 +129,13 @@ function retryDelayMs(
   attempt: number,
   configuration: ConnectorConfiguration,
   error: SafeFetchError,
+  random: () => number,
 ): number {
   const base = Math.min(
     configuration.maximumRetryDelayMs,
     configuration.minimumRetryDelayMs * Math.max(1, 2 ** attempt),
   );
-  const jitter = Math.floor(Math.random() * 250);
+  const jitter = Math.floor(random() * 250);
   const suggested = typeof error.details.retryAfterMs === "number" ? error.details.retryAfterMs : 0;
   return Math.min(configuration.maximumRetryDelayMs, Math.max(base + jitter, suggested));
 }
@@ -138,6 +148,8 @@ export async function safeFetchApprovedSource(
   const fetcher = options.fetcher ?? fetch;
   const initialUrl = validateApprovedUrl(input, configuration);
   const maxRetries = Math.max(0, configuration.maxRetries ?? 0);
+  const sleep = options.sleep ?? ((milliseconds: number) => delay(milliseconds, options.signal));
+  const random = options.random ?? Math.random;
 
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     if (options.signal?.aborted) {
@@ -263,7 +275,7 @@ export async function safeFetchApprovedSource(
       if (!safeError.details.retryable || attempt >= maxRetries || options.signal?.aborted) {
         throw safeError;
       }
-      await delay(retryDelayMs(attempt, configuration, safeError), options.signal);
+      await sleep(retryDelayMs(attempt, configuration, safeError, random));
     } finally {
       clearTimeout(timeout);
       options.signal?.removeEventListener("abort", onAbort);

@@ -19,13 +19,13 @@ describe("market scope filters", () => {
       </RouterProvider>,
     );
 
-    expect(screen.getByText("48 intended markets")).toBeVisible();
+    expect(screen.getByText("50 intended markets")).toBeVisible();
     expect(screen.getByText("Countries with named source leads")).toBeVisible();
     expect(screen.getByText("Candidate source products")).toBeVisible();
     expect(screen.getByText("Retrieved samples (known count)")).toBeVisible();
     expect(screen.getByText("Records parsed by OppSift")).toBeVisible();
     expect(screen.getByText("Operational connectors")).toBeVisible();
-    expect(screen.getByText("67", { exact: true })).toBeVisible();
+    expect(screen.getByText("69", { exact: true })).toBeVisible();
     expect(
       screen.queryByText("No named source candidates"),
     ).not.toBeInTheDocument();
@@ -119,6 +119,6 @@ describe("market scope filters", () => {
     );
     expect(window.location.pathname).toBe("/markets");
     expect(window.location.search).toBe("");
-    expect(screen.getByText("48 intended markets")).toBeVisible();
+    expect(screen.getByText("50 intended markets")).toBeVisible();
   });
 });

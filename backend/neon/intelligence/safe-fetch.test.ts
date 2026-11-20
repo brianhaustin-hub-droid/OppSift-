@@ -64,10 +64,18 @@ describe("approved-source fetch security", () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       new Response("{}", { status: 429, headers: { "Retry-After": "30" } }),
     );
+    // Inject the timer so the 30s Retry-After backoff is not actually awaited;
+    // the classification and retry-after carry-through are what is asserted.
+    const sleep = vi.fn(async () => {});
     await expect(
-      safeFetchApprovedSource(configuration.endpoint, configuration, { fetcher }),
+      safeFetchApprovedSource(configuration.endpoint, configuration, {
+        fetcher,
+        sleep,
+        random: () => 0,
+      }),
     ).rejects.toMatchObject({
       details: { kind: "rate_limit", retryable: true, retryAfterMs: 30_000 },
     });
+    expect(sleep).toHaveBeenCalledWith(30_000);
   });
 });

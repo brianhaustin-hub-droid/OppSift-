@@ -279,6 +279,10 @@ export class ContractsFinderOcdsClient {
           signal: search.signal,
           fetcher: this.dependencies.fetcher,
           headers: { Accept: "application/json" },
+          // Same retry dependencies as the outer policy so backoff is
+          // deterministic and does not block on real timers in tests.
+          sleep,
+          random: () => 0,
         }),
         {
           maxRetries: this.configuration.maxRetries,

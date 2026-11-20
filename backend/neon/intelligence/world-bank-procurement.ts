@@ -326,6 +326,10 @@ export function createWorldBankProcurementConnector(
         headers: { Accept: "application/json" },
         signal,
         fetcher: options.fetcher,
+        // Honour the same retry dependencies as the outer policy; otherwise the
+        // inner backoff waits on real timers and ignores Retry-After in tests.
+        sleep: options.retryDependencies?.sleep,
+        random: options.retryDependencies?.random,
       });
     }, {
       maxRetries: configuration.maxRetries,
