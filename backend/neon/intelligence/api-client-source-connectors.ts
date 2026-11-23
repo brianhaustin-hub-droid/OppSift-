@@ -645,7 +645,10 @@ export function createKenyaPpipSourceConnector(
     maximumPages?: number;
   } = {},
 ): SourceConnector {
-  const client = new KenyaPpipApiClient(source, { fetcher: options.fetcher });
+  const client = new KenyaPpipApiClient(source, {
+    fetcher: options.fetcher,
+    now: options.now,
+  });
   return createBufferedConnector({
     source,
     initialCursor: options.currentCursor,

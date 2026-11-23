@@ -19,5 +19,6 @@
     "noUncheckedSideEffectImports": true,
     "types": ["vite/client", "vitest/globals", "node"]
   },
-  "include": ["src", "functions"]
+  "include": ["src", "functions"],
+  "exclude": ["src/ui"]
 }

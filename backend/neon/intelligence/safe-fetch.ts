@@ -6,6 +6,11 @@ export type SafeFetchOptions = {
   method?: "GET" | "HEAD" | "POST";
   body?: string;
   fetcher?: typeof fetch;
+  /**
+   * Set to false when the caller already retries this request (for example a
+   * connector that wraps it in withRetry) so attempts are not multiplied.
+   */
+  retry?: boolean;
 };
 
 export class SafeFetchError extends Error {
@@ -75,28 +80,6 @@ function validateApprovedUrl(input: string, configuration: ConnectorConfiguratio
   return url;
 }
 
-function classifyStatus(status: number, headers: Headers): ConnectorError {
-  if (status === 401) return { kind: "authentication", message: "Source authentication failed.", retryable: false, status };
-  if (status === 403) return { kind: "permission", message: "Source denied access; review permission and terms.", retryable: false, status };
-  if (status === 404) return { kind: "http_client", message: "Approved source endpoint was not found.", retryable: false, status };
-  if (status === 408) return { kind: "timeout", message: "Source request timed out.", retryable: true, status };
-  if (status === 429) {
-    const retryAfter = headers.get("Retry-After");
-    const seconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : null;
-    const dateDelay = retryAfter && seconds === null ? Date.parse(retryAfter) - Date.now() : null;
-    return {
-      kind: "rate_limit",
-      message: "Source rate limit exceeded.",
-      retryable: true,
-      status,
-      ...(seconds !== null && { retryAfterMs: seconds * 1000 }),
-      ...(dateDelay !== null && dateDelay >= 0 && { retryAfterMs: dateDelay }),
-    };
-  }
-  if (status >= 500) return { kind: "http_server", message: `Source server returned HTTP ${status}.`, retryable: true, status };
-  return { kind: "http_client", message: `Source returned HTTP ${status}.`, retryable: false, status };
-}
-
 function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
   if (milliseconds <= 0) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -130,6 +113,28 @@ function retryDelayMs(
   return Math.min(configuration.maximumRetryDelayMs, Math.max(base + jitter, suggested));
 }
 
+function classifyStatus(status: number, headers: Headers): ConnectorError {
+  if (status === 401) return { kind: "authentication", message: "Source authentication failed.", retryable: false, status };
+  if (status === 403) return { kind: "permission", message: "Source denied access; review permission and terms.", retryable: false, status };
+  if (status === 404) return { kind: "http_client", message: "Approved source endpoint was not found.", retryable: false, status };
+  if (status === 408) return { kind: "timeout", message: "Source request timed out.", retryable: true, status };
+  if (status === 429) {
+    const retryAfter = headers.get("Retry-After");
+    const seconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : null;
+    const dateDelay = retryAfter && seconds === null ? Date.parse(retryAfter) - Date.now() : null;
+    return {
+      kind: "rate_limit",
+      message: "Source rate limit exceeded.",
+      retryable: true,
+      status,
+      ...(seconds !== null && { retryAfterMs: seconds * 1000 }),
+      ...(dateDelay !== null && dateDelay >= 0 && { retryAfterMs: dateDelay }),
+    };
+  }
+  if (status >= 500) return { kind: "http_server", message: `Source server returned HTTP ${status}.`, retryable: true, status };
+  return { kind: "http_client", message: `Source returned HTTP ${status}.`, retryable: false, status };
+}
+
 export async function safeFetchApprovedSource(
   input: string,
   configuration: ConnectorConfiguration,
@@ -137,7 +142,12 @@ export async function safeFetchApprovedSource(
 ): Promise<Response> {
   const fetcher = options.fetcher ?? fetch;
   const initialUrl = validateApprovedUrl(input, configuration);
-  const maxRetries = Math.max(0, configuration.maxRetries ?? 0);
+  // Retries live here by default so connectors that do not wrap the call keep
+  // their configured retry budget. Callers that own retrying (withRetry) pass
+  // retry: false instead, which used to double every attempt.
+  const maxRetries = options.retry === false
+    ? 0
+    : Math.max(0, configuration.maxRetries ?? 0);
 
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     if (options.signal?.aborted) {
@@ -260,7 +270,12 @@ export async function safeFetchApprovedSource(
             message: error instanceof Error ? error.message : "Source request failed.",
             retryable: true,
           });
-      if (!safeError.details.retryable || attempt >= maxRetries || options.signal?.aborted) {
+      if (
+        options.retry === false ||
+        !safeError.details.retryable ||
+        attempt >= maxRetries ||
+        options.signal?.aborted
+      ) {
         throw safeError;
       }
       await delay(retryDelayMs(attempt, configuration, safeError), options.signal);

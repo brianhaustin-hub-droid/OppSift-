@@ -404,6 +404,24 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-18T06:05:00.000Z"
+    },
+    {
+      "version": "0046",
+      "file": "0046_expand_african_coverage_20_markets.sql",
+      "dependsOn": [
+        "0045"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-22T22:22:30.299Z"
+    },
+    {
+      "version": "0047",
+      "file": "0047_schema_and_catalogue_fixes.sql",
+      "dependsOn": [
+        "0046"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-22T22:45:44.569Z"
     }
   ]
 }

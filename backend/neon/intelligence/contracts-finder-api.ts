@@ -279,6 +279,7 @@ export class ContractsFinderOcdsClient {
           signal: search.signal,
           fetcher: this.dependencies.fetcher,
           headers: { Accept: "application/json" },
+          retry: false,
         }),
         {
           maxRetries: this.configuration.maxRetries,

@@ -65,9 +65,35 @@ describe("approved-source fetch security", () => {
       new Response("{}", { status: 429, headers: { "Retry-After": "30" } }),
     );
     await expect(
-      safeFetchApprovedSource(configuration.endpoint, configuration, { fetcher }),
+      safeFetchApprovedSource(configuration.endpoint, configuration, { fetcher, retry: false }),
     ).rejects.toMatchObject({
       details: { kind: "rate_limit", retryable: true, retryAfterMs: 30_000 },
     });
+  });
+
+  it("retries retryable failures within the configured retry budget", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response("{}", { status: 503 }),
+    );
+    const retrying = connectorConfigurationSchema.parse({
+      ...configuration,
+      maxRetries: 2,
+      minimumRetryDelayMs: 100,
+      maximumRetryDelayMs: 100,
+    });
+    await expect(
+      safeFetchApprovedSource(retrying.endpoint, retrying, { fetcher }),
+    ).rejects.toMatchObject({ details: { kind: "http_server", retryable: true } });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it("makes a single attempt when the caller owns retrying", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response("{}", { status: 503 }),
+    );
+    await expect(
+      safeFetchApprovedSource(configuration.endpoint, configuration, { fetcher, retry: false }),
+    ).rejects.toMatchObject({ details: { kind: "http_server", retryable: true } });
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

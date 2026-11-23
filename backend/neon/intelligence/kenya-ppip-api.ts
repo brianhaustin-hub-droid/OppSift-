@@ -74,7 +74,7 @@ function makeConfiguration(
     maxPagesPerRun: 10,
     requestTimeoutMs: dependencies.requestTimeoutMs ?? 35_000,
     maxResponseBytes: dependencies.maxResponseBytes ?? 10_000_000,
-    maxRetries: 6,
+    maxRetries: 5,
     minimumRetryDelayMs: 3_000,
     maximumRetryDelayMs: 45_000,
     allowedContentTypes: ["application/json"],

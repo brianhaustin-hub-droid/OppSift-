@@ -107,6 +107,10 @@ export const neonClient =
         auth: {
           url: authUrl.value,
           adapter: BetterAuthReactAdapter(),
+          // Public opportunity, source and country tables are readable through
+          // the Data API's anonymous role. Without this the SDK sends no token
+          // and every public read fails with 401 PGRST302.
+          allowAnonymous: true,
         },
         dataApi: { url: dataApiUrl.value },
       })

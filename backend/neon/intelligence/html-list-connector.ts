@@ -120,7 +120,9 @@ export function createHtmlListSourceConnector(
       const { document } = parseHTML(html);
       const elements = [...document.querySelectorAll(site.selector)];
       if (elements.length === 0) {
-        return { records: [], nextCursor: null };
+        // A selector that matches nothing means the listing markup changed. Failing
+        // the run is louder than reporting a successful run with zero records.
+        throw new Error(`HTML listing source has no matching items at ${site.listUrl}`);
       }
 
       const records: Array<{

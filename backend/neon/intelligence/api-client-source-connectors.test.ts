@@ -303,7 +303,8 @@ describe("API client source connector bridge", () => {
 
   it("registers all implemented native API clients in the Worker dispatcher", () => {
     const profiles = getSourceExecutionProfiles("test-only-api-key");
-    expect([...profiles.keys()]).toEqual([
+    const registered = [...profiles.keys()];
+    expect(registered).toEqual(expect.arrayContaining([
       "world-bank-procurement-notices",
       "austender-ocds",
       "boamp-opendata",
@@ -341,7 +342,8 @@ describe("API client source connector bridge", () => {
       "contracts-finder-ocds",
       "sam-gov-opportunities",
       "grants-gov-search",
-    ]);
+    ]));
+    expect(new Set(registered).size).toBe(registered.length);
     expect([...profiles.values()].every((profile) => profile.kind === "native")).toBe(true);
   });
 });

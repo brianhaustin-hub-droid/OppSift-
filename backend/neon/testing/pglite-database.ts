@@ -54,6 +54,8 @@ const migrationNames = [
   // live schema is caught here instead of as a failing column mid-insert.
   "0028_ingestion_parse_status.sql",
   "0031_canonical_dedupe_key.sql",
+  "0045_align_opportunities_schema.sql",
+  "0047_schema_and_catalogue_fixes.sql",
 ] as const;
 
 export async function createMigratedTestDatabase() {

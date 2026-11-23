@@ -81,7 +81,7 @@ describe("South Sudan HTML-list connector", () => {
       externalId: "486",
       countryCode: "SS",
       sourceCategoryTerm: "Invitation for Bids",
-      closingAt: "2026-11-27T07:00:00Z",
+      closingAt: "2026-11-27T07:00:00.000Z",
       sourceUrl: "https://tenderportal.ppdaa.gov.ss/bid/486/construction-flood-control-structures-bor-south-and-twic-east",
     });
 

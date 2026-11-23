@@ -326,6 +326,7 @@ export function createWorldBankProcurementConnector(
         headers: { Accept: "application/json" },
         signal,
         fetcher: options.fetcher,
+        retry: false,
       });
     }, {
       maxRetries: configuration.maxRetries,

@@ -39,6 +39,50 @@ function parseFlexibleDate(value: string | null | undefined): string | null {
   return null;
 }
 
+// Portals that publish dd-mm-yyyy need this first: Date.parse reads
+// "02-11-2026" as 11 February, which would close a bid three months early.
+function parseDayFirstDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})(?:[ T](\d{1,2}):(\d{2}))?$/u);
+  if (!match) return parseFlexibleDate(value);
+  const [, day, month, year, hour, minute] = match;
+  const date = new Date(Date.UTC(
+    Number(year), Number(month) - 1, Number(day), Number(hour ?? "0"), Number(minute ?? "0"),
+  ));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+const MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+/**
+ * Parses "13-Nov-2026" and "02-Dec-2026 10:00 AM". A date without a time is a
+ * calendar date (UTC midnight); a date with a time is a local wall clock at the
+ * portal's UTC offset, so the stored instant is comparable across sources.
+ */
+function parseMonthNameDate(value: string | null | undefined, offsetMinutes: number): string | null {
+  if (!value) return null;
+  const match = value.trim().match(
+    /^(\d{1,2})[\s\-.]([A-Za-z]{3,})[\s\-.](\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?)?$/u,
+  );
+  if (!match) return parseFlexibleDate(value);
+  const [, dayText, monthText, yearText, hourText, minuteText, meridiem] = match;
+  const month = MONTHS[monthText.slice(0, 3).toLowerCase()];
+  if (month === undefined) return null;
+  let hour = Number(hourText ?? "0");
+  if (meridiem) {
+    const upper = meridiem.toUpperCase();
+    if (upper === "PM" && hour < 12) hour += 12;
+    if (upper === "AM" && hour === 12) hour = 0;
+  }
+  const hasTime = hourText !== undefined;
+  const utc = Date.UTC(Number(yearText), month, Number(dayText), hour, Number(minuteText ?? "0"));
+  const instant = hasTime ? utc - offsetMinutes * 60_000 : utc;
+  return Number.isNaN(instant) ? null : new Date(instant).toISOString();
+}
+
 function slugifyId(prefix: string, seed: string): string {
   const slug = seed
     .toLowerCase()
@@ -56,24 +100,47 @@ function deadlineStatus(deadline: string | null, now: Date): "open" | "closed" |
   return timestamp > now.getTime() ? "open" : "closed";
 }
 
+/** Label lookup for tables that publish their column names in data-label attributes. */
+function labelledCell(row: Element, label: RegExp): Element | null {
+  for (const cell of row.querySelectorAll("td[data-label]")) {
+    if (label.test(cell.getAttribute("data-label") ?? "")) return cell;
+  }
+  return null;
+}
+
 /** Philippines PS-PhilGEPS - Open Opportunities listing. */
 export const philippinesSite: HtmlSiteConfig = {
   listUrl: "https://notices.philgeps.gov.ph/",
-  selector: "table tbody tr, .tender-item, article, a[href*='BidNotice']",
+  selector: "table tbody tr, table tr, .tender-item, article",
   extract(row, _document, baseUrl) {
     const link = row.querySelector("a[href]");
     const href = text(link?.getAttribute("href"));
+    const referenceCell = labelledCell(row, /reference\s*number/iu);
+    // The detail link carries the notice id, a far more stable identity than
+    // row text if the table ever loses its data-label attributes.
+    const hrefReference = href?.match(/viewLiveTenderDetails\/(\d+)/iu)?.[1] ?? null;
+    const referenceNumber = (text(referenceCell?.textContent) ?? hrefReference ?? text(link?.textContent))?.slice(0, 200) ?? null;
     const cells = [...row.querySelectorAll("td")];
-    const titleText = text(link?.textContent) ?? text(cells[1]?.textContent) ?? text(row.textContent);
+    // Repeated header rows carry column names but no reference number or link.
+    if (!referenceNumber || !/\d/u.test(referenceNumber)) return null;
+    const titleText = text(labelledCell(row, /notice\s*title|control\s*number/iu)?.textContent)
+      ?? text(cells[1]?.textContent)
+      ?? text(link?.textContent);
     if (!titleText || titleText.length < 6) return null;
-    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
-    const referenceNumber = text(cells[0]?.textContent)?.slice(0, 200) ?? null;
-    const externalId = `philgeps-${(referenceNumber ?? titleText).toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    const publishedText = text(labelledCell(row, /publish\s*date/iu)?.textContent) ?? text(cells[5]?.textContent);
+    const closingText = text(labelledCell(row, /closing\s*date/iu)?.textContent) ?? text(cells[6]?.textContent);
+    const procuringOrganization = text(labelledCell(row, /agency\s*name/iu)?.textContent) ?? text(cells[4]?.textContent) ?? null;
+    const sourceUrl = resolveHref(href, baseUrl);
+    const externalId = `philgeps-${referenceNumber.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    // PhilGEPS publishes Philippine wall-clock times (UTC+08:00).
+    const publishedAt = parseMonthNameDate(publishedText, 480);
+    const closingAt = parseMonthNameDate(closingText, 480);
     const parsed: ParsedSourceOpportunity = {
       externalId, title: titleText.slice(0, 1000), description: null, sourceCategoryTerm: "Bid Notice",
-      referenceNumber, countryCode: "PH", region: null, city: null, issuingInstitution: null, procuringOrganization: null,
-      publisher: "PS-PhilGEPS - Philippines", publishedAt: null, sourceDeadlineText: null, closingAt: null, timeZone: null,
-      status: "unknown", sourceUrl, canonicalUrl: null, currency: null, amount: null, originalValues: { title: titleText, url: sourceUrl },
+      referenceNumber, countryCode: "PH", region: null, city: null, issuingInstitution: null, procuringOrganization,
+      publisher: "PS-PhilGEPS - Philippines", publishedAt, sourceDeadlineText: closingText ?? null, closingAt, timeZone: "Asia/Manila",
+      status: deadlineStatus(closingAt, new Date()), sourceUrl, canonicalUrl: null, currency: null, amount: null,
+      originalValues: { title: titleText, url: sourceUrl },
     };
     return { externalId, sourceUrl, parsed, payload: { title: titleText, url: sourceUrl } };
   },
@@ -82,22 +149,30 @@ export const philippinesSite: HtmlSiteConfig = {
 /** India CPPP - Latest Active Tenders. */
 export const indiaSite: HtmlSiteConfig = {
   listUrl: "https://eprocure.gov.in/eprocure/app",
-  selector: "table.list_table tbody tr, table#table tbody tr, table tbody tr",
+  selector: "table.list_table tr, table#table tr, table tbody tr",
   extract(row, _document, baseUrl) {
     const cells = [...row.querySelectorAll("td")];
     if (cells.length < 2) return null;
     const link = row.querySelector("a[href]");
     const href = text(link?.getAttribute("href"));
-    const titleText = text(link?.textContent) ?? text(cells[4]?.textContent) ?? text(cells[1]?.textContent);
+    // CPPP list rows are numbered ("1. Enquiry for ..."); the number is not part of the title.
+    const rawTitle = text(link?.textContent) ?? text(cells[4]?.textContent) ?? text(cells[1]?.textContent);
+    const titleText = rawTitle?.replace(/^\d+\s*[.)]\s*/u, "") ?? null;
     if (!titleText || titleText.length < 6) return null;
-    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
     const referenceNumber = text(cells[1]?.textContent)?.slice(0, 200) ?? null;
-    const externalId = `in-cppp-${(referenceNumber ?? titleText).toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    // Repeated header rows (and separator rows) have labels instead of IDs.
+    if (!referenceNumber || !href || !/\d/u.test(referenceNumber)) return null;
+    const sourceUrl = resolveHref(href, baseUrl);
+    const externalId = `cppp-${referenceNumber.replace(/[^A-Za-z0-9]+/gu, "-").slice(0, 120)}`;
+    const closingText = text(cells[2]?.textContent);
+    // CPPP publishes Indian wall-clock times (UTC+05:30).
+    const closingAt = parseMonthNameDate(closingText, 330);
     const parsed: ParsedSourceOpportunity = {
       externalId, title: titleText.slice(0, 1000), description: null, sourceCategoryTerm: "Tender Notice",
-      referenceNumber, countryCode: "IN", region: null, city: null, issuingInstitution: null, procuringOrganization: text(cells[3]?.textContent),
-      publisher: "Central Public Procurement Portal (India)", publishedAt: null, sourceDeadlineText: null, closingAt: null, timeZone: "Asia/Kolkata",
-      status: "unknown", sourceUrl, canonicalUrl: null, currency: null, amount: null, originalValues: { title: titleText, url: sourceUrl },
+      referenceNumber, countryCode: "IN", region: null, city: null, issuingInstitution: null, procuringOrganization: null,
+      publisher: "Central Public Procurement Portal (India)", publishedAt: null, sourceDeadlineText: closingText ?? null, closingAt, timeZone: "Asia/Kolkata",
+      status: deadlineStatus(closingAt, new Date()), sourceUrl, canonicalUrl: null, currency: null, amount: null,
+      originalValues: { title: titleText, url: sourceUrl },
     };
     return { externalId, sourceUrl, parsed, payload: { title: titleText, url: sourceUrl } };
   },
@@ -105,43 +180,76 @@ export const indiaSite: HtmlSiteConfig = {
 
 /** South Sudan PPDAA - Current Bids. */
 export const southSudanSite: HtmlSiteConfig = {
-  listUrl: "https://ppdaa.gov.ss/tenders",
-  selector: "table tbody tr, article, .tender-item, .views-row",
+  listUrl: "https://tenderportal.ppdaa.gov.ss/current-bids",
+  selector: ".row > div.col-md-12, article, .tender-item, .views-row, table tbody tr",
   extract(row, _document, baseUrl) {
     const link = row.querySelector("a[href]");
     const href = text(link?.getAttribute("href"));
-    const titleText = text(link?.textContent) ?? text(row.textContent);
+    // The portal numbers every bid: /bid/<id>/<slug>. A container without that
+    // link is page chrome, not a bid, and would otherwise emit a record built
+    // from the whole page's text.
+    const bidId = href?.match(/\/bid\/(\d+)/u)?.[1] ?? null;
+    if (!href || !bidId) return null;
+    const titleText = text(row.querySelector("h4, h3, h2")?.textContent) ?? text(link?.textContent) ?? text(row.textContent);
     if (!titleText || titleText.length < 6) return null;
-    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
-    const externalId = `ss-${titleText.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    const sourceUrl = resolveHref(href, baseUrl);
+    const externalId = bidId;
+    const deadlineElement = row.querySelector("time[datetime]");
+    // The datetime attribute is stored only when it parses; a raw string would
+    // break the timestamp column, and parsing the whole row could pick up a
+    // different date from the surrounding card.
+    const closingAt = parseFlexibleDate(text(deadlineElement?.getAttribute("datetime")))
+      ?? parseFlexibleDate(text(deadlineElement?.textContent));
+    const category = text(row.querySelector(".cat-wrap")?.textContent);
     const parsed: ParsedSourceOpportunity = {
-      externalId, title: titleText.slice(0, 1000), description: null, sourceCategoryTerm: "Tender Notice",
-      referenceNumber: null, countryCode: "SS", region: null, city: null, issuingInstitution: null, procuringOrganization: null,
-      publisher: "PPDAA South Sudan", publishedAt: null, sourceDeadlineText: null, closingAt: null, timeZone: "Africa/Juba",
-      status: "unknown", sourceUrl, canonicalUrl: null, currency: null, amount: null, originalValues: { title: titleText, url: sourceUrl },
+      externalId, title: titleText.slice(0, 1000), description: null,
+      sourceCategoryTerm: category ?? "Invitation for Bids",
+      referenceNumber: bidId, countryCode: "SS", region: null, city: null, issuingInstitution: null, procuringOrganization: null,
+      publisher: "PPDAA South Sudan", publishedAt: null, sourceDeadlineText: text(deadlineElement?.textContent), closingAt, timeZone: "Africa/Juba",
+      status: deadlineStatus(closingAt, new Date()), sourceUrl, canonicalUrl: null, currency: null, amount: null,
+      originalValues: { title: titleText, url: sourceUrl },
     };
     return { externalId, sourceUrl, parsed, payload: { title: titleText, url: sourceUrl } };
   },
 };
 
-/** Sierra Leone NPPA - Tender Portal bids. */
+/**
+ * Sierra Leone NPPA - Bid Opportunities table
+ * (Bidding Organization | Date Posted | Expiration Date | Description | Download Bid).
+ */
 export const sierraLeoneSite: HtmlSiteConfig = {
-  listUrl: "https://nppa.gov.sl/tenders",
-  selector: "table tbody tr, article, .tender, .views-row, a[href*='tender']",
+  listUrl: "https://www.nppa.gov.sl/bid/",
+  selector: "table#tablepress-1 tbody tr, table tbody tr",
   extract(row, _document, baseUrl) {
-    const link = row.querySelector("a[href]");
-    const href = text(link?.getAttribute("href"));
-    const titleText = text(link?.textContent) ?? text(row.textContent);
-    if (!titleText || titleText.length < 6) return null;
-    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
-    const externalId = `sl-${titleText.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    const cells = [...row.querySelectorAll("td")];
+    if (cells.length < 4) return null;
+    const procuringOrganization = text(cells[0]?.textContent);
+    const publishedText = text(cells[1]?.textContent);
+    const deadlineText = text(cells[2]?.textContent);
+    const title = text(cells[3]?.textContent);
+    // The table repeats a header row; a bid always has a description.
+    if (!title || title.length < 6 || !publishedText) return null;
+    const documentHref = text(row.querySelector("a[href]")?.getAttribute("href"));
+    const sourceUrl = resolveHref(documentHref, baseUrl, "/bid/");
+    const publishedAt = parseDayFirstDate(publishedText);
+    // The repeated header row has text cells but no real dates.
+    if (!publishedAt) return null;
+    const closingAt = parseDayFirstDate(deadlineText);
+    // Some bids share one PDF and some share a description; the row identity
+    // is the combination, so neither case collides.
+    const externalId = slugifyId(
+      "sl-nppa",
+      `${documentHref ?? ""}-${procuringOrganization ?? ""}-${deadlineText}-${title}`,
+    );
     const parsed: ParsedSourceOpportunity = {
-      externalId, title: titleText.slice(0, 1000), description: null, sourceCategoryTerm: "Tender Notice",
-      referenceNumber: null, countryCode: "SL", region: null, city: null, issuingInstitution: null, procuringOrganization: null,
-      publisher: "National Public Procurement Authority (Sierra Leone)", publishedAt: null, sourceDeadlineText: null, closingAt: null, timeZone: "Africa/Freetown",
-      status: "unknown", sourceUrl, canonicalUrl: null, currency: null, amount: null, originalValues: { title: titleText, url: sourceUrl },
+      externalId, title: title.slice(0, 1000), description: null, sourceCategoryTerm: "Bid Opportunity",
+      referenceNumber: null, countryCode: "SL", region: null, city: null, issuingInstitution: null,
+      procuringOrganization, publisher: "National Public Procurement Authority (Sierra Leone)",
+      publishedAt, sourceDeadlineText: deadlineText, closingAt, timeZone: "Africa/Freetown",
+      status: deadlineStatus(closingAt, new Date()), sourceUrl, canonicalUrl: null, currency: null, amount: null,
+      originalValues: { procuringOrganization, datePosted: publishedText, expirationDate: deadlineText, description: title, url: sourceUrl },
     };
-    return { externalId, sourceUrl, parsed, payload: { title: titleText, url: sourceUrl } };
+    return { externalId, sourceUrl, parsed, payload: { ...parsed.originalValues } };
   },
 };
 
