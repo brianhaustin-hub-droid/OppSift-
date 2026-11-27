@@ -31,6 +31,14 @@ import {
   getDaysRemaining,
 } from '../../data/fixtures';
 import { useCountryLeads } from '../../data/leads';
+import {
+  describeLiveCheck,
+  describeLiveStatus,
+  formatLiveAge,
+  liveOutcomeTone,
+  useCountryLiveStatus,
+  useSourceLiveStatus,
+} from '../../data/liveness';
 import { Opportunity, OpportunityCategory, SourceLead } from '../../types/oppsift';
 
 function OpportunityExplorerCore({
@@ -1068,6 +1076,8 @@ export function SourceDetailPage({ sourceId }: { sourceId: string }) {
   const { navigate, goBack, getBackLabel } = useRouter();
   const { opportunities, sources } = useAppState();
   const source = sources.find((s) => s.id === sourceId) ?? null;
+  // Read before the early return so the hook order never depends on the source.
+  const liveState = useSourceLiveStatus(sourceId);
 
   if (!source) {
     return (
@@ -1151,8 +1161,8 @@ export function SourceDetailPage({ sourceId }: { sourceId: string }) {
               </p>
             </div>
             <div>
-              <p className="text-[#64748B] dark:text-[#CBD5E1]">Last Verified Update</p>
-              <p className="mt-1 font-mono">{source.lastUpdated}</p>
+              <p className="text-[#64748B] dark:text-[#CBD5E1]">Last Successful Retrieval</p>
+              <p className="mt-1 font-mono">{source.lastUpdated || 'Never'}</p>
             </div>
           </div>
 
@@ -1164,6 +1174,73 @@ export function SourceDetailPage({ sourceId }: { sourceId: string }) {
             <p className="text-[#64748B] dark:text-[#CBD5E1]">{source.verificationNotes}</p>
             {source.lastError && <p className="text-[#DC2626] font-mono pt-1">Last Error: {source.lastError}</p>}
           </div>
+        </section>
+
+        <section className="p-6 rounded-lg oppsift-card space-y-3">
+          <div>
+            <h3 className="font-display text-base font-semibold">Live verification</h3>
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] mt-1 max-w-3xl">
+              OppSift requests this publisher's registered endpoint and stores what the server returned. That is
+              reachability evidence with a timestamp, not proof that notices are being ingested.
+            </p>
+          </div>
+          {liveState.loading ? (
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">Reading the last stored check…</p>
+          ) : liveState.error ? (
+            <p className="text-xs text-[#DC2626]">Live check unavailable: {liveState.error}</p>
+          ) : liveState.status ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+              <div>
+                <p className="text-[#64748B] dark:text-[#CBD5E1]">Latest result</p>
+                <p className={`mt-1 font-semibold ${liveOutcomeTone(liveState.status.outcome)}`}>
+                  {describeLiveCheck(liveState.status)}
+                </p>
+                {liveState.status.lastErrorMessage && (
+                  <p className="mt-0.5 break-words text-[11px] text-[#DC2626]">
+                    {liveState.status.lastErrorMessage}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-[#64748B] dark:text-[#CBD5E1]">Endpoints that answered</p>
+                <p className="mt-1 font-mono font-semibold">
+                  {liveState.status.answeredTargets} of {liveState.status.probedTargets}
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#64748B] dark:text-[#CBD5E1]">Feed endpoint and official website</p>
+              </div>
+              <div>
+                <p className="text-[#64748B] dark:text-[#CBD5E1]">Last checked</p>
+                <p className="mt-1 font-mono">
+                  {liveState.status.checkedAt
+                    ? `${liveState.status.checkedAt.replace('T', ' ').slice(0, 16)} UTC`
+                    : 'Never'}
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#64748B] dark:text-[#CBD5E1]">
+                  {formatLiveAge(liveState.status.checkedAt)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[#64748B] dark:text-[#CBD5E1]">Endpoint requested</p>
+                {liveState.status.targetUrl ? (
+                  <a
+                    href={liveState.status.targetUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="mt-1 inline-flex items-center gap-1 font-semibold text-[#541B32] dark:text-[#E8A4B5] hover:underline"
+                  >
+                    {liveState.status.targetKind === 'feed' ? 'Feed endpoint' : 'Official website'}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : (
+                  <p className="mt-1 font-mono">Not recorded</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
+              No live check has been recorded for this source yet.
+            </p>
+          )}
         </section>
 
         <section className="p-6 rounded-lg oppsift-card space-y-4">
@@ -1240,6 +1317,10 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
   // Read before the early return so the hook order never depends on whether
   // the coverage row exists.
   const leadState = useCountryLeads(countryCode);
+  const registeredSourceCount = sources.filter(
+    (s) => s.countryCodes.includes(countryCode) || s.countryCode === countryCode,
+  ).length;
+  const liveState = useCountryLiveStatus(countryCode, registeredSourceCount);
 
   if (!country) {
     return (
@@ -1290,7 +1371,20 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
                 <p className="text-xs text-white/80 mt-1">
                   Coverage: <span className="font-semibold text-[#4ADE80]">{country.coverageStatus}</span> ·{' '}
                   <span className="font-semibold text-white">{countrySources.length}</span> verified sources ·{' '}
-                  <span className="font-semibold text-white">{leadTotal}</span> unverified leads · Categories:{' '}
+                  <span
+                    className={
+                      liveState.summary.coverage === 'verified'
+                        ? 'font-semibold text-[#4ADE80]'
+                        : liveState.summary.coverage === 'partial'
+                          ? 'font-semibold text-[#FBBF24]'
+                          : liveState.summary.coverage === 'failed'
+                            ? 'font-semibold text-[#F87171]'
+                            : 'font-semibold text-white/70'
+                    }
+                  >
+                    Live: {liveState.summary.label} ({liveState.summary.answeredCount}/{liveState.summary.sourceCount})
+                  </span>{' '}
+                  · <span className="font-semibold text-white">{leadTotal}</span> unverified leads · Categories:{' '}
                   {country.categoriesSupported.join(', ') || 'none observed yet'}
                 </p>
               </div>
@@ -1330,30 +1424,72 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
           <div className="lg:col-span-4 p-5 rounded-lg oppsift-card space-y-3">
             <h3 className="font-display text-base font-semibold">Verified sources ({countrySources.length})</h3>
             <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1]">
-              Registered publishers only. These feeds are the only ones crawled and counted in coverage.
+              Registered publishers only. These feeds are the only ones crawled and counted in coverage, and
+              each one carries the result of the last live request to its own endpoint.
             </p>
+            {countrySources.length > 0 && (
+              <div
+                className={
+                  liveState.summary.coverage === 'verified'
+                    ? 'rounded-md border border-[#16A34A]/30 bg-[#16A34A]/8 px-3 py-2'
+                    : liveState.summary.coverage === 'failed'
+                      ? 'rounded-md border border-[#DC2626]/30 bg-[#DC2626]/8 px-3 py-2'
+                      : 'rounded-md border border-[#D97706]/30 bg-[#D97706]/8 px-3 py-2'
+                }
+              >
+                <p className="text-[11px] font-semibold">{liveState.summary.label}</p>
+                <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1]">
+                  {liveState.loading
+                    ? 'Reading stored live checks…'
+                    : liveState.error
+                      ? `Live checks unavailable: ${liveState.error}`
+                      : liveState.summary.detail}
+                </p>
+              </div>
+            )}
             {countrySources.length === 0 ? (
               <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
                 No verified source registered for {country.name} yet. Coverage status is {country.coverageStatus}.
               </p>
             ) : (
               <div className="space-y-2.5">
-                {countrySources.map((src) => (
-                  <button
-                    key={src.id}
-                    type="button"
-                    onClick={() => navigate(`/sources/${src.id}`)}
-                    className="w-full text-left p-3 rounded-md border border-[#E2E8F0] dark:border-white/12 hover:border-[#A33B59] text-xs flex items-center justify-between gap-2 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold truncate">{src.name}</p>
-                      <p className="text-[#64748B] dark:text-[#CBD5E1] truncate">{src.accessMethod}</p>
-                    </div>
-                    <span className={src.availability === 'Connected' ? 'text-[#16A34A] font-semibold shrink-0' : 'text-[#DC2626] font-semibold shrink-0'}>
-                      {src.availability}
-                    </span>
-                  </button>
-                ))}
+                {countrySources.map((src) => {
+                  const live = liveState.bySourceId.get(src.id);
+                  const reachable = Boolean(live && (live.answeredTargets > 0 || live.outcome === 'answered'));
+                  return (
+                    <button
+                      key={src.id}
+                      type="button"
+                      onClick={() => navigate(`/sources/${src.id}`)}
+                      className="w-full text-left p-3 rounded-md border border-[#E2E8F0] dark:border-white/12 hover:border-[#A33B59] text-xs flex items-start justify-between gap-2 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{src.name}</p>
+                        <p className="text-[#64748B] dark:text-[#CBD5E1] truncate">{src.accessMethod}</p>
+                        <p className={`truncate ${liveOutcomeTone(reachable ? 'answered' : (live?.outcome ?? null))}`}>
+                          {live ? describeLiveStatus(live) : 'Live check not recorded'}
+                        </p>
+                      </div>
+                      <span
+                        title="Connector state for ingestion, separate from the live reachability check"
+                        className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide ${
+                          src.availability === 'Connected'
+                            ? 'text-[#16A34A]'
+                            : src.availability === 'Scheduled'
+                              ? 'text-[#38BDF8]'
+                              : 'text-[#94A3B8]'
+                        }`}
+                      >
+                        Connector:{' '}
+                        {src.availability === 'Connected'
+                          ? 'live'
+                          : src.availability === 'Scheduled'
+                            ? 'scheduled'
+                            : 'none'}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -430,6 +430,31 @@ inventory used for the African markets now covers all 101 registry countries.
   production branch.
 * Method, limits and the source/lead distinction: `docs/source-catalog/GLOBAL_LEADS_INVENTORY.md`.
 
+## 12. Live verification of every source (27 Nov 2026)
+
+Registration dates said when a publisher was catalogued, not whether it
+answers now. Migration `0053` adds append-only HTTP checks of each source's own
+endpoint, and both the country page and the source page show the latest result
+with its age.
+
+* All **215 registered endpoints across 180 sources** were requested on the
+  app-facing branch, then every silent source retried with a 25 s timeout:
+  **148 endpoints answered**, 17 refused automated access, 6 returned an error
+  status and 44 failed to connect.
+* **128 of 180 sources answered at least one endpoint.**
+* **All 101 countries now have live evidence: 70 have every registered source
+  answering, 31 are partial, 0 have none.** No country is left unverified.
+* New reads: `source_live_status`, `country_source_live_status` and
+  `country_live_summary`; the base check table stays private. The country page
+  shows `Live: <status> (answered/total)` plus a per-source result line, and the
+  source page shows the latest result, answered endpoints, check time and the
+  requested URL.
+* Honesty guard: a blocked, errored or silent endpoint is never counted as
+  verified, and a live check never changes reliability, licensing or terms
+  status. Ingestion stays a separate, connector-backed claim.
+* Re-run with `npm run sources:verify` (see
+  `docs/source-catalog/LIVE_SOURCE_VERIFICATION.md`).
+
 ---
 
 *End of master build report.*

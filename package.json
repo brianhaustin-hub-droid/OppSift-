@@ -13,6 +13,7 @@
     "worker:deploy": "node scripts/deploy-ingestion-worker.mjs",
     "typecheck": "tsc -b --pretty",
     "migrate": "node scripts/apply-pending-migrations.mjs",
+    "sources:verify": "node scripts/check-source-liveness.mjs",
     "lint": "eslint ."
   },
   "dependencies": {

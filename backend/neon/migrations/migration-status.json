@@ -467,6 +467,24 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-27T14:14:43.152Z"
+    },
+    {
+      "version": "0053",
+      "file": "0053_source_live_verification.sql",
+      "dependsOn": [
+        "0052"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-27T14:43:43.370Z"
+    },
+    {
+      "version": "0054",
+      "file": "0054_live_status_answered_target.sql",
+      "dependsOn": [
+        "0053"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-27T15:00:49.610Z"
     }
   ]
 }
