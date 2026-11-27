@@ -30,7 +30,8 @@ import {
   formatDisplayDate,
   getDaysRemaining,
 } from '../../data/fixtures';
-import { Opportunity, OpportunityCategory } from '../../types/oppsift';
+import { useCountryLeads } from '../../data/leads';
+import { Opportunity, OpportunityCategory, SourceLead } from '../../types/oppsift';
 
 function OpportunityExplorerCore({
   pageTitle,
@@ -1206,10 +1207,39 @@ export function SourceDetailPage({ sourceId }: { sourceId: string }) {
   );
 }
 
+const LEAD_KIND_TITLES: Record<string, string> = {
+  national_buyer: 'National ministries and departments',
+  central_agency: 'Central agencies and regulators',
+  state_owned_enterprise: 'State-owned enterprises and utilities',
+  subnational: 'Subnational government',
+  sector_programme: 'Public programmes and funds',
+  development_partner: 'Development partners',
+  grants_funding: 'Grants and business support',
+  commercial: 'Commercial and membership bodies',
+};
+
+const LEAD_KIND_ORDER = Object.keys(LEAD_KIND_TITLES);
+
+/** Groups the country's leads by kind, in a fixed reading order. */
+function groupLeadsByKind(leads: readonly SourceLead[]): { kind: string; title: string; leads: SourceLead[] }[] {
+  const groups = new Map<string, SourceLead[]>();
+  for (const lead of leads) {
+    const bucket = groups.get(lead.leadKind);
+    if (bucket) bucket.push(lead);
+    else groups.set(lead.leadKind, [lead]);
+  }
+  return [...groups.entries()]
+    .sort((a, b) => LEAD_KIND_ORDER.indexOf(a[0]) - LEAD_KIND_ORDER.indexOf(b[0]))
+    .map(([kind, items]) => ({ kind, title: LEAD_KIND_TITLES[kind] ?? kind, leads: items }));
+}
+
 export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
   const { navigate, goBack, getBackLabel } = useRouter();
   const { opportunities, countries, sources } = useAppState();
   const country = countries.find((c) => c.code === countryCode) ?? null;
+  // Read before the early return so the hook order never depends on whether
+  // the coverage row exists.
+  const leadState = useCountryLeads(countryCode);
 
   if (!country) {
     return (
@@ -1231,6 +1261,8 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
   const countrySources = sources.filter((s) =>
     s.countryCodes.includes(country.code) || s.countryCode === country.code,
   );
+  const leadGroups = groupLeadsByKind(leadState.leads);
+  const leadTotal = leadState.leads.length || country.leadCount;
 
   return (
     <WorkspaceLayout title={`${country.name} Opportunity Discovery`} breadcrumb={`Discovery / Country / ${country.code}`}>
@@ -1257,7 +1289,9 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
                 <h2 className="mt-0.5 font-display text-2xl font-bold text-white">{country.name} Market Dossier</h2>
                 <p className="text-xs text-white/80 mt-1">
                   Coverage: <span className="font-semibold text-[#4ADE80]">{country.coverageStatus}</span> ·{' '}
-                  {country.activeSourcesCount} configured sources · Categories: {country.categoriesSupported.join(', ')}
+                  <span className="font-semibold text-white">{countrySources.length}</span> verified sources ·{' '}
+                  <span className="font-semibold text-white">{leadTotal}</span> unverified leads · Categories:{' '}
+                  {country.categoriesSupported.join(', ') || 'none observed yet'}
                 </p>
               </div>
             </div>
@@ -1294,10 +1328,13 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
           </div>
 
           <div className="lg:col-span-4 p-5 rounded-lg oppsift-card space-y-3">
-            <h3 className="font-display text-base font-semibold">Connected Sources</h3>
+            <h3 className="font-display text-base font-semibold">Verified sources ({countrySources.length})</h3>
+            <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1]">
+              Registered publishers only. These feeds are the only ones crawled and counted in coverage.
+            </p>
             {countrySources.length === 0 ? (
               <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
-                No direct feeds configured yet for {country.name}. Coverage status is {country.coverageStatus}.
+                No verified source registered for {country.name} yet. Coverage status is {country.coverageStatus}.
               </p>
             ) : (
               <div className="space-y-2.5">
@@ -1332,6 +1369,66 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
               ))}
             </ul>
           </div>
+        </div>
+
+        <div className="p-5 rounded-lg oppsift-card space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h3 className="font-display text-base font-semibold">Unverified leads ({leadTotal})</h3>
+              <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] mt-1 max-w-3xl">
+                Named buying organisations identified for {country.name}. A lead is not a source: nothing is
+                collected from it, no notice is attributed to it, and it never adds to the source count or
+                coverage. Each lead becomes a source only after its publisher, official tender page and reuse
+                terms are confirmed.
+              </p>
+            </div>
+            <span className="self-start shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#D97706]/40 text-[#D97706] bg-[#D97706]/10">
+              Not verified · excluded from coverage
+            </span>
+          </div>
+
+          {leadState.loading ? (
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">Reading the lead inventory…</p>
+          ) : leadState.error ? (
+            <p className="text-xs text-[#DC2626]">Lead inventory unavailable: {leadState.error}</p>
+          ) : leadGroups.length === 0 ? (
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
+              No lead inventory recorded for {country.name} yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {leadGroups.map((group) => (
+                <div key={group.kind} className="p-4 rounded-md border border-[#E2E8F0] dark:border-white/10">
+                  <p className="text-xs font-semibold flex items-center justify-between gap-2">
+                    <span>{group.title}</span>
+                    <span className="font-mono text-[#64748B] dark:text-[#CBD5E1]">{group.leads.length}</span>
+                  </p>
+                  <ul className="mt-2.5 space-y-2 text-xs">
+                    {group.leads.map((lead) => (
+                      <li key={lead.id} className="flex items-start justify-between gap-2">
+                        <span className="min-w-0">
+                          <span className="block text-[#334155] dark:text-[#E2E8F0]">{lead.name}</span>
+                          <span className="block text-[11px] text-[#94A3B8] dark:text-[#94A3B8]">{lead.sector}</span>
+                        </span>
+                        {lead.officialWebsite ? (
+                          <a
+                            href={lead.officialWebsite}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[#541B32] dark:text-[#E8A4B5] hover:underline"
+                          >
+                            URL <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="shrink-0 text-[10px] uppercase tracking-wide text-[#D97706]">Lead</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="p-5 rounded-lg oppsift-card">

@@ -407,6 +407,29 @@ contractors, founders, consultants, and organisations.
 > unsatisfactory and a redesign is planned using Google Stitch AI design generation
 > before porting into the existing React design system.
 
+## 11. Per-country lead inventory (27 Nov 2026)
+
+Coverage counts stayed honest: 180 registered sources, 516 coverage rows and
+3–6 sources per country. Rather than inflate that number, the per-country lead
+inventory used for the African markets now covers all 101 registry countries.
+
+* `public.source_leads` (migration `0052`) stores **73 named buying functions
+  per country — 7,373 leads** across 101 countries, all `unverified_lead`.
+  `official_website` is null for every lead: no URL is claimed until it has been
+  read from the publisher.
+* Public reads: `source_leads_public` (country page) and `country_lead_summary`
+  (lead count joined into the coverage table). Both granted to the anonymous
+  role; the base table is not exposed.
+* Leads are excluded from `coverage_truth`, the source catalogue and every
+  coverage status. The country page shows "Verified sources (n)" and
+  "Unverified leads (73)" as separate panels, the leads grouped by kind with a
+  "Not verified · excluded from coverage" badge.
+* Seed: `node scripts/seed-source-leads.mjs` from
+  `backend/neon/intelligence/lead-inventory.ts` (idempotent, unique on
+  `(country_code, name)`). Applied to the dev branch and the app-facing
+  production branch.
+* Method, limits and the source/lead distinction: `docs/source-catalog/GLOBAL_LEADS_INVENTORY.md`.
+
 ---
 
 *End of master build report.*

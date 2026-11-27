@@ -72,6 +72,11 @@ type CountryRow = {
   time_zones: string[] | null;
 };
 
+type LeadSummaryRow = {
+  country_code: string;
+  lead_count: number | string | null;
+};
+
 type CoverageTruthRow = {
   code: string;
   status: string | null;
@@ -337,6 +342,7 @@ function buildCountries(
   sources: readonly DataSourceRecord[],
   countryRows: readonly CountryRow[],
   coverageRows: readonly CoverageTruthRow[],
+  leadCounts: ReadonlyMap<string, number>,
 ): CountryCoverage[] {
   const truthByCode = new Map(coverageRows.map((row) => [row.code.toUpperCase(), row]));
   const codes = new Set<string>([
@@ -382,6 +388,7 @@ function buildCountries(
       currency: meta?.primary_currency_code || records[0]?.currency || 'USD',
       timezone: meta?.time_zones?.[0] || records[0]?.deadlineTimezone || 'UTC',
       activeSourcesCount: activeSources,
+      leadCount: leadCounts.get(code) ?? 0,
       categoriesSupported: [...new Set(records.map((r) => r.category))],
       coverageStatus:
         storedRecords > 0 ? 'Active' : sourceCount > 0 ? 'Partial' : 'Planned',
@@ -554,7 +561,31 @@ export function useLiveData(): LiveData {
             return toSource(row, codes, codes[0] ?? 'INT');
           });
 
-        const countries = buildCountries(opportunities, sources, countryResult.rows, truthResult.rows);
+        // The lead inventory is supplementary: a database without migration
+        // 0052 still renders the feed, just without lead counts. Leads are
+        // never sources, so they cannot affect coverage status.
+        const leadResult = await fetchAll<LeadSummaryRow>((from, to) =>
+          db
+            .from('country_lead_summary')
+            .select('country_code, lead_count')
+            .range(from, to),
+        );
+        const leadCounts = new Map<string, number>();
+        if (!leadResult.error) {
+          for (const row of leadResult.rows) {
+            if (!row?.country_code) continue;
+            const count = numberOr(row.lead_count, 0);
+            leadCounts.set(row.country_code.toUpperCase(), count);
+          }
+        }
+
+        const countries = buildCountries(
+          opportunities,
+          sources,
+          countryResult.rows,
+          truthResult.rows,
+          leadCounts,
+        );
 
         setState({
           opportunities: withProvenance,

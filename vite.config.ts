@@ -7,6 +7,12 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Hostnames for a proxied dev preview are supplied per process, never
+    // committed: `VITE_ALLOWED_HOSTS=a.example,b.example npm run dev`.
+    allowedHosts: (process.env.VITE_ALLOWED_HOSTS ?? "")
+      .split(",")
+      .map((host) => host.trim())
+      .filter(Boolean),
   },
   test: {
     exclude: [

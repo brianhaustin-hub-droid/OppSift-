@@ -458,6 +458,15 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-27T13:31:17.257Z"
+    },
+    {
+      "version": "0052",
+      "file": "0052_source_lead_inventory.sql",
+      "dependsOn": [
+        "0051"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-27T14:14:43.152Z"
     }
   ]
 }

@@ -159,12 +159,35 @@ export interface CountryCoverage {
   currency: string;
   timezone: string;
   activeSourcesCount: number;
+  /** Unverified named buying functions. Leads are not sources and never add to coverage. */
+  leadCount: number;
   categoriesSupported: OpportunityCategory[];
   coverageStatus: 'Active' | 'Partial' | 'Planned';
   lastUpdated: string;
   sampleRecordCount: number;
   topSectors: { sector: string; count: number }[];
   issuingInstitutions: string[];
+}
+
+export type LeadKind =
+  | 'national_buyer'
+  | 'central_agency'
+  | 'state_owned_enterprise'
+  | 'subnational'
+  | 'sector_programme'
+  | 'development_partner'
+  | 'grants_funding'
+  | 'commercial'
+  | string;
+
+/** A named buying function identified for a country. Not a source. */
+export interface SourceLead {
+  id: string;
+  name: string;
+  leadKind: LeadKind;
+  sector: string;
+  /** Null until a publisher URL has actually been read; a lead never implies a checked link. */
+  officialWebsite: string | null;
 }
 
 export interface DataSourceRecord {

@@ -4,6 +4,11 @@
 
 **Status (inventories):** 27/27 African markets covered with deep-inventory docs (50+ target structure each).
 
+**Global extension (27 Nov 2026):** the same lead concept now covers all 101
+registry countries in the database (`public.source_leads`, 73 named buying
+functions per country, all unverified and excluded from coverage). See
+[`GLOBAL_LEADS_INVENTORY.md`](GLOBAL_LEADS_INVENTORY.md).
+
 | Country | Code | Region | Inventory | Repo/catalog leads (summary) |
 |---|---|---|---|---|
 | Benin | BJ | West Africa | [benin-deep-source-inventory.md](benin-deep-source-inventory.md) | `benin-armp-notices` (html, candidate) |
