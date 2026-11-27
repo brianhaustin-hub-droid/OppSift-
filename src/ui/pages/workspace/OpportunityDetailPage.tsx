@@ -21,6 +21,7 @@ import { WorkspaceLayout } from '../../components/layout/WorkspaceLayout';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
 import { formatCurrencyValue, formatDisplayDate, getDaysRemaining } from '../../data/fixtures';
+import { useNoticeTranslation } from '../../../i18n/useNoticeTranslation';
 
 type DetailTab =
   | 'overview'
@@ -47,6 +48,8 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
   // Never fall back to an arbitrary notice: a deep link must show the requested
   // opportunity or an honest empty state.
   const opp = opportunities.find((o) => o.id === opportunityId) ?? null;
+  const titleTranslation = useNoticeTranslation(opp?.title ?? '');
+  const descriptionTranslation = useNoticeTranslation(opp?.description ?? '');
 
   if (!opp) {
     return (
@@ -122,7 +125,7 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
                 <span className="font-mono">{opp.referenceNumber}</span>
               </div>
               <h2 className="font-display text-xl sm:text-2xl font-bold text-[#172033] dark:text-[#F8FAFC]">
-                {opp.title}
+                {titleTranslation.text}
               </h2>
               <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">{opp.issuingOrganisation}</p>
             </div>
@@ -269,7 +272,16 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
                   </div>
                   <div>
                     <h4 className="font-display text-sm font-semibold">Detailed Scope</h4>
-                    <p className="mt-1.5 text-[#64748B] dark:text-[#CBD5E1] leading-relaxed">{opp.description}</p>
+                    <p className="mt-1.5 text-[#64748B] dark:text-[#CBD5E1] leading-relaxed">{descriptionTranslation.text}</p>
+                    {descriptionTranslation.isTranslated && (
+                      <button
+                        type="button"
+                        onClick={descriptionTranslation.toggleOriginal}
+                        className="mt-1 text-[11px] underline decoration-dotted underline-offset-2 text-[#64748B] dark:text-[#CBD5E1]"
+                      >
+                        {descriptionTranslation.showOriginal ? 'Show translated description' : 'Show original wording'}
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E2E8F0] dark:border-white/10 text-xs">
                     <div>

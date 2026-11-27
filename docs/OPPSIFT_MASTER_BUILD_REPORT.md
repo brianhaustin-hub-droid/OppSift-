@@ -169,6 +169,33 @@ contractors, founders, consultants, and organisations.
   (status, category, availability, coverage). Free-text notices are never rewritten:
   the original wording is shown with the detected language beside it.
   Tests: `src/i18n/i18n.test.ts` (11 cases).
+- **Notice content translation** (`src/i18n/noticeTranslation.ts`,
+  `useNoticeTranslation.ts`): titles and descriptions are translated into the
+  reader's language, not just the labels around them. Text is chunked on
+  sentence boundaries, cached in `localStorage` (400 entries), and every
+  translated field keeps a "show original" control. Detection still runs first:
+  text already in the chosen language is never sent to a provider, and text whose
+  language cannot be determined is shown as-is.
+  Providers, in order: the same-origin proxy `functions/api/translate.ts`
+  (uses `DEEPL_API_KEY` when set, server-side only), then MyMemory's public
+  no-key endpoint. A failed translation keeps the original wording and says so;
+  no text is ever invented. Tests: `src/i18n/noticeTranslation.test.ts` (9 cases).
+
+## 4c. Source depth per country (migration 0051)
+
+- Four verified multilateral publishers were added (all fetched HTTP 200 on
+  2026-11-27): UNGM (UNOPS), the UN Procurement Division, the EU Funding &
+  Tenders Portal and the EBRD. World Bank coverage was extended from 30 to every
+  country in the registry, since the Bank advertises procurement in each.
+- Result: **180 sources, 516 coverage rows across all 101 countries**, minimum 3
+  sources per country (was 1 in 57 markets), average 5.1.
+- **Not 50 per country.** Reaching 50 verified publishers in every country would
+  mean registering roughly 4,900 more sources, and most countries publish their
+  procurement through a single national portal. The registry stores real,
+  fetchable publishers only; inventing 4,800 rows to hit a number would break the
+  no-fabrication rule. Real paths to more depth: connector work on the registered
+  portals, and agency-level expansion (ministries, utilities, state enterprises)
+  in the markets that matter most.
 - Regions (frontend groupings):
   - North America: US, Canada (2)
   - Europe: GB, DE, FR, NL, IE, IT, ES, SE, PL, DK, BE (11)

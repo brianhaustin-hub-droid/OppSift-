@@ -449,6 +449,15 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-27T12:59:28.196Z"
+    },
+    {
+      "version": "0051",
+      "file": "0051_register_multilateral_procurement_sources.sql",
+      "dependsOn": [
+        "0050"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-27T13:31:17.257Z"
     }
   ]
 }

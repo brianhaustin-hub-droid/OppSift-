@@ -4,6 +4,7 @@ import { PublicLayout } from "../../components/layout/PublicLayout";
 import { useAppState } from "../../context/AppStateContext";
 import { useRouter } from "../../context/RouterContext";
 import { useI18n } from "../../../i18n/I18nContext";
+import { useNoticeTranslation } from "../../../i18n/useNoticeTranslation";
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -28,6 +29,10 @@ export function PublicOpportunityPage({ opportunityId }: { opportunityId: string
   const opportunity = opportunities.find((item) => item.id === opportunityId) ?? null;
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/o/${opportunityId}`;
   const language = opportunity ? detect(opportunity.title) : { code: "und", confidence: 0 };
+  // Notice content follows the reader's language; the original wording stays
+  // one click away and is what gets attributed to the publisher.
+  const titleTranslation = useNoticeTranslation(opportunity?.title ?? "");
+  const descriptionTranslation = useNoticeTranslation(opportunity?.description ?? "");
 
   const copy = async () => {
     try {
@@ -87,8 +92,28 @@ export function PublicOpportunityPage({ opportunityId }: { opportunityId: string
               </span>
             )}
           </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{opportunity.title}</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{titleTranslation.text}</h1>
           <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">{opportunity.issuingOrganisation}</p>
+          {(titleTranslation.isTranslated || titleTranslation.pending || titleTranslation.unavailable) && (
+            <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1] flex flex-wrap items-center gap-2">
+              <span>
+                {titleTranslation.pending
+                  ? "Translating the notice…"
+                  : titleTranslation.isTranslated
+                    ? `Machine translation from ${titleTranslation.sourceLanguage ?? language.code}`
+                    : "Automatic translation is unavailable right now; the original wording is shown."}
+              </span>
+              {titleTranslation.isTranslated && (
+                <button
+                  type="button"
+                  onClick={titleTranslation.toggleOriginal}
+                  className="underline decoration-dotted underline-offset-2 hover:text-[#172033] dark:hover:text-white"
+                >
+                  {titleTranslation.showOriginal ? "Show translation" : "Show original"}
+                </button>
+              )}
+            </p>
+          )}
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -142,8 +167,18 @@ export function PublicOpportunityPage({ opportunityId }: { opportunityId: string
 
         {opportunity.description && opportunity.description !== opportunity.title && (
           <section className="rounded-lg oppsift-card p-5 space-y-2">
-            <p className="text-sm leading-relaxed whitespace-pre-line">{opportunity.description}</p>
-            <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1]">{t("common.showingOriginal")}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-line">{descriptionTranslation.text}</p>
+            {descriptionTranslation.isTranslated && (
+              <button
+                type="button"
+                onClick={descriptionTranslation.toggleOriginal}
+                className="text-[11px] underline decoration-dotted underline-offset-2 text-[#64748B] dark:text-[#CBD5E1] hover:text-[#172033] dark:hover:text-white"
+              >
+                {descriptionTranslation.showOriginal
+                  ? "Show translated description"
+                  : `Show original (${descriptionTranslation.sourceLanguage ?? language.code})`}
+              </button>
+            )}
           </section>
         )}
 
