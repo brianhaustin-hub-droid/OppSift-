@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   Bell,
   Bookmark,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   HelpCircle,
   Layers,
   MessageSquareText,
+  SearchX,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -43,6 +45,30 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
 
   const opp = opportunities.find((o) => o.id === opportunityId) || opportunities[0];
+
+  if (!opp) {
+    return (
+      <WorkspaceLayout title="Opportunity" breadcrumb="Discovery / Opportunity">
+        <div className="p-10 rounded-lg oppsift-card text-center space-y-3 max-w-xl mx-auto">
+          <SearchX className="w-8 h-8 mx-auto text-[#94A3B8]" />
+          <h1 className="font-display text-lg font-bold">This opportunity is not available</h1>
+          <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
+            The notice may have been withdrawn by the issuing authority, or it is outside the records currently
+            available to your workspace.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/discover')}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl oppsift-sidebar-active text-white text-xs font-semibold"
+          >
+            <span>Browse opportunities</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </WorkspaceLayout>
+    );
+  }
+
   const isSaved = savedIds.includes(opp.id);
   const isCompared = compareIds.includes(opp.id);
   const existingPipe = pipeline.find((p) => p.opportunityId === opp.id);
@@ -80,7 +106,7 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
         </div>
 
         {/* Opportunity Header + Persistent Action Panel */}
-        <section className="p-6 rounded-2xl oppsift-card space-y-5">
+        <section className="p-6 rounded-lg oppsift-card space-y-5">
           <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-5">
             <div className="space-y-2 max-w-3xl">
               <div className="flex flex-wrap items-center gap-2 text-xs text-[#64748B] dark:text-[#CBD5E1]">
@@ -214,7 +240,7 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
         {/* Main 2-column Dossier + Eligibility Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-7 space-y-4 min-w-0">
-            <div className="flex items-center gap-1 p-1.5 rounded-2xl oppsift-card max-w-full overflow-x-auto">
+            <div className="flex items-center gap-1 p-1.5 rounded-lg oppsift-card max-w-full overflow-x-auto">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -231,7 +257,7 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
               ))}
             </div>
 
-            <div className="p-6 rounded-2xl oppsift-card space-y-5 text-sm">
+            <div className="p-6 rounded-lg oppsift-card space-y-5 text-sm">
               {activeTab === 'overview' && (
                 <>
                   <div>
@@ -433,7 +459,7 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
 
           {/* Right Eligibility Intelligence Panel */}
           <aside className="lg:col-span-5 min-w-0">
-            <div className="p-6 rounded-2xl oppsift-card space-y-4 lg:sticky lg:top-20">
+            <div className="p-6 rounded-lg oppsift-card space-y-4 lg:sticky lg:top-20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[#A33B59] dark:text-[#E8A4B5]" />

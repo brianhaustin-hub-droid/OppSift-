@@ -1,35 +1,19 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  INITIAL_AUDIT_EVENTS,
-  INITIAL_COUPONS,
-  INITIAL_INVOICES,
   INITIAL_PLAN_CATALOG,
-  INITIAL_REFUNDS,
-  INITIAL_SUPPORT_TICKETS,
-  INITIAL_TRANSACTIONS,
-  INITIAL_USER_SESSIONS,
   INITIAL_WORKSPACE_SUBSCRIPTION,
 } from '../data/billingConfig';
-import {
-  DEFAULT_ONBOARDING_PROFILE,
-  INITIAL_ALERT_RULES,
-  INITIAL_INGESTION_JOBS,
-  INITIAL_INTEGRATIONS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_PIPELINE,
-  INITIAL_SAVED_ANALYSES,
-  INITIAL_SAVED_REPORTS,
-  INITIAL_SAVED_SEARCHES,
-  INITIAL_SEARCH_HISTORY,
-  INITIAL_TEAM_MEMBERS,
-} from '../data/fixtures';
+import { DEFAULT_ONBOARDING_PROFILE } from '../data/fixtures';
 import { lemonSqueezyAdapter } from '../services/paymentAdapter';
 import { useLiveData } from '../data/live';
 import { useOptionalAuth } from '../../app/auth/AuthProvider';
+import { useOptionalOrganizations } from '../../app/organizations/OrganizationProvider';
+import { neonClient } from '../../app/auth/neon-client';
 import type { CountryCoverage, DataSourceRecord } from '../types/oppsift';
 import {
   AlertRule,
   AuditLogEvent,
+  BillingConnectionState,
   BillingFrequency,
   CheckoutStateMode,
   CouponRecord,
@@ -39,6 +23,7 @@ import {
   InvoiceRecord,
   NotificationItem,
   OnboardingProfile,
+  PaymentMethodSummary,
   Opportunity,
   PipelineItem,
   PipelineStage,
@@ -150,8 +135,12 @@ interface AppStateContextValue {
   closeCheckout: () => void;
   requestPlanTransition: (targetPlanId: PlanTierId, frequency: BillingFrequency) => Promise<void>;
   cancelPendingPlanTransition: () => void;
-  requestSubscriptionCancel: (reason: string) => Promise<void>;
-  requestSubscriptionReactivate: () => void;
+  requestSubscriptionCancel: (reason: string) => Promise<boolean>;
+  requestSubscriptionReactivate: () => Promise<void>;
+  paymentMethods: PaymentMethodSummary[];
+  billingConnection: BillingConnectionState;
+  billingConnectionMessage: string;
+  refreshBilling: () => Promise<void>;
 
   /* Support, Security Sessions & Audit Events */
   supportTickets: SupportTicket[];
@@ -162,18 +151,33 @@ interface AppStateContextValue {
   addAuditEvent: (event: Omit<AuditLogEvent, 'id' | 'timestamp'>) => void;
   userSessions: UserSessionRecord[];
   revokeOtherSessions: () => void;
-
-  /* Background Video Accessibility Preference */
-  reduceBackgroundMotion: boolean;
-  setReduceBackgroundMotion: (reduce: boolean) => void;
 }
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
+
+/** Describes the browser holding the session without claiming a location. */
+function describeDevice(): string {
+  if (typeof navigator === 'undefined') return 'Current browser';
+  const userAgent = navigator.userAgent;
+  const platform = /Windows|Macintosh|Linux|Android|iPhone|iPad/i.exec(userAgent)?.[0] ?? 'Web';
+  const browser = /Edg\//.test(userAgent)
+    ? 'Edge'
+    : /Chrome\//.test(userAgent)
+      ? 'Chrome'
+      : /Safari\//.test(userAgent)
+        ? 'Safari'
+        : /Firefox\//.test(userAgent)
+          ? 'Firefox'
+          : 'Browser';
+  return `${platform} · ${browser}`;
+}
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const live = useLiveData();
   const session = useOptionalAuth();
   const sessionUser = session?.user ?? null;
+  const organizations = useOptionalOrganizations();
+  const organizationId = organizations?.activeOrganization?.id ?? null;
   // Records come only from the live Neon tables. A failed or empty read is
   // reported as such; no bundled sample rows are substituted.
   const opportunities: Opportunity[] = live.opportunities;
@@ -188,11 +192,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const dataModeDetail = live.loading
     ? 'Reading live opportunity, source and country records from the OppSift database.'
     : !live.configured
-      ? 'VITE_NEON_AUTH_URL and VITE_NEON_DATA_API_URL are not set for this build, so no live records are available.'
+      ? 'Opportunity records are unavailable right now. Try again shortly.'
       : live.error
-        ? `The live database request failed: ${live.error}`
+        ? 'Opportunity records could not be loaded. Try again shortly.'
         : live.opportunities.length === 0
-          ? 'The live database returned no opportunity records. Ingestion has not stored any notices for the current filters.'
+          ? 'No opportunity records are available for the current filters yet.'
           : 'Live records read from the OppSift database.';
   const dataTotals = {
     opportunities: live.totalOpportunities,
@@ -202,16 +206,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [compareIds, setCompareIds] = useState<string[]>([]);
-  const [pipeline, setPipeline] = useState<PipelineItem[]>(INITIAL_PIPELINE);
-  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(INITIAL_SAVED_SEARCHES);
-  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>(INITIAL_SEARCH_HISTORY);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
-  const [alertRules, setAlertRules] = useState<AlertRule[]>(INITIAL_ALERT_RULES);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(INITIAL_TEAM_MEMBERS);
-  const [ingestionJobs, setIngestionJobs] = useState<IngestionJob[]>(INITIAL_INGESTION_JOBS);
-  const [integrations, setIntegrations] = useState<IntegrationItem[]>(INITIAL_INTEGRATIONS);
-  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysisRecord[]>(INITIAL_SAVED_ANALYSES);
-  const [savedReports, setSavedReports] = useState<SavedReportRecord[]>(INITIAL_SAVED_REPORTS);
+  // Workspace records begin empty. They are created by the signed-in account
+  // and, where a service exists, read from the application API. No synthetic
+  // pipeline, notification or analysis is injected into a new workspace.
+  const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [ingestionJobs, setIngestionJobs] = useState<IngestionJob[]>([]);
+  const [integrations, setIntegrations] = useState<IntegrationItem[]>([]);
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysisRecord[]>([]);
+  const [savedReports, setSavedReports] = useState<SavedReportRecord[]>([]);
   const [onboarding, setOnboarding] = useState<OnboardingProfile>({
     ...DEFAULT_ONBOARDING_PROFILE,
     preferredLanguage: 'English (International)',
@@ -235,36 +242,26 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   /* Billing & Operations State */
   const [planCatalog, setPlanCatalog] = useState<PlanTierConfig[]>(INITIAL_PLAN_CATALOG);
   const [subscription, setSubscription] = useState<WorkspaceSubscription>(INITIAL_WORKSPACE_SUBSCRIPTION);
-  const [invoices] = useState<InvoiceRecord[]>(INITIAL_INVOICES);
-  const [transactions] = useState<TransactionRecord[]>(INITIAL_TRANSACTIONS);
-  const [refunds] = useState<RefundRecord[]>(INITIAL_REFUNDS);
-  const [coupons] = useState<CouponRecord[]>(INITIAL_COUPONS);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [refunds, setRefunds] = useState<RefundRecord[]>([]);
+  const [coupons] = useState<CouponRecord[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSummary[]>([]);
+  const [billingConnection, setBillingConnection] = useState<BillingConnectionState>(
+    lemonSqueezyAdapter.configured ? 'loading' : 'unconfigured',
+  );
+  const [billingConnectionMessage, setBillingConnectionMessage] = useState<string>(
+    lemonSqueezyAdapter.configured
+      ? 'Reading subscription records from the billing service.'
+      : 'Subscription records are unavailable right now.',
+  );
   const [checkoutOpen, setCheckoutOpen] = useState<boolean>(false);
   const [checkoutPlanId, setCheckoutPlanId] = useState<PlanTierId>('professional');
   const [checkoutFrequency, setCheckoutFrequency] = useState<BillingFrequency>('monthly');
   const [checkoutState, setCheckoutState] = useState<CheckoutStateMode>('ready');
 
-  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(INITIAL_SUPPORT_TICKETS);
-  const [auditEvents, setAuditEvents] = useState<AuditLogEvent[]>(INITIAL_AUDIT_EVENTS);
-  const [userSessions, setUserSessions] = useState<UserSessionRecord[]>(INITIAL_USER_SESSIONS);
-  const [reduceBackgroundMotion, setReduceBackgroundMotionState] = useState<boolean>(() => {
-    try {
-      return typeof window !== 'undefined' && window.localStorage.getItem('oppsift_reduce_motion') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const setReduceBackgroundMotion = (reduce: boolean) => {
-    setReduceBackgroundMotionState(reduce);
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('oppsift_reduce_motion', String(reduce));
-      }
-    } catch {
-      // Ignore storage access errors in restricted frames
-    }
-  };
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [auditEvents, setAuditEvents] = useState<AuditLogEvent[]>([]);
 
   const pushToast = (tone: ToastMessage['tone'], message: string) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -291,7 +288,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       used: searchHistory.length,
       allowance: currentPlan.entitlements.searchesMonthly,
       periodType: 'Monthly',
-      resetDate: '2026-12-01',
+      resetDate: subscription.nextRenewalDate,
       unit: 'queries',
     },
     {
@@ -309,16 +306,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       used: savedAnalyses.length,
       allowance: currentPlan.entitlements.aiAnalysesMonthly,
       periodType: 'Monthly',
-      resetDate: '2026-12-01',
+      resetDate: subscription.nextRenewalDate,
       unit: 'analyses',
     },
     {
       id: 'u-docs',
       label: 'Document Analyses',
-      used: 2,
+      used: 0,
       allowance: currentPlan.entitlements.documentAnalysesMonthly,
       periodType: 'Monthly',
-      resetDate: '2026-12-01',
+      resetDate: subscription.nextRenewalDate,
       unit: 'documents',
     },
     {
@@ -354,17 +351,149 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       used: savedReports.length,
       allowance: currentPlan.entitlements.reportsMonthly,
       periodType: 'Monthly',
-      resetDate: '2026-12-01',
+      resetDate: subscription.nextRenewalDate,
       unit: 'exports',
     },
   ];
 
+  // Identity is supplied by the authenticated account and the workspace
+  // profile. Nothing here is representative sample data.
+  const effectiveOnboarding: OnboardingProfile = useMemo(
+    () => ({
+      ...onboarding,
+      fullName:
+        onboarding.fullName ||
+        sessionUser?.name ||
+        sessionUser?.email?.split('@')[0] ||
+        '',
+    }),
+    [onboarding, sessionUser],
+  );
+
+  const effectiveSubscription: WorkspaceSubscription = useMemo(() => {
+    const seatAllowance = currentPlan.entitlements.teamSeatsLimit;
+    const allocated =
+      typeof seatAllowance === 'number'
+        ? Math.max(seatAllowance, teamMembers.length)
+        : subscription.allocatedSeats;
+    return {
+      ...subscription,
+      billingEmail: subscription.billingEmail || sessionUser?.email || '',
+      billingAdministrator:
+        subscription.billingAdministrator || effectiveOnboarding.fullName,
+      organisationName:
+        subscription.organisationName || effectiveOnboarding.organisationName,
+      occupiedSeats: teamMembers.length,
+      allocatedSeats: allocated,
+    };
+  }, [subscription, sessionUser, effectiveOnboarding, teamMembers.length, currentPlan]);
+
+  const userSessions: UserSessionRecord[] = useMemo(() => {
+    if (!sessionUser) return [];
+    return [
+      {
+        id: sessionUser.id,
+        device: describeDevice(),
+        location: effectiveOnboarding.preferredTimezone || 'Time zone not set',
+        authMethod: 'Neon Managed Auth',
+        lastActive: 'Active now',
+        current: true,
+      },
+    ];
+  }, [sessionUser, effectiveOnboarding.preferredTimezone]);
+
+  /** Reads authoritative subscription, invoice and payment records. */
+  const refreshBilling = useCallback(async () => {
+    if (!lemonSqueezyAdapter.configured) {
+      setBillingConnection('unconfigured');
+      setBillingConnectionMessage(
+        isSignedIn
+          ? 'Subscription records are unavailable right now.'
+          : 'Sign in to read subscription and billing records.',
+      );
+      return;
+    }
+    if (!isSignedIn) {
+      setBillingConnection('unauthenticated');
+      setBillingConnectionMessage('Sign in to read subscription and billing records.');
+      return;
+    }
+    setBillingConnection('loading');
+    const result = await lemonSqueezyAdapter.fetchBillingSnapshot();
+    setBillingConnection(result.state);
+    setBillingConnectionMessage(result.message);
+    if (result.state !== 'ready' || !result.snapshot) return;
+    if (result.snapshot.subscription) setSubscription(result.snapshot.subscription);
+    setPaymentMethods(result.snapshot.paymentMethods);
+    setInvoices(result.snapshot.invoices);
+    setTransactions(result.snapshot.transactions);
+    setRefunds(result.snapshot.refunds);
+  }, [isSignedIn]);
+
+  useEffect(() => {
+    void refreshBilling();
+  }, [refreshBilling]);
+
+  // Saved opportunities live in the organisation table. The list loads for the
+  // signed-in organisation and every toggle is written through the RPC, with
+  // the optimistic change rolled back when the database rejects it.
+  useEffect(() => {
+    if (!organizationId || !isSignedIn || !neonClient) {
+      setSavedIds([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await neonClient.rpc('list_saved_opportunities', {
+          p_organization_id: organizationId,
+        });
+        if (cancelled || result.error) return;
+        const rows = Array.isArray(result.data) ? result.data : [];
+        const ids = rows
+          .map((row) =>
+            row && typeof row === 'object' && 'opportunity_id' in row
+              ? String((row as { opportunity_id?: unknown }).opportunity_id ?? '')
+              : '',
+          )
+          .filter((value) => value.length > 0);
+        setSavedIds(ids);
+      } catch {
+        // The screen reports the empty list; the account can retry by reloading.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, isSignedIn]);
+
   const toggleSaveOpportunity = (id: string) => {
-    setSavedIds((prev) => {
-      const exists = prev.includes(id);
-      pushToast('info', exists ? 'Removed from saved opportunities.' : 'Saved to workspace.');
-      return exists ? prev.filter((item) => item !== id) : [id, ...prev];
-    });
+    const exists = savedIds.includes(id);
+    setSavedIds((prev) => (exists ? prev.filter((item) => item !== id) : [id, ...prev]));
+    pushToast('info', exists ? 'Removed from saved opportunities.' : 'Saved to workspace.');
+
+    if (!organizationId || !neonClient) {
+      pushToast('warning', 'Sign in to an organisation workspace to store saved opportunities.');
+      return;
+    }
+
+    void (async () => {
+      try {
+        const result = exists
+          ? await neonClient.rpc('delete_saved_opportunity', {
+              p_organization_id: organizationId,
+              p_opportunity_id: id,
+            })
+          : await neonClient.rpc('upsert_saved_opportunity', {
+              p_organization_id: organizationId,
+              p_opportunity_id: id,
+            });
+        if (result.error) throw new Error(result.error.message);
+      } catch {
+        setSavedIds((prev) => (exists ? [id, ...prev.filter((item) => item !== id)] : prev.filter((item) => item !== id)));
+        pushToast('error', 'Saved opportunities could not be updated. Try again.');
+      }
+    })();
   };
 
   const toggleCompareOpportunity = (id: string) => {
@@ -394,27 +523,27 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         opportunityId,
         stage,
         priority: 'Medium',
-        addedAt: '2026-11-19',
+        addedAt: new Date().toISOString().slice(0, 10),
         notes: 'Added from discovery workspace for initial eligibility review.',
         tasks: [
           {
             id: `t-${Date.now()}`,
             title: 'Review mandatory submission requirements',
-            owner: onboarding.fullName,
-            dueDate: '2026-11-26',
+            owner: effectiveOnboarding.fullName,
+            dueDate: new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10),
             priority: 'High',
             completed: false,
           },
         ],
         documents: [],
         milestones: [
-          { id: `m-${Date.now()}`, label: 'Initial Go/No-Go Review', targetDate: '2026-11-28', status: 'Upcoming' },
+          { id: `m-${Date.now()}`, label: 'Initial Go/No-Go Review', targetDate: new Date(Date.now() + 9 * 86_400_000).toISOString().slice(0, 10), status: 'Upcoming' },
         ],
         activityLog: [
           {
             id: `act-${Date.now()}`,
-            timestamp: '2026-11-19 (just now)',
-            actor: onboarding.fullName,
+            timestamp: `${new Date().toISOString().slice(0, 10)} (just now)`,
+            actor: effectiveOnboarding.fullName,
             summary: `Added to pipeline (${stage})`,
           },
         ],
@@ -434,8 +563,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
               activityLog: [
                 {
                   id: `act-${Date.now()}`,
-                  timestamp: '2026-11-19 (just now)',
-                  actor: onboarding.fullName,
+                  timestamp: `${new Date().toISOString().slice(0, 10)} (just now)`,
+                  actor: effectiveOnboarding.fullName,
                   summary: `Moved stage from ${item.stage} to ${stage}`,
                 },
                 ...item.activityLog,
@@ -483,8 +612,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
                 {
                   id: `t-${Date.now()}`,
                   title: title.trim(),
-                  owner: owner || onboarding.fullName,
-                  dueDate: dueDate || '2026-12-01',
+                  owner: owner || effectiveOnboarding.fullName,
+                  dueDate: dueDate || new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10),
                   priority,
                   completed: false,
                 },
@@ -492,8 +621,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
               activityLog: [
                 {
                   id: `act-${Date.now()}`,
-                  timestamp: '2026-11-19 (just now)',
-                  actor: onboarding.fullName,
+                  timestamp: `${new Date().toISOString().slice(0, 10)} (just now)`,
+                  actor: effectiveOnboarding.fullName,
                   summary: `Created task "${title.trim()}"`,
                 },
                 ...item.activityLog,
@@ -536,7 +665,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         id: `sh-${Date.now()}`,
         query: query.trim(),
         filtersSummary,
-        searchedAt: '2026-11-19 (just now)',
+        searchedAt: `${new Date().toISOString().slice(0, 10)} (just now)`,
         resultsCount,
       },
       ...prev.slice(0, 14),
@@ -591,11 +720,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     addAuditEvent({
       scope: 'Team',
       action: 'Member invitation created',
-      actor: onboarding.fullName,
+      actor: effectiveOnboarding.fullName,
       target: `${email} (${role})`,
       detail: 'Added pending workspace invitation.',
     });
-    pushToast('success', `Invitation queued for ${email}.`);
+    pushToast('success', `Invitation recorded for ${email}.`);
   };
 
   const retryIngestionJob = (jobId: string) => {
@@ -605,8 +734,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           ? {
               ...j,
               status: 'Succeeded',
-              startedAt: '2026-11-19 (retried)',
-              completedAt: '2026-11-19 (just now)',
+              startedAt: `${new Date().toISOString().slice(0, 10)} (retried)`,
+              completedAt: `${new Date().toISOString().slice(0, 10)} (just now)`,
               recordsCollected: 42,
               recordsProcessed: 42,
               errorDetail: undefined,
@@ -644,8 +773,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addSavedReport = (report: Omit<SavedReportRecord, 'id' | 'generatedAt'>) => {
+    const generatedAt = new Date().toISOString().slice(0, 10);
     setSavedReports((prev) => [
-      { ...report, id: `rep-${Date.now()}`, generatedAt: '2026-11-19' },
+      { ...report, id: `rep-${Date.now()}`, generatedAt },
       ...prev,
     ]);
   };
@@ -664,7 +794,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       target: planId,
       detail: 'Updated configurable plan limits, pricing, or provider variant identifiers.',
     });
-    pushToast('success', `Plan "${planId}" configuration updated and audited.`);
+    pushToast('success', 'Plan configuration updated and recorded in the audit trail.');
   };
 
   const updateSubscriptionField = (patch: Partial<WorkspaceSubscription>) => {
@@ -685,16 +815,23 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const requestPlanTransition = async (targetPlanId: PlanTierId, frequency: BillingFrequency) => {
     const res = await lemonSqueezyAdapter.requestPlanChange(subscription.planId, targetPlanId, frequency);
+    if (!res.accepted) {
+      pushToast('error', res.message);
+      return;
+    }
     setSubscription((prev) => ({
       ...prev,
       pendingPlanId: targetPlanId,
       frequency,
-      pendingChangeEffectiveDate: res.effectivePolicy === 'next_period' ? prev.nextRenewalDate || 'Next billing cycle' : 'Pending webhook confirmation',
+      pendingChangeEffectiveDate:
+        res.effectivePolicy === 'next_period'
+          ? prev.nextRenewalDate || 'Next billing cycle'
+          : 'Awaiting provider confirmation',
     }));
     addAuditEvent({
       scope: 'Billing',
       action: 'Plan change requested',
-      actor: onboarding.fullName,
+      actor: effectiveOnboarding.fullName,
       target: `${subscription.planId} -> ${targetPlanId} (${frequency})`,
       detail: res.message,
     });
@@ -710,37 +847,43 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     pushToast('info', 'Pending plan change cancelled.');
   };
 
-  const requestSubscriptionCancel = async (reason: string) => {
+  const requestSubscriptionCancel = async (reason: string): Promise<boolean> => {
     const res = await lemonSqueezyAdapter.requestCancellation(subscription.providerSubscriptionRef, reason);
+    if (!res.accepted) {
+      pushToast('error', res.message);
+      return false;
+    }
     setSubscription((prev) => ({
       ...prev,
       status: 'cancelled',
-      accessEndDate: prev.nextRenewalDate || 'End of current period',
+      accessEndDate: res.accessEndDate ?? prev.nextRenewalDate,
     }));
     addAuditEvent({
       scope: 'Billing',
       action: 'Subscription cancellation requested',
-      actor: onboarding.fullName,
+      actor: effectiveOnboarding.fullName,
       target: subscription.planId,
       detail: reason ? `Reason: ${reason}` : res.message,
     });
-    pushToast('info', res.message);
+    pushToast('success', res.message);
+    return true;
   };
 
-  const requestSubscriptionReactivate = () => {
-    setSubscription((prev) => ({
-      ...prev,
-      status: prev.providerSubscriptionRef ? 'active' : 'free',
-      accessEndDate: null,
-    }));
+  const requestSubscriptionReactivate = async () => {
+    const res = await lemonSqueezyAdapter.requestReactivation(subscription.providerSubscriptionRef);
+    if (!res.accepted) {
+      pushToast('error', res.message);
+      return;
+    }
     addAuditEvent({
       scope: 'Billing',
       action: 'Subscription reactivation requested',
-      actor: onboarding.fullName,
+      actor: effectiveOnboarding.fullName,
       target: subscription.planId,
-      detail: 'Reactivation intent recorded for Lemon Squeezy provider confirmation.',
+      detail: res.message,
     });
-    pushToast('success', 'Subscription reactivation intent recorded.');
+    pushToast('success', res.message);
+    await refreshBilling();
   };
 
   /* Support, Security & Audit */
@@ -752,7 +895,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const nowLabel = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
     const next: SupportTicket = {
-      id: `TKT-2026-${Math.floor(1050 + Math.random() * 8900)}`,
+      id: `TKT-${new Date().getFullYear()}-${Math.floor(1050 + Math.random() * 8900)}`,
       subject: subject.trim(),
       category,
       status: 'Open',
@@ -762,7 +905,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       messages: [
         {
           id: `msg-${Date.now()}`,
-          sender: onboarding.fullName,
+          sender: effectiveOnboarding.fullName,
           role: 'Customer',
           timestamp: nowLabel,
           body: body.trim(),
@@ -773,7 +916,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     addAuditEvent({
       scope: 'User',
       action: 'Support ticket created',
-      actor: onboarding.fullName,
+      actor: effectiveOnboarding.fullName,
       target: next.id,
       detail: subject.trim(),
     });
@@ -794,7 +937,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
                 ...t.messages,
                 {
                   id: `msg-${Date.now()}`,
-                  sender: onboarding.fullName,
+                  sender: effectiveOnboarding.fullName,
                   role: 'Customer',
                   timestamp: nowLabel,
                   body: body.trim(),
@@ -816,15 +959,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const revokeOtherSessions = () => {
-    setUserSessions((prev) => prev.filter((s) => s.current));
-    addAuditEvent({
-      scope: 'User',
-      action: 'Signed out all secondary sessions',
-      actor: onboarding.fullName,
-      target: 'Neon Managed Auth Sessions',
-      detail: 'Revoked external device sessions.',
-    });
-    pushToast('info', 'All other active sessions signed out.');
+    const otherSessions = userSessions.filter((session) => !session.current);
+    if (otherSessions.length === 0) {
+      pushToast('info', 'This is the only active session reported for your account.');
+      return;
+    }
+    pushToast(
+      'info',
+      'Session revocation for other devices is completed from your Neon account security settings.',
+    );
   };
 
   return (
@@ -877,7 +1020,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         toggleSaveAnalysis,
         savedReports,
         addSavedReport,
-        onboarding,
+        onboarding: effectiveOnboarding,
         updateOnboarding,
         isSignedIn,
         setIsSignedIn,
@@ -892,13 +1035,17 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         dismissToast,
         planCatalog,
         updatePlanConfig,
-        subscription,
+        subscription: effectiveSubscription,
         updateSubscriptionField,
         usageMetrics,
         invoices,
         transactions,
         refunds,
         coupons,
+        paymentMethods,
+        billingConnection,
+        billingConnectionMessage,
+        refreshBilling,
         checkoutOpen,
         checkoutPlanId,
         checkoutFrequency,
@@ -918,8 +1065,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         addAuditEvent,
         userSessions,
         revokeOtherSessions,
-        reduceBackgroundMotion,
-        setReduceBackgroundMotion,
       }}
     >
       {children}

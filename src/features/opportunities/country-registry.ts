@@ -6,8 +6,10 @@ export type SupportedCountry = {
     | "africa"
     | "asia"
     | "europe"
+    | "middle_east"
     | "north_america"
-    | "oceania";
+    | "oceania"
+    | "south_america";
 };
 
 export const supportedCountries: readonly SupportedCountry[] = [
@@ -81,6 +83,37 @@ export const supportedCountries: readonly SupportedCountry[] = [
   { code: "DJ", name: "Djibouti", region: "East Africa", regionCode: "africa" },
   { code: "SO", name: "Somalia", region: "East Africa", regionCode: "africa" },
   { code: "SC", name: "Seychelles", region: "East Africa", regionCode: "africa" },
+  { code: "BR", name: "Brazil", region: "Latin America", regionCode: "south_america" },
+  { code: "CL", name: "Chile", region: "Latin America", regionCode: "south_america" },
+  { code: "CO", name: "Colombia", region: "Latin America", regionCode: "south_america" },
+  { code: "PE", name: "Peru", region: "Latin America", regionCode: "south_america" },
+  { code: "AR", name: "Argentina", region: "Latin America", regionCode: "south_america" },
+  { code: "MX", name: "Mexico", region: "Latin America", regionCode: "north_america" },
+  { code: "SA", name: "Saudi Arabia", region: "Middle East", regionCode: "middle_east" },
+  { code: "AE", name: "United Arab Emirates", region: "Middle East", regionCode: "middle_east" },
+  { code: "QA", name: "Qatar", region: "Middle East", regionCode: "middle_east" },
+  { code: "OM", name: "Oman", region: "Middle East", regionCode: "middle_east" },
+  { code: "BH", name: "Bahrain", region: "Middle East", regionCode: "middle_east" },
+  { code: "KW", name: "Kuwait", region: "Middle East", regionCode: "middle_east" },
+  { code: "JO", name: "Jordan", region: "Middle East", regionCode: "middle_east" },
+  { code: "CH", name: "Switzerland", region: "Europe", regionCode: "europe" },
+  { code: "NO", name: "Norway", region: "Europe", regionCode: "europe" },
+  { code: "FI", name: "Finland", region: "Europe", regionCode: "europe" },
+  { code: "PT", name: "Portugal", region: "Europe", regionCode: "europe" },
+  { code: "CZ", name: "Czechia", region: "Europe", regionCode: "europe" },
+  { code: "RO", name: "Romania", region: "Europe", regionCode: "europe" },
+  { code: "GR", name: "Greece", region: "Europe", regionCode: "europe" },
+  { code: "HU", name: "Hungary", region: "Europe", regionCode: "europe" },
+  { code: "AT", name: "Austria", region: "Europe", regionCode: "europe" },
+  { code: "NZ", name: "New Zealand", region: "Asia-Pacific", regionCode: "oceania" },
+  { code: "BD", name: "Bangladesh", region: "Asia-Pacific", regionCode: "asia" },
+  { code: "PK", name: "Pakistan", region: "Asia-Pacific", regionCode: "asia" },
+  { code: "LK", name: "Sri Lanka", region: "Asia-Pacific", regionCode: "asia" },
+  { code: "KZ", name: "Kazakhstan", region: "Asia-Pacific", regionCode: "asia" },
+  { code: "UZ", name: "Uzbekistan", region: "Asia-Pacific", regionCode: "asia" },
+  { code: "TW", name: "Taiwan", region: "Asia-Pacific", regionCode: "asia" },
+  { code: "HK", name: "Hong Kong", region: "Asia-Pacific", regionCode: "asia" },
+  { code: "MN", name: "Mongolia", region: "Asia-Pacific", regionCode: "asia" },
 ];
 
 export function getSupportedCountry(code: string) {

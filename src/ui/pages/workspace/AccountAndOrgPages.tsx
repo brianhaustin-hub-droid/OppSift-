@@ -11,6 +11,10 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import {
+  acceptOrganizationInvitation,
+  declineOrganizationInvitation,
+} from '../../../features/organizations/organization-service';
 import { WorkspaceLayout } from '../../components/layout/WorkspaceLayout';
 import { ConfirmationDialog } from '../../components/ui/StateViews';
 import { useAppState } from '../../context/AppStateContext';
@@ -19,7 +23,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { TeamMember } from '../../types/oppsift';
 
 export function TeamsOrganisationPage() {
-  const { navigate } = useRouter();
   const { teamMembers, inviteTeamMember, onboarding, updateOnboarding, pushToast } = useAppState();
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<TeamMember['role']>('Analyst');
@@ -36,7 +39,7 @@ export function TeamsOrganisationPage() {
   return (
     <WorkspaceLayout title="Organisations & Teams" breadcrumb="Organisation / Team Management">
       <div className="space-y-6">
-        <div className="p-6 rounded-2xl oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="p-6 rounded-lg oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold text-[#A33B59] dark:text-[#E8A4B5]">Active Organisation</p>
             <h2 className="mt-1 font-display text-xl font-bold">{onboarding.organisationName}</h2>
@@ -71,7 +74,7 @@ export function TeamsOrganisationPage() {
           </form>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl oppsift-card max-w-full overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 rounded-lg oppsift-card max-w-full overflow-x-auto">
           {[
             { id: 'members' as const, label: 'Members & Shared Collections' },
             { id: 'org-settings' as const, label: 'Organisation Capabilities & Settings' },
@@ -91,7 +94,7 @@ export function TeamsOrganisationPage() {
 
         {orgTab === 'members' ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 overflow-x-auto rounded-2xl oppsift-card">
+            <div className="lg:col-span-8 overflow-x-auto rounded-lg oppsift-card">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
                   <tr>
@@ -103,6 +106,16 @@ export function TeamsOrganisationPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0] dark:divide-white/8">
+                  {teamMembers.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-10 px-4 text-center">
+                        <p className="font-semibold">No team members yet</p>
+                        <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] mt-1">
+                          Invite a colleague to collaborate on shared opportunities and preparation tasks.
+                        </p>
+                      </td>
+                    </tr>
+                  )}
                   {teamMembers.map((m) => (
                     <tr
                       key={m.id}
@@ -127,35 +140,23 @@ export function TeamsOrganisationPage() {
               </table>
             </div>
 
-            <div className="lg:col-span-4 p-5 rounded-2xl oppsift-card space-y-3">
+            <div className="lg:col-span-4 p-5 rounded-lg oppsift-card space-y-3">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#164E8B] dark:text-[#38BDF8]" />
                 <h3 className="font-display text-base font-semibold">Shared Opportunity Collections</h3>
               </div>
               <div className="space-y-2.5 text-xs">
-                {[
-                  { name: 'Q4 UK & EU Digital Health Frameworks', items: 8 },
-                  { name: 'APAC Environmental Telemetry Bids', items: 5 },
-                  { name: 'Horizon Europe Consortium Watchlist', items: 4 },
-                ].map((col) => (
-                  <button
-                    key={col.name}
-                    type="button"
-                    onClick={() => {
-                      pushToast('info', `Opened shared collection: ${col.name}`);
-                      navigate('/discover');
-                    }}
-                    className="w-full text-left p-3 rounded-xl border border-[#E2E8F0] dark:border-white/10 hover:border-[#A33B59] flex items-center justify-between transition-colors"
-                  >
-                    <span className="font-medium truncate pr-2">{col.name}</span>
-                    <span className="font-mono tabular-nums text-[#64748B] dark:text-[#CBD5E1] shrink-0">{col.items}</span>
-                  </button>
-                ))}
+                <div className="rounded-xl border border-dashed border-[#E2E8F0] dark:border-white/15 px-4 py-6 text-center">
+                  <p className="font-semibold">No shared collections yet</p>
+                  <p className="mt-1 text-[#64748B] dark:text-[#CBD5E1]">
+                    Collections shared by your team appear here once members save opportunities to them.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="p-6 rounded-2xl oppsift-card space-y-4 max-w-3xl text-xs">
+          <div className="p-6 rounded-lg oppsift-card space-y-4 max-w-3xl text-xs">
             <h3 className="font-display text-base font-semibold">Organisation Capability &amp; Market Settings</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -188,7 +189,7 @@ export function TeamsOrganisationPage() {
             </div>
             <button
               type="button"
-              onClick={() => pushToast('success', 'Organisation capability settings saved.')}
+              onClick={() => pushToast('success', 'Organisation settings updated.')}
               className="px-4 py-2 rounded-xl bg-[#541B32] text-white font-semibold"
             >
               Save Organisation Settings
@@ -243,17 +244,73 @@ export function AcceptInvitationPage() {
   const { navigate } = useRouter();
   const { isSignedIn, pushToast } = useAppState();
   const [status, setStatus] = useState<'pending' | 'accepted' | 'declined'>('pending');
+  const [invitationError, setInvitationError] = useState<string | null>(null);
+  const [invitationBusy, setInvitationBusy] = useState(false);
+  const invitationToken = new URLSearchParams(window.location.search).get('token') ?? '';
+
+  const handleAcceptInvitation = async () => {
+    if (!isSignedIn) {
+      navigate('/auth');
+      return;
+    }
+    if (!invitationToken) {
+      setInvitationError('This link does not include an invitation token.');
+      return;
+    }
+    setInvitationBusy(true);
+    setInvitationError(null);
+    try {
+      await acceptOrganizationInvitation(invitationToken);
+      setStatus('accepted');
+      pushToast('success', 'Organisation membership accepted.');
+    } catch (error) {
+      setInvitationError(error instanceof Error ? error.message : 'The invitation could not be accepted.');
+    } finally {
+      setInvitationBusy(false);
+    }
+  };
+
+  const handleDeclineInvitation = async () => {
+    if (!invitationToken) {
+      setInvitationError('This link does not include an invitation token.');
+      return;
+    }
+    setInvitationBusy(true);
+    setInvitationError(null);
+    try {
+      await declineOrganizationInvitation(invitationToken);
+      setStatus('declined');
+    } catch (error) {
+      setInvitationError(error instanceof Error ? error.message : 'The invitation could not be declined.');
+    } finally {
+      setInvitationBusy(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center oppsift-workspace-canvas text-[#172033] dark:text-[#F8FAFC] p-4">
-      <div className="w-full max-w-lg rounded-2xl oppsift-card p-8 space-y-5 shadow-xl">
+      <div className="w-full max-w-lg rounded-lg oppsift-card p-8 space-y-5 shadow-xl">
         <p className="text-xs font-semibold text-[#A33B59] dark:text-[#E8A4B5]">Organisation Invitation</p>
-        <h1 className="font-display text-2xl font-bold">Join Meridian Civic &amp; Cloud Advisory Ltd</h1>
+        <h1 className="font-display text-2xl font-bold">Accept your organisation invitation</h1>
         <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-white/6 border border-[#E2E8F0] dark:border-white/10 text-xs space-y-1.5">
-          <p><span className="font-semibold">Invited by:</span> Elena Vance (Owner)</p>
-          <p><span className="font-semibold">Assigned Role:</span> Analyst (Discover, Eligibility Review, Shared Pipeline)</p>
-          <p><span className="font-semibold">Authentication Gate:</span> {isSignedIn ? 'Verified Neon Auth session active' : 'Sign-in required before acceptance'}</p>
+          <p>
+            <span className="font-semibold">Invitation:</span>{' '}
+            {invitationToken ? 'Link token detected' : 'No invitation token in this link'}
+          </p>
+          <p>
+            <span className="font-semibold">Authentication Gate:</span>{' '}
+            {isSignedIn ? 'Verified Neon Auth session active' : 'Sign-in required before acceptance'}
+          </p>
+          <p className="text-[#64748B] dark:text-[#94A3B8]">
+            The organisation, invited email and assigned role are confirmed by the server when the invitation is accepted.
+          </p>
         </div>
+
+        {invitationError && (
+          <p className="p-3 rounded-lg border border-[#DC2626]/30 bg-[#DC2626]/8 text-xs text-[#B91C1C] dark:text-[#FCA5A5]">
+            {invitationError}
+          </p>
+        )}
 
         {status === 'accepted' ? (
           <div className="space-y-3">
@@ -284,22 +341,17 @@ export function AcceptInvitationPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="button"
-              onClick={() => {
-                if (!isSignedIn) {
-                  navigate('/auth');
-                  return;
-                }
-                setStatus('accepted');
-                pushToast('success', 'Organisation membership accepted.');
-              }}
-              className="flex-1 h-10 rounded-xl bg-[#541B32] hover:bg-[#A33B59] text-white text-sm font-semibold"
+              disabled={invitationBusy}
+              onClick={() => void handleAcceptInvitation()}
+              className="flex-1 h-10 rounded-xl bg-[#541B32] hover:bg-[#A33B59] text-white text-sm font-semibold disabled:opacity-60"
             >
-              Accept Invitation
+              {invitationBusy ? 'Working…' : 'Accept Invitation'}
             </button>
             <button
               type="button"
-              onClick={() => setStatus('declined')}
-              className="flex-1 h-10 rounded-xl border border-[#E2E8F0] dark:border-white/12 text-sm font-medium"
+              disabled={invitationBusy}
+              onClick={() => void handleDeclineInvitation()}
+              className="flex-1 h-10 rounded-xl border border-[#E2E8F0] dark:border-white/12 text-sm font-medium disabled:opacity-60"
             >
               Decline
             </button>
@@ -320,7 +372,7 @@ export function SettingsPage({
   breadcrumb?: string;
 } = {}) {
   const { navigate } = useRouter();
-  const { onboarding, updateOnboarding, pushToast, reduceBackgroundMotion, setReduceBackgroundMotion } = useAppState();
+  const { onboarding, updateOnboarding, pushToast } = useAppState();
   const { preference, setPreference } = useTheme();
   const [tab, setTab] = useState<'profile' | 'appearance' | 'notifications' | 'security' | 'account'>(initialTab);
   const [confirmAction, setConfirmAction] = useState<'deactivate' | 'delete' | null>(null);
@@ -344,7 +396,7 @@ export function SettingsPage({
     <WorkspaceLayout title={title} breadcrumb={breadcrumb}>
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-1.5 p-1.5 rounded-2xl oppsift-card max-w-full">
+          <div className="flex flex-wrap gap-1.5 p-1.5 rounded-lg oppsift-card max-w-full">
             {(['profile', 'appearance', 'notifications', 'security', 'account'] as const).map((t) => (
               <button
                 key={t}
@@ -394,7 +446,7 @@ export function SettingsPage({
 
         {tab === 'profile' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 p-6 rounded-2xl oppsift-card space-y-4">
+            <div className="lg:col-span-8 p-6 rounded-lg oppsift-card space-y-4">
               <h2 className="font-display text-lg font-bold">Profile &amp; Organisation Details</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -452,7 +504,7 @@ export function SettingsPage({
               </button>
             </div>
 
-            <div className="lg:col-span-4 p-6 rounded-2xl oppsift-card space-y-4">
+            <div className="lg:col-span-4 p-6 rounded-lg oppsift-card space-y-4">
               <h3 className="font-display text-base font-semibold">Profile Completeness</h3>
               <p className="font-display text-3xl font-bold tabular-nums text-[#A33B59] dark:text-[#E8A4B5]">
                 {completenessPct}%
@@ -501,25 +553,11 @@ export function SettingsPage({
                 </button>
               ))}
             </div>
-            <label className="flex items-start justify-between gap-4 p-4 rounded-md border border-[#E2E8F0] dark:border-white/12 cursor-pointer hover:border-[#A33B59]/50">
-              <div>
-                <p className="font-display text-sm font-semibold">Reduce Background Video Motion</p>
-                <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] mt-0.5">
-                  Pauses ambient hero and banner video playback across public and intelligence headers, displaying crisp static posters instead.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={reduceBackgroundMotion}
-                onChange={(e) => setReduceBackgroundMotion(e.target.checked)}
-                className="mt-1 accent-[#541B32]"
-              />
-            </label>
           </div>
         )}
 
         {tab === 'notifications' && (
-          <div className="p-6 rounded-2xl oppsift-card space-y-4 max-w-2xl">
+          <div className="p-6 rounded-lg oppsift-card space-y-4 max-w-2xl">
             <h2 className="font-display text-lg font-bold">Notification Preferences</h2>
             {[
               { key: 'notifyNewMatches' as const, label: 'Email & In-App New Match Digests' },
@@ -540,7 +578,7 @@ export function SettingsPage({
         )}
 
         {tab === 'security' && (
-          <div className="p-6 rounded-2xl oppsift-card space-y-4 max-w-2xl">
+          <div className="p-6 rounded-lg oppsift-card space-y-4 max-w-2xl">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-[#16A34A]" />
               <h2 className="font-display text-lg font-bold">Security &amp; Neon Managed Auth</h2>
@@ -572,7 +610,7 @@ export function SettingsPage({
         )}
 
         {tab === 'account' && (
-          <div className="p-6 rounded-2xl oppsift-card space-y-5 max-w-2xl">
+          <div className="p-6 rounded-lg oppsift-card space-y-5 max-w-2xl">
             <div className="flex items-center gap-2 text-[#DC2626]">
               <AlertTriangle className="w-5 h-5" />
               <h2 className="font-display text-lg font-bold">Account Lifecycle &amp; Governance</h2>

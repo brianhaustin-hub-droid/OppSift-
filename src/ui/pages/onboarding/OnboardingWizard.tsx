@@ -144,7 +144,7 @@ export function OnboardingWizardPage() {
           ))}
         </div>
 
-        <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923] p-6 sm:p-8 shadow-xs">
+        <div className="rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923] p-6 sm:p-8 shadow-xs">
           {step === 0 && (
             <div className="space-y-5">
               <p className="text-xs font-semibold text-[#541B32] dark:text-[#E8A4B5]">Step 1 · Welcome</p>

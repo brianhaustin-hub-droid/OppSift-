@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -25,12 +25,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
 import { BILLING_PROVIDER_CONFIG, getPlanConfig } from '../../data/billingConfig';
 import { lemonSqueezyAdapter } from '../../services/paymentAdapter';
-import {
-  BillingFrequency,
-  InvoiceRecord,
-  PlanTierId,
-  SubscriptionStatus,
-} from '../../types/oppsift';
+import { BillingFrequency, InvoiceRecord, PlanTierId } from '../../types/oppsift';
 
 export function SubscriptionBillingPage() {
   const { navigate } = useRouter();
@@ -46,19 +41,33 @@ export function SubscriptionBillingPage() {
     checkoutFrequency,
     checkoutState,
     setCheckoutState,
-    openCheckout,
     closeCheckout,
     cancelPendingPlanTransition,
     requestSubscriptionReactivate,
     pushToast,
+    refreshBilling,
   } = useAppState();
+
+  // A provider checkout returns the customer with a result marker. Re-read the
+  // subscription so the screen reflects the confirmed state rather than the
+  // pre-checkout plan.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success' || params.get('checkout') === 'pending') {
+      void refreshBilling();
+    }
+  }, [refreshBilling]);
 
   const currentPlan = getPlanConfig(planCatalog, subscription.planId);
   const checkoutPlan = getPlanConfig(planCatalog, checkoutPlanId);
 
   const handleManagePaymentMethod = async () => {
     const res = await lemonSqueezyAdapter.requestCustomerPortalUrl(subscription.providerSubscriptionRef);
-    pushToast(res.available ? 'info' : 'warning', res.message);
+    if (res.available && res.url) {
+      window.location.assign(res.url);
+      return;
+    }
+    pushToast('info', res.message);
   };
 
   const navSubTabs = [
@@ -73,7 +82,7 @@ export function SubscriptionBillingPage() {
     <WorkspaceLayout title="Subscription & Billing" breadcrumb="Settings / Billing">
       <div className="space-y-6">
         {/* Sub-navigation across billing suite */}
-        <div className="flex items-center gap-1.5 p-1.5 rounded-2xl oppsift-card max-w-full overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1.5 rounded-lg oppsift-card max-w-full overflow-x-auto">
           {navSubTabs.map((t) => (
             <button
               key={t.route}
@@ -95,19 +104,19 @@ export function SubscriptionBillingPage() {
           status={subscription.status}
           reason={subscription.failureReason}
           gracePeriodDays={subscription.gracePeriodDays}
-          onRetry={() => openCheckout(subscription.planId, subscription.frequency)}
+          onRetry={handleManagePaymentMethod}
           onUpdateMethod={handleManagePaymentMethod}
         />
 
         {/* Pending Plan Change Notice */}
         {subscription.pendingPlanId && (
-          <div className="p-4 rounded-2xl oppsift-card border-[#164E8B]/35 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="p-4 rounded-lg oppsift-card border-[#164E8B]/35 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div>
               <p className="font-semibold text-[#164E8B] dark:text-[#38BDF8]">
                 Pending plan transition to {getPlanConfig(planCatalog, subscription.pendingPlanId).name}
               </p>
               <p className="text-[#64748B] dark:text-[#CBD5E1] mt-0.5">
-                Effective: {subscription.pendingChangeEffectiveDate}. Active once authoritative {BILLING_PROVIDER_CONFIG.providerName} webhook confirms.
+                Effective: {subscription.pendingChangeEffectiveDate}. Your plan updates after {BILLING_PROVIDER_CONFIG.providerName} confirms the change.
               </p>
             </div>
             <button
@@ -122,7 +131,7 @@ export function SubscriptionBillingPage() {
 
         {/* Current Subscription & Entitlement Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 p-6 rounded-2xl oppsift-card space-y-5">
+          <div className="lg:col-span-7 p-6 rounded-lg oppsift-card space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold text-[#A33B59] dark:text-[#E8A4B5]">Current Workspace Plan</p>
@@ -203,7 +212,7 @@ export function SubscriptionBillingPage() {
           </div>
 
           {/* Payment Method Overview (Hosted Lemon Squeezy Flow) */}
-          <div className="lg:col-span-5 p-6 rounded-2xl oppsift-card flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-5 p-6 rounded-lg oppsift-card flex flex-col justify-between space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -237,7 +246,7 @@ export function SubscriptionBillingPage() {
         </div>
 
         {/* Team Seat & Organisation Billing Summary */}
-        <div className="p-6 rounded-2xl oppsift-card space-y-4">
+        <div className="p-6 rounded-lg oppsift-card space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-[#A33B59] dark:text-[#E8A4B5]" />
@@ -251,10 +260,10 @@ export function SubscriptionBillingPage() {
               Manage Team Members →
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             <div className="p-4 rounded-xl border border-[#E2E8F0] dark:border-white/10">
               <p className="text-[#64748B] dark:text-[#94A3B8]">Billing Administrator</p>
-              <p className="font-semibold mt-1">{subscription.billingAdministrator}</p>
+              <p className="font-semibold mt-1">{subscription.billingAdministrator || 'Not assigned'}</p>
             </div>
             <div className="p-4 rounded-xl border border-[#E2E8F0] dark:border-white/10">
               <p className="text-[#64748B] dark:text-[#94A3B8]">Occupied Seats</p>
@@ -266,7 +275,7 @@ export function SubscriptionBillingPage() {
             </div>
             <div className="p-4 rounded-xl border border-[#E2E8F0] dark:border-white/10">
               <p className="text-[#64748B] dark:text-[#94A3B8]">Billing Identity</p>
-              <p className="font-mono truncate mt-1">{subscription.billingEmail}</p>
+              <p className="font-mono truncate mt-1">{subscription.billingEmail || 'Sign in to set'}</p>
             </div>
           </div>
         </div>
@@ -291,7 +300,7 @@ export function SubscriptionBillingPage() {
         </div>
 
         {/* Refunds & Disputes Policy Card */}
-        <div className="p-6 rounded-2xl oppsift-card space-y-3">
+        <div className="p-6 rounded-lg oppsift-card space-y-3">
           <h3 className="font-display text-base font-semibold">Refunds &amp; Payment Disputes</h3>
           {refunds.length === 0 ? (
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
@@ -332,13 +341,14 @@ export function UsageLimitsPage() {
           <span>Back to {getBackLabel('Subscription & Billing')}</span>
         </button>
 
-        <div className="p-5 rounded-2xl oppsift-card flex flex-wrap items-center justify-between gap-4">
+        <div className="p-5 rounded-lg oppsift-card flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <p className="text-xs font-semibold text-[#A33B59] dark:text-[#E8A4B5]">
               Active Entitlement Plan: {currentPlan.name}
             </p>
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
-              Monthly metered allowances reset on the 1st of each billing cycle. Workspace capacity allowances apply across active records.
+              Monthly allowances reset at the start of each billing period
+              {subscription.nextRenewalDate ? ` (next on ${subscription.nextRenewalDate})` : ''}. Workspace capacity allowances apply across active records.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -412,10 +422,16 @@ export function BillingHistoryPage() {
 
         <InvoiceHistoryTable
           invoices={visibleInvoices}
-          onDownload={(inv) => pushToast('info', `Invoice ${inv.invoiceNumber} PDF retrieval requested.`)}
+          onDownload={(inv) => {
+            if (inv.receiptUrl) {
+              window.open(inv.receiptUrl, '_blank', 'noopener,noreferrer');
+              return;
+            }
+            pushToast('info', 'The payment provider has not supplied a downloadable copy of this invoice.');
+          }}
         />
 
-        <div className="p-6 rounded-2xl oppsift-card space-y-3">
+        <div className="p-6 rounded-lg oppsift-card space-y-3">
           <div className="flex items-center gap-2">
             <Receipt className="w-4 h-4 text-[#164E8B] dark:text-[#38BDF8]" />
             <h3 className="font-display text-base font-semibold">Refund &amp; Dispute History</h3>
@@ -475,7 +491,7 @@ export function PlanChangePage() {
           <span>Back to {getBackLabel('Subscription & Billing')}</span>
         </button>
 
-        <div className="p-5 rounded-2xl oppsift-card flex flex-wrap items-center justify-between gap-4">
+        <div className="p-5 rounded-lg oppsift-card flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold text-[#A33B59] dark:text-[#E8A4B5]">
               Current Plan: {currentPlan.name} ({subscription.frequency})
@@ -515,7 +531,7 @@ export function PlanChangePage() {
         </div>
 
         {targetId !== subscription.planId && !targetPlan.customPricing && (
-          <div className="p-6 rounded-2xl oppsift-card space-y-4">
+          <div className="p-6 rounded-lg oppsift-card space-y-4">
             <h3 className="font-display text-base font-semibold">
               Plan Transition Summary: {currentPlan.name} → {targetPlan.name}
             </h3>
@@ -535,7 +551,7 @@ export function PlanChangePage() {
               <div className="p-4 rounded-xl border border-[#E2E8F0] dark:border-white/10">
                 <p className="text-[#64748B] dark:text-[#94A3B8]">Effective Timing</p>
                 <p className="font-semibold mt-1">
-                  {targetId === 'free' ? 'End of current billing period' : 'Upon payment webhook confirmation'}
+                  {targetId === 'free' ? 'End of current billing period' : 'After payment confirmation'}
                 </p>
               </div>
             </div>
@@ -585,11 +601,12 @@ export function CancelSubscriptionPage() {
   const [confirmed, setConfirmed] = useState(subscription.status === 'cancelled');
 
   const currentPlan = getPlanConfig(planCatalog, subscription.planId);
+  const freePlan = getPlanConfig(planCatalog, 'free');
 
   const handleConfirmCancel = async (e: React.FormEvent) => {
     e.preventDefault();
-    await requestSubscriptionCancel(reason);
-    setConfirmed(true);
+    const cancelled = await requestSubscriptionCancel(reason);
+    if (cancelled) setConfirmed(true);
   };
 
   return (
@@ -605,7 +622,7 @@ export function CancelSubscriptionPage() {
         </button>
 
         {confirmed ? (
-          <div className="p-8 rounded-2xl oppsift-card space-y-4">
+          <div className="p-8 rounded-lg oppsift-card space-y-4">
             <div className="flex items-center gap-2 text-[#16A34A]">
               <CheckCircle2 className="w-5 h-5" />
               <h2 className="font-display text-lg font-bold">Cancellation recorded cleanly</h2>
@@ -626,7 +643,7 @@ export function CancelSubscriptionPage() {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleConfirmCancel} className="p-6 rounded-2xl oppsift-card space-y-5">
+          <form onSubmit={handleConfirmCancel} className="p-6 rounded-lg oppsift-card space-y-5">
             <div className="flex items-start gap-3">
               <Ban className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
               <div>
@@ -640,9 +657,9 @@ export function CancelSubscriptionPage() {
             <div className="p-4 rounded-xl border border-[#E2E8F0] dark:border-white/10 bg-[#F8FAFC] dark:bg-white/4 space-y-2 text-xs">
               <p className="font-semibold">What changes at the end of your current period:</p>
               <ul className="space-y-1 text-[#64748B] dark:text-[#CBD5E1]">
-                <li>• Plan reverts to the Free tier limits (10 saved opportunities, 3 monthly AI analyses, 1 workspace).</li>
-                <li>• Access continues until: {subscription.nextRenewalDate || 'Immediate (Free tier)'}.</li>
-                <li>• Existing saved notices, bid checklists, and notes remain safely stored in read-accessible history.</li>
+                <li>• Your workspace returns to the Free plan allowances ({freePlan.entitlements.savedOpportunitiesLimit} saved opportunities, {freePlan.entitlements.aiAnalysesMonthly} AI analyses per month, {freePlan.entitlements.workspacesLimit} workspace).</li>
+                <li>• Paid access continues until: {subscription.accessEndDate || subscription.nextRenewalDate || 'the end of the current billing period'}.</li>
+                <li>• Existing saved opportunities, preparation notes and reports remain stored and readable after cancellation.</li>
               </ul>
             </div>
 
@@ -706,7 +723,7 @@ export function StandaloneCheckoutPage() {
           <span>Back to {getBackLabel('Subscription & Billing')}</span>
         </button>
 
-        <div className="p-4 rounded-2xl oppsift-card flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="p-4 rounded-lg oppsift-card flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#A33B59] dark:text-[#E8A4B5]" />
             <span className="font-semibold">Plan Selection:</span>

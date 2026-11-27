@@ -47,7 +47,6 @@ import {
   FirstTimeUserExperiencePage,
   IntegrationsPage,
 } from './pages/workspace/CommercialSupportAndBrandPages';
-import { AwardsPage } from './pages/workspace/AwardsPage';
 import { DashboardPage } from './pages/workspace/DashboardPage';
 import {
   CountryDiscoveryPage,
@@ -142,7 +141,7 @@ function AppRoutes() {
     if (path === '/contact') return <PublicContactPage />;
     if (path === '/contact/confirmed') return <PublicContactPage initialSubmitted={true} />;
     if (path === '/pricing') return <PublicPricingPage />;
-    if (path === '/status') return isAdminAuthorized ? <SystemStatusPage /> : <NotFoundScreen />;
+    if (path === '/status') return <SystemStatusPage />;
     if (path === '/getting-started') return <PublicGettingStartedPage />;
     if (path === '/docs') return <PublicDocsPage />;
     if (path === '/security') return <PublicSecurityPage />;
@@ -171,7 +170,6 @@ function AppRoutes() {
 
     // Main Workspace & Discovery
     if (path === '/dashboard') return <DashboardPage />;
-    if (path === '/awards') return <AwardsPage />;
     if (path === '/matched') return <MatchedOpportunitiesPage />;
     if (path === '/discover') return <DiscoverExplorerPage />;
     if (path === '/discover/government') return <DiscoverGovernmentPage />;

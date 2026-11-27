@@ -111,7 +111,34 @@ contractors, founders, consultants, and organisations.
 
 ## 4. Country coverage state
 
-- **48 supported countries** in frontend registry (`src/features/opportunities/country-registry.ts`).
+- **101 supported countries** in frontend registry (`src/features/opportunities/country-registry.ts`).
+- Migration 0048 adds 31 markets — Latin America (Brazil, Chile, Colombia, Peru, Argentina, Mexico), the Middle East (Saudi Arabia, UAE, Qatar, Oman, Bahrain, Kuwait, Jordan), remaining Europe (Switzerland, Norway, Finland, Portugal, Czechia, Romania, Greece, Hungary, Austria) and Asia-Pacific (New Zealand, Bangladesh, Pakistan, Sri Lanka, Kazakhstan, Uzbekistan, Taiwan, Hong Kong, Mongolia) — each with one verified official procurement portal registered as `not_started`/`inactive` with licensing `review_required`.
+  - **Applied to the live Neon database on 2026-11-26:** 101 countries, 176 source registrations, 214 `source_country_coverage` rows, 31 new portals (all `planned-*`, `inactive`).
+- **Migration 0049 activates the first of those portals end-to-end:** the Brazil PNCP
+  consultation API (`connector_identifier = pncp-api`) is now
+  `approved`/`active`/`operational`, with a native connector
+  (`backend/neon/intelligence/pncp-api.ts`) and a worker profile, and a verified
+  real ingest:
+  - run `419b5432-ceab-4b66-8c17-97f2f81928f5` (`succeeded`): 100 records
+    discovered, 100 parsed, 52 created, 48 unchanged, 0 rejected, 0 pending review;
+  - 100 live Brazilian opportunities stored with BRL amounts, state/municipality,
+    buyer, closing date and the official
+    `https://pncp.gov.br/app/editais/<cnpj>/<ano>/<sequencial>` URL;
+  - `coverage_truth` for `BR` reports `live`, 100 records, 1 active source;
+    `opportunity_sources.last_successful_retrieval` set and `source_health = healthy`.
+  - Connector facts: one modality per request (`codigoModalidadeContratacao` is
+    required and comma lists are rejected), `tamanhoPagina` must be 10–50, so it
+    walks 8 modalities (Pregão Eletrônico, Inexigibilidade, Concorrência
+    Eletrônica, Dispensa, Credenciamento, Pregão Presencial, Concorrência
+    Presencial, Concurso) at 50 records × 10 pages = 500 records per run and
+    carries a `pncp` cursor between runs. The 7-day backlog is far larger than one
+    run, so coverage accumulates over successive runs rather than same-day.
+  - Licensing evidence is the public OpenAPI document
+    (`https://pncp.gov.br/api/consulta/v3/api-docs`, maintained by Serpro) and the
+    Swagger UI; the document publishes no explicit reuse licence, and a formal
+    licence review of the portal terms is still advisable.
+- The other 30 portals added by 0048 have no connector and therefore produce no
+  opportunities; they stay `not_started`/`inactive` until each has a verified live sample.
 - Regions (frontend groupings):
   - North America: US, Canada (2)
   - Europe: GB, DE, FR, NL, IE, IT, ES, SE, PL, DK, BE (11)
@@ -305,7 +332,8 @@ contractors, founders, consultants, and organisations.
 > Neon Postgres/Neon Auth/Data API backend, Cloudflare Worker + Queue orchestrator
 > with 5-minute cron). It ingests government procurement, grants, and commercial
 > opportunities from free national sources, OCP bulk mirrors, and open registries.
-> Current launch footprint: 48 supported countries (Africa: East/West/Southern),
+> Current launch footprint: 101 supported countries (Africa, Europe, Asia-Pacific,
+> Middle East and Latin America),
 > 67 source products, 26 operational connectors, 7 live-retrieved sources, 0 parsed
 > records stored yet. Latest deployed batch added 10 African HTML-scraper sources
 > (Benin, Senegal, Gambia, Niger, Burkina Faso, Botswana, Namibia, Madagascar,

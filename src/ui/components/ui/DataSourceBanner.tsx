@@ -2,17 +2,13 @@ import React from 'react';
 import { AlertTriangle, Database, Loader2 } from 'lucide-react';
 import { useAppState } from '../../context/AppStateContext';
 
-function formatCount(value: number): string {
-  return new Intl.NumberFormat('en-GB').format(value);
-}
-
 /**
- * Reports the provenance of every figure on screen. The application has no
- * sample-data mode: this strip confirms live database reads, or states why
- * live records are unavailable.
+ * Reports the provenance of the figures on screen. The application has no
+ * sample-data mode: this strip confirms database reads, or states why
+ * records are unavailable.
  */
 export function DataSourceBanner() {
-  const { dataMode, dataModeDetail, dataLoading, dataTotals, dataTruncated, dataLastSyncedAt } = useAppState();
+  const { dataMode, dataModeDetail, dataLoading, dataLastSyncedAt } = useAppState();
 
   if (dataMode === 'loading' || dataLoading) {
     return (
@@ -22,7 +18,7 @@ export function DataSourceBanner() {
       >
         <Loader2 className="w-4 h-4 shrink-0 mt-0.5 animate-spin" />
         <div>
-          <p className="text-sm font-semibold">Loading live records</p>
+          <p className="text-sm font-semibold">Loading records</p>
           <p className="text-xs opacity-90 mt-0.5">{dataModeDetail}</p>
         </div>
       </div>
@@ -37,7 +33,7 @@ export function DataSourceBanner() {
       >
         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold">Live records unavailable</p>
+          <p className="text-sm font-semibold">Records unavailable</p>
           <p className="text-xs opacity-90 mt-0.5">{dataModeDetail}</p>
         </div>
       </div>
@@ -51,20 +47,14 @@ export function DataSourceBanner() {
     >
       <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide">
         <Database className="w-3.5 h-3.5" />
-        Live data
+        Connected
       </span>
       <span className="text-[11px] text-[#334155] dark:text-[#CBD5E1]">
-        {formatCount(dataTotals.opportunities)} opportunities · {formatCount(dataTotals.awards)} awards ·{' '}
-        {formatCount(dataTotals.sources)} sources · {formatCount(dataTotals.countries)} countries
+        Opportunity database connected
         {dataLastSyncedAt
           ? ` · synced ${new Date(dataLastSyncedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
           : ''}
       </span>
-      {dataTruncated && (
-        <span className="text-[11px] font-medium text-[#B45309] dark:text-[#FBBF24]">
-          Showing the most recent 25,000 rows.
-        </span>
-      )}
     </div>
   );
 }

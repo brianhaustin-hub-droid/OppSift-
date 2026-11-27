@@ -65,7 +65,7 @@ export function GlobalSearchOverlay() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/55 backdrop-blur-xs" role="dialog" aria-modal="true" aria-label="Global Opportunity Search">
-      <div className="w-full max-w-2xl rounded-2xl border border-[#E2E8F0] dark:border-white/15 bg-white dark:bg-[#171324] shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl rounded-lg border border-[#E2E8F0] dark:border-white/15 bg-white dark:bg-[#171324] shadow-2xl overflow-hidden">
         <form onSubmit={handleSubmit} className="flex items-center gap-3 px-4 py-3.5 border-b border-[#E2E8F0] dark:border-white/10">
           <Search className="w-4 h-4 text-[#A33B59] dark:text-[#E8A4B5] shrink-0" />
           <input

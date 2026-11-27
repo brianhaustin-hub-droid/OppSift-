@@ -23,7 +23,6 @@ import {
   Sparkles,
   Sun,
   Target,
-  Trophy,
   User,
   Users,
   X,
@@ -40,7 +39,6 @@ const BREADCRUMB_ROUTE_MAP: Record<string, string> = {
   Workspace: '/dashboard',
   Discovery: '/discover',
   Explorer: '/discover',
-  Awards: '/awards',
   Opportunities: '/discover',
   'Matched Opportunities': '/matched',
   'Saved Opportunities': '/saved',
@@ -102,7 +100,6 @@ export function WorkspaceLayout({
   const primaryNav = [
     { label: 'Dashboard', route: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { label: 'Discover Opportunities', route: '/discover', icon: <Compass className="w-4 h-4" /> },
-    { label: 'Awarded Contracts', route: '/awards', icon: <Trophy className="w-4 h-4" /> },
     { label: 'Matched for You', route: '/matched', icon: <Target className="w-4 h-4" /> },
     { label: 'Saved Opportunities', route: '/saved', icon: <Heart className="w-4 h-4" />, count: savedIds.length },
     { label: 'Saved Searches', route: '/saved-searches', icon: <Bookmark className="w-4 h-4" /> },

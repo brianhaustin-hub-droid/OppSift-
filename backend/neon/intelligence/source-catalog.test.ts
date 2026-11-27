@@ -59,13 +59,13 @@ describe("source research catalog", () => {
     expect(sourceCatalog.every((source) => source.storedRecordCount === 0)).toBe(true);
   });
 
-  it("matches the approved 70-country scope and candidate counts without claiming coverage", () => {
+  it("matches the approved 101-country scope and candidate counts without claiming coverage", () => {
     const coverage = getCountrySourceCoverage(supportedCountries);
     const counts = Object.fromEntries(
       coverage.map((country) => [country.code, country.candidateSourceCount]),
     );
 
-    expect(coverage).toHaveLength(70);
+    expect(coverage).toHaveLength(101);
     expect(counts).toEqual({
       US: 5,
       GB: 2,
@@ -137,13 +137,44 @@ describe("source research catalog", () => {
       DJ: 0,
       SO: 0,
       SC: 0,
+      BR: 0,
+      CL: 0,
+      CO: 0,
+      PE: 0,
+      AR: 0,
+      MX: 0,
+      SA: 0,
+      AE: 0,
+      QA: 0,
+      OM: 0,
+      BH: 0,
+      KW: 0,
+      JO: 0,
+      CH: 0,
+      NO: 0,
+      FI: 0,
+      PT: 0,
+      CZ: 0,
+      RO: 0,
+      GR: 0,
+      HU: 0,
+      AT: 0,
+      NZ: 0,
+      BD: 0,
+      PK: 0,
+      LK: 0,
+      KZ: 0,
+      UZ: 0,
+      TW: 0,
+      HK: 0,
+      MN: 0,
     });
     expect(
       coverage.filter((country) => country.status === "candidate_research_only"),
     ).toHaveLength(50);
     expect(
       coverage.filter((country) => country.status === "not_researched"),
-    ).toHaveLength(20);
+    ).toHaveLength(51);
   });
 
   it("uses only HTTPS links and labels bounded data retrieval distinctly from parsing", () => {

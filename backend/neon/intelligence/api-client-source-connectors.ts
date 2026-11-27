@@ -12,6 +12,7 @@ import { AusTenderOcdsClient } from "./austender-api";
 import { BoampApiClient } from "./boamp-api";
 import { CanadabuysApiClient } from "./canadabuys-api";
 import { KenyaPpipApiClient } from "./kenya-ppip-api";
+import { PncpApiClient, pncpModalities } from "./pncp-api";
 import { KkjApiClient, nextKkjDay, PREFECTURE_COUNT } from "./kkj-api";
 import { NestOcdsClient } from "./nest-api";
 import { OcpBulkClient } from "./ocp-bulk-api";
@@ -24,7 +25,7 @@ const maximumRawPayloadBytes = 2_000_000;
 const connectorPageSize = 100;
 const connectorPagesPerRun = 10;
 const cursorSchema = z.object({
-  kind: z.enum(["ted", "contracts_finder", "sam_gov", "grants_gov", "austender", "boamp", "tenderned", "nest", "kenya_ppip", "ocp_bulk", "canadabuys", "kkj"]),
+  kind: z.enum(["ted", "contracts_finder", "sam_gov", "grants_gov", "austender", "boamp", "tenderned", "nest", "kenya_ppip", "ocp_bulk", "canadabuys", "kkj", "pncp"]),
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   position: z.union([z.number().int().nonnegative(), z.string().min(1)]),
@@ -105,7 +106,7 @@ function decodeCursor(
   if (!parsed.success || parsed.data.kind !== kind) {
     throw new Error("Source API continuation cursor is invalid for this connector.");
   }
-  const urlCursorKinds: readonly string[] = ["contracts_finder", "austender", "nest"];
+  const urlCursorKinds: readonly string[] = ["contracts_finder", "austender", "nest", "pncp"];
   const positionMatches = urlCursorKinds.includes(kind)
     ? typeof parsed.data.position === "string" && parsed.data.to !== undefined
     : typeof parsed.data.position === "number" &&
@@ -671,6 +672,65 @@ export function createKenyaPpipSourceConnector(
         nextCursor: result.nextPage === null
           ? null
           : encodeCursor("kenya_ppip", { from, to, position: result.nextPage }),
+      };
+    },
+  });
+}
+
+export function createPncpSourceConnector(
+  source: SourceRegistryRecord,
+  options: {
+    currentCursor?: string | null;
+    fetcher?: typeof fetch;
+    now?: () => Date;
+    maximumPages?: number;
+    windowDays?: number;
+  } = {},
+): SourceConnector {
+  const client = new PncpApiClient(source, {
+    fetcher: options.fetcher,
+    now: options.now,
+  });
+  const windowDays = options.windowDays ?? 7;
+  return createBufferedConnector({
+    source,
+    initialCursor: options.currentCursor,
+    maximumPages: options.maximumPages,
+    async loadPage(cursor, signal) {
+      const state = decodeCursor(cursor, "pncp");
+      const now = options.now?.() ?? new Date();
+      const from = state?.from ?? dateDaysAgo(now, windowDays);
+      const to = state?.to ?? now.toISOString().slice(0, 10);
+      const position = typeof state?.position === "string"
+        ? state.position
+        : `${pncpModalities[0].code}:1`;
+      const [modalityText, pageText] = position.split(":");
+      const modalityIndex = pncpModalities.findIndex(
+        (candidate) => String(candidate.code) === modalityText,
+      );
+      if (modalityIndex < 0) {
+        throw new Error("PNCP continuation cursor names an unsupported modality.");
+      }
+      const page = Number(pageText);
+      if (!Number.isSafeInteger(page) || page < 1) {
+        throw new Error("PNCP continuation cursor names an invalid page.");
+      }
+      const modality = pncpModalities[modalityIndex];
+      const result = await client.search({ modality: modality.code, page, windowDays, signal });
+      const rawRecords = new Map(result.rawRecords.map((record) => [record.externalId, record.payload]));
+      const nextModality = pncpModalities[modalityIndex + 1] ?? null;
+      return {
+        records: result.records.map((parsed) => ({
+          externalId: parsed.externalId,
+          sourceUrl: parsed.sourceUrl,
+          payload: rawRecords.get(parsed.externalId) ?? parsed,
+          parsed,
+        })),
+        nextCursor: result.nextPage !== null
+          ? encodeCursor("pncp", { from, to, position: `${modality.code}:${result.nextPage}` })
+          : nextModality
+            ? encodeCursor("pncp", { from, to, position: `${nextModality.code}:1` })
+            : null,
       };
     },
   });

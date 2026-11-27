@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowRight,
   Ban,
   Check,
   CheckCircle2,
@@ -19,14 +18,13 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { BILLING_PROVIDER_CONFIG } from '../../data/billingConfig';
+import { BILLING_PROVIDER_CONFIG, formatUsd, getPlanCharge } from '../../data/billingConfig';
 import { lemonSqueezyAdapter } from '../../services/paymentAdapter';
 import {
   BillingFrequency,
   CheckoutStateMode,
   InvoiceRecord,
   PlanTierConfig,
-  PlanTierId,
   SubscriptionStatus,
   UsageMetricRecord,
 } from '../../types/oppsift';
@@ -95,11 +93,12 @@ export function PlanTierCard({
   isCurrent: boolean;
   onSelect: (plan: PlanTierConfig) => void;
 }) {
-  const unitPrice = frequency === 'annual' ? plan.annualMonthlyPriceUsd : plan.monthlyPriceUsd;
+  const charge = getPlanCharge(plan, frequency);
+  const unitPrice = charge.perMonthUsd;
 
   return (
     <div
-      className={`p-6 rounded-2xl flex flex-col justify-between transition-all ${
+      className={`p-6 rounded-lg flex flex-col justify-between transition-all ${
         plan.recommended
           ? 'oppsift-card border-[#A33B59] dark:border-[#E8A4B5] ring-1 ring-[#A33B59]/25'
           : 'oppsift-card'
@@ -128,7 +127,7 @@ export function PlanTierCard({
             <>
               <div className="flex items-baseline gap-1">
                 <span className="font-display text-3xl font-bold tabular-nums text-[#172033] dark:text-white">
-                  ${unitPrice}
+                  {formatUsd(unitPrice)}
                 </span>
                 <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">/ month</span>
               </div>
@@ -136,7 +135,7 @@ export function PlanTierCard({
                 {unitPrice === 0
                   ? 'Free tier · No card required'
                   : frequency === 'annual'
-                  ? `Billed annually ($${unitPrice * 12}/year) · Taxes by MoR`
+                  ? `${formatUsd(charge.totalUsd)} per year${charge.discountPercent > 0 ? ` · ${charge.discountPercent}% annual discount` : ' · Taxes calculated at checkout'}`
                   : 'Billed monthly · Taxes calculated at checkout'}
               </p>
             </>
@@ -214,7 +213,7 @@ export function PlanComparisonMatrix({ catalog }: { catalog: PlanTierConfig[] })
   ];
 
   return (
-    <div className="overflow-x-auto rounded-2xl oppsift-card">
+    <div className="overflow-x-auto rounded-lg oppsift-card">
       <table className="w-full text-left text-xs">
         <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
           <tr>
@@ -251,13 +250,17 @@ export function UsageMetricCard({
   onUpgrade?: () => void;
 }) {
   const isCustom = metric.allowance === 'Custom';
-  const numericAllowance = typeof metric.allowance === 'number' ? metric.allowance : Math.max(metric.used * 2, 1);
-  const pct = isCustom ? 18 : Math.min(100, Math.round((metric.used / Math.max(numericAllowance, 1)) * 100));
-  const remaining = isCustom ? 'Contracted' : `${Math.max(0, numericAllowance - metric.used)} ${metric.unit}`;
+  const numericAllowance = typeof metric.allowance === 'number' ? metric.allowance : 0;
+  const pct = isCustom
+    ? 0
+    : Math.min(100, Math.round((metric.used / Math.max(numericAllowance, 1)) * 100));
+  const remaining = isCustom
+    ? 'Contracted'
+    : `${Math.max(0, numericAllowance - metric.used)} ${metric.unit}`;
   const isNearCap = !isCustom && pct >= 80;
 
   return (
-    <div className="p-5 rounded-2xl oppsift-card space-y-3 flex flex-col justify-between">
+    <div className="p-5 rounded-lg oppsift-card space-y-3 flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between gap-2 text-xs">
           <span className="font-semibold text-[#172033] dark:text-white">{metric.label}</span>
@@ -268,17 +271,23 @@ export function UsageMetricCard({
             {metric.used.toLocaleString()}
           </span>
           <span className="font-mono text-xs tabular-nums text-[#64748B] dark:text-[#CBD5E1]">
-            of {isCustom ? 'Custom' : numericAllowance.toLocaleString()} {metric.unit}
+            of {isCustom ? 'contracted allowance' : `${numericAllowance.toLocaleString()} ${metric.unit}`}
           </span>
         </div>
-        <div className="mt-3 h-2 w-full rounded-full bg-[#F1F5F9] dark:bg-white/10 overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${
-              isNearCap ? 'bg-[#D97706]' : 'bg-gradient-to-r from-[#A33B59] to-[#38BDF8]'
-            }`}
-            style={{ width: `${Math.max(pct, metric.used > 0 ? 6 : 0)}%` }}
-          />
-        </div>
+        {isCustom ? (
+          <p className="mt-3 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+            Allowance defined in your organisation agreement.
+          </p>
+        ) : (
+          <div className="mt-3 h-2 w-full rounded-full bg-[#F1F5F9] dark:bg-white/10 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${
+                isNearCap ? 'bg-[#D97706]' : 'bg-gradient-to-r from-[#A33B59] to-[#38BDF8]'
+              }`}
+              style={{ width: `${Math.max(pct, metric.used > 0 ? 6 : 0)}%` }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="pt-2 border-t border-[#E2E8F0] dark:border-white/8 flex items-center justify-between text-[11px]">
@@ -312,7 +321,7 @@ export function InvoiceHistoryTable({
 }) {
   if (invoices.length === 0) {
     return (
-      <div className="p-10 rounded-2xl oppsift-card text-center space-y-2">
+      <div className="p-10 rounded-lg oppsift-card text-center space-y-2">
         <div className="mx-auto w-11 h-11 rounded-xl bg-[#FFF1F2] dark:bg-[#541B32]/40 text-[#541B32] dark:text-[#E8A4B5] flex items-center justify-center">
           <Receipt className="w-5 h-5" />
         </div>
@@ -325,7 +334,7 @@ export function InvoiceHistoryTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl oppsift-card">
+    <div className="overflow-x-auto rounded-lg oppsift-card">
       <table className="w-full text-left text-xs">
         <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
           <tr>
@@ -364,14 +373,20 @@ export function InvoiceHistoryTable({
                 </span>
               </td>
               <td className="py-3 px-4 text-right">
-                <button
-                  type="button"
-                  onClick={() => onDownload(inv)}
-                  className="inline-flex items-center gap-1 text-[#541B32] dark:text-[#E8A4B5] font-semibold hover:underline"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>PDF</span>
-                </button>
+                {inv.receiptUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => onDownload(inv)}
+                    className="inline-flex items-center gap-1 text-[#541B32] dark:text-[#E8A4B5] font-semibold hover:underline"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Receipt</span>
+                  </button>
+                ) : (
+                  <span className="text-[#94A3B8]" aria-label="Receipt not supplied by the provider">
+                    —
+                  </span>
+                )}
               </td>
             </tr>
           ))}
@@ -397,7 +412,7 @@ export function PaymentRecoveryBanner({
   if (status !== 'past_due' && status !== 'suspended') return null;
 
   return (
-    <div className="p-5 rounded-2xl border border-[#DC2626]/35 bg-[#DC2626]/8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="p-5 rounded-lg border border-[#DC2626]/35 bg-[#DC2626]/8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
       <div className="flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
         <div className="space-y-1 text-xs">
@@ -405,7 +420,8 @@ export function PaymentRecoveryBanner({
             {status === 'suspended' ? 'Paid workspace features suspended' : 'Subscription renewal payment unsuccessful'}
           </p>
           <p className="text-[#172033] dark:text-[#F8FAFC]">
-            {reason || 'Authoritative billing notice: renewal charge could not be completed by Lemon Squeezy.'}
+            {reason ||
+              'The renewal payment could not be completed by Lemon Squeezy. Update your payment method or retry the payment to restore full access.'}
           </p>
           <p className="text-[#64748B] dark:text-[#CBD5E1]">
             Grace policy: Your saved opportunities, pipeline tasks, and notes remain preserved for {gracePeriodDays} days during recovery. No workspace records are deleted on payment failure.
@@ -455,8 +471,8 @@ export function CheckoutExperiencePanel({
   const [orgInput, setOrgInput] = useState(organisationName);
   const [resultMessage, setResultMessage] = useState('');
 
-  const monthlyUnit = frequency === 'annual' ? plan.annualMonthlyPriceUsd : plan.monthlyPriceUsd;
-  const totalCharge = monthlyUnit === null ? null : frequency === 'annual' ? monthlyUnit * 12 : monthlyUnit;
+  const charge = getPlanCharge(plan, frequency);
+  const totalCharge = charge.totalUsd;
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -477,10 +493,26 @@ export function CheckoutExperiencePanel({
     setSubmitting(false);
     onChangeState(res.state);
     setResultMessage(res.message);
+    if (res.checkoutUrl) {
+      window.location.assign(res.checkoutUrl);
+    }
+  };
+
+  const checkoutStateLabel: Record<CheckoutStateMode, string> = {
+    ready: 'Ready',
+    opening: 'Opening secure checkout',
+    pending: 'Payment window open',
+    succeeded: 'Payment confirmed',
+    failed: 'Payment unsuccessful',
+    cancelled: 'Checkout cancelled',
+    verification_pending: 'Awaiting confirmation',
+    expired: 'Checkout expired',
+    duplicate_prevented: 'Checkout already in progress',
+    unavailable: 'Checkout unavailable',
   };
 
   return (
-    <div className="oppsift-card rounded-2xl p-6 space-y-6">
+    <div className="oppsift-card rounded-lg p-6 space-y-6">
       <div className="flex items-start justify-between gap-4 border-b border-[#E2E8F0] dark:border-white/10 pb-4">
         <div>
           <p className="text-xs font-semibold text-[#A33B59] dark:text-[#E8A4B5]">
@@ -553,7 +585,7 @@ export function CheckoutExperiencePanel({
             <div className="flex items-center justify-between">
               <span className="font-semibold">Checkout Status</span>
               <span className="font-mono text-[11px] text-[#A33B59] dark:text-[#E8A4B5] uppercase">
-                {stateMode.replace('_', ' ')}
+                {checkoutStateLabel[stateMode]}
               </span>
             </div>
 
@@ -566,24 +598,28 @@ export function CheckoutExperiencePanel({
             {stateMode === 'pending' && (
               <p className="flex items-center gap-2 text-[#D97706]">
                 <Clock className="w-4 h-4" />
-                <span>Checkout window open. Complete payment in the provider modal to trigger webhook confirmation.</span>
+                <span>Complete payment in the secure payment window. Your plan updates when the payment is confirmed.</span>
               </p>
             )}
             {stateMode === 'verification_pending' && (
               <p className="flex items-center gap-2 text-[#164E8B] dark:text-[#38BDF8]">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
                 <span>
-                  {resultMessage || 'Checkout request prepared. Entitlements activate only upon authoritative payment webhook confirmation.'}
+                  {resultMessage || 'Checkout request received. Subscription access activates after the payment provider confirms the transaction.'}
                 </span>
               </p>
             )}
             {stateMode === 'succeeded' && (
               <p className="flex items-center gap-2 text-[#16A34A]">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Authoritative webhook verified. Subscription entitlements activated.</span>
+                <span>Payment confirmed. Your subscription is active.</span>
               </p>
             )}
-            {(stateMode === 'failed' || stateMode === 'expired' || stateMode === 'cancelled' || stateMode === 'duplicate_prevented') && (
+            {(stateMode === 'failed' ||
+              stateMode === 'expired' ||
+              stateMode === 'cancelled' ||
+              stateMode === 'duplicate_prevented' ||
+              stateMode === 'unavailable') && (
               <p className="flex items-center gap-2 text-[#DC2626]">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>
@@ -591,8 +627,12 @@ export function CheckoutExperiencePanel({
                     (stateMode === 'expired'
                       ? 'Checkout session expired before completion. Start a fresh checkout session.'
                       : stateMode === 'cancelled'
-                      ? 'Checkout cancelled by user. No charge occurred.'
-                      : 'Payment could not be completed. Review card authorisation or contact support.')}
+                        ? 'Checkout cancelled. No charge occurred.'
+                        : stateMode === 'duplicate_prevented'
+                          ? 'A checkout request is already in progress. Complete the open payment window.'
+                          : stateMode === 'unavailable'
+                            ? 'Secure checkout is currently unavailable. No payment has been taken.'
+                            : 'Payment could not be completed. Review your payment details or contact support.')}
                 </span>
               </p>
             )}
@@ -649,12 +689,23 @@ export function CheckoutExperiencePanel({
               <span className="text-[#64748B] dark:text-[#CBD5E1]">Taxes / VAT / GST</span>
               <span>Calculated by Lemon Squeezy</span>
             </div>
+            {charge.discountPercent > 0 && (
+              <div className="flex justify-between text-[#16A34A]">
+                <span>Annual discount</span>
+                <span>{charge.discountPercent}%</span>
+              </div>
+            )}
             <div className="pt-3 border-t border-[#E2E8F0] dark:border-white/10 flex justify-between items-baseline">
-              <span className="font-semibold">Subtotal Estimate</span>
+              <span className="font-semibold">
+                {frequency === 'annual' ? 'Annual total' : 'Monthly total'}
+              </span>
               <span className="font-display text-xl font-bold tabular-nums">
-                {totalCharge === null ? 'Custom' : `$${totalCharge.toFixed(2)}`}
+                {formatUsd(totalCharge)}
               </span>
             </div>
+            <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+              The final amount, currency and tax are confirmed by the payment provider before you pay.
+            </p>
           </div>
         </div>
       </div>

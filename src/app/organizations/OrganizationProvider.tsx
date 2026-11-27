@@ -330,3 +330,11 @@ export function useOrganizations() {
   }
   return context;
 }
+
+/**
+ * Optional variant for components that also render outside the authenticated
+ * application shell (for example isolated previews and tests).
+ */
+export function useOptionalOrganizations() {
+  return useContext(OrganizationContext);
+}

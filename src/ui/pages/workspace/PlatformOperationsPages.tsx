@@ -24,7 +24,9 @@ import { PublicLayout } from '../../components/layout/PublicLayout';
 import { WorkspaceLayout } from '../../components/layout/WorkspaceLayout';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
-import { SYSTEM_SERVICES_STATUS } from '../../data/billingConfig';
+import { buildSystemServicesStatus } from '../../data/billingConfig';
+import { lemonSqueezyAdapter } from '../../services/paymentAdapter';
+import { useOptionalAuth } from '../../../app/auth/AuthProvider';
 import type { AuditLogEvent, SupportTicket, SystemServiceStatus } from '../../types/oppsift';
 
 /* ---------------- 1. Account Security (/settings/security) ---------------- */
@@ -159,14 +161,14 @@ export function AccountSecurityPage() {
               </div>
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#16A34A] dark:text-[#34D399]">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Verified Account</span>
+                <span>Signed In</span>
               </span>
             </div>
 
             <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-white/4 border border-[#E2E8F0] dark:border-white/10 space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-[#64748B] dark:text-[#CBD5E1]">Primary Provider</span>
-                <span className="font-semibold">Neon Managed Auth (Email + Password)</span>
+                <span className="font-semibold">Neon Managed Auth</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#64748B] dark:text-[#CBD5E1]">Secondary Sign-In</span>
@@ -243,6 +245,11 @@ export function AccountSecurityPage() {
             </button>
           </div>
 
+          {userSessions.length === 0 && (
+            <div className="rounded-xl border border-dashed border-[#E2E8F0] dark:border-white/15 px-5 py-6 text-center text-xs text-[#64748B] dark:text-[#CBD5E1]">
+              Session details appear after you sign in.
+            </div>
+          )}
           <div className="divide-y divide-[#E2E8F0] dark:divide-white/8">
             {userSessions.map((sess) => (
               <div key={sess.id} className="py-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -346,7 +353,7 @@ export function AccountSecurityPage() {
 /* ---------------- 2. Global Preferences (/settings/preferences) ---------------- */
 
 export function GlobalPreferencesPage() {
-  const { onboarding, updateOnboarding, addAuditEvent, pushToast, reduceBackgroundMotion, setReduceBackgroundMotion, countries } = useAppState();
+  const { onboarding, updateOnboarding, addAuditEvent, pushToast, countries } = useAppState();
   const { navigate, goBack, getBackLabel } = useRouter();
 
   const [language, setLanguage] = useState(onboarding.preferredLanguage || 'English (International)');
@@ -557,20 +564,6 @@ export function GlobalPreferencesPage() {
                   />
                 </label>
               ))}
-              <label className="flex items-start justify-between gap-4 p-3.5 rounded-md border border-[#E2E8F0] dark:border-white/10 cursor-pointer hover:border-[#A33B59]/50">
-                <div>
-                  <p className="font-semibold text-[#172033] dark:text-white">Reduce Background Video Motion</p>
-                  <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-0.5">
-                    Freeze ambient hero and header video backdrops onto static verified posters.
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={reduceBackgroundMotion}
-                  onChange={(e) => setReduceBackgroundMotion(e.target.checked)}
-                  className="mt-1 accent-[#541B32]"
-                />
-              </label>
             </div>
           </section>
         </div>
@@ -617,7 +610,7 @@ export function ActivityAuditPage({ adminMode = false }: { adminMode?: boolean }
         breadcrumb="Admin / Audit History"
       >
         <div className="p-8 rounded-lg oppsift-card max-w-xl mx-auto text-center space-y-4">
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-[#FFF1F2] dark:bg-[#541B32]/40 text-[#541B32] dark:text-[#E8A4B5] flex items-center justify-center">
+          <div className="mx-auto w-12 h-12 rounded-lg bg-[#FFF1F2] dark:bg-[#541B32]/40 text-[#541B32] dark:text-[#E8A4B5] flex items-center justify-center">
             <ShieldAlert className="w-6 h-6" />
           </div>
           <h2 className="font-display text-xl font-bold">Administrative Audit Scope Restricted</h2>
@@ -890,6 +883,15 @@ export function SupportTicketsPage() {
             <div className="p-5 rounded-lg oppsift-card space-y-3">
               <h2 className="font-display text-base font-bold">Your Support Tickets ({supportTickets.length})</h2>
               <div className="space-y-2">
+                {supportTickets.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-[#E2E8F0] dark:border-white/15 px-5 py-8 text-center">
+                    <HelpCircle className="w-6 h-6 mx-auto text-[#94A3B8]" />
+                    <p className="mt-2 font-semibold text-sm">No support requests yet</p>
+                    <p className="mt-1 text-xs text-[#64748B] dark:text-[#CBD5E1]">
+                      Submit a request and the conversation will appear here with its status and history.
+                    </p>
+                  </div>
+                )}
                 {supportTickets.map((t) => (
                   <button
                     key={t.id}
@@ -1009,6 +1011,13 @@ export function SupportTicketsPage() {
 
 export function SystemStatusPage() {
   const { navigate } = useRouter();
+  const { dataConfigured } = useAppState();
+  const auth = useOptionalAuth();
+  const services = buildSystemServicesStatus({
+    authConfigured: Boolean(auth?.configured),
+    dataConfigured,
+    paymentsConfigured: lemonSqueezyAdapter.configured,
+  });
 
   const renderBadge = (state: SystemServiceStatus['state']) => {
     if (state === 'Operational') {
@@ -1030,7 +1039,7 @@ export function SystemStatusPage() {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#164E8B] dark:text-[#38BDF8]">
         <Clock className="w-3.5 h-3.5" />
-        <span>Probe Unverified</span>
+        <span>Not monitored</span>
       </span>
     );
   };
@@ -1063,19 +1072,20 @@ export function SystemStatusPage() {
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-display text-base font-bold">Genuine Operational Telemetry Boundary</h2>
+              <h2 className="font-display text-base font-bold">Service checks</h2>
               <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
-                Services awaiting live external health probe hooks display &ldquo;Probe Unverified&rdquo; rather than synthetic uptime percentages.
+                States reflect checks this deployment can perform. A service without a probe is shown as not
+                monitored instead of reporting an invented uptime figure.
               </p>
             </div>
           </div>
           <span className="font-mono text-xs text-[#64748B] dark:text-[#94A3B8]">
-            Updated 2026-11-19 11:00 UTC
+            Checked {services[0]?.checkedAt ?? 'on request'}
           </span>
         </div>
 
         <div className="divide-y divide-[#E2E8F0] dark:divide-white/8 rounded-lg oppsift-card overflow-hidden">
-          {SYSTEM_SERVICES_STATUS.map((svc) => (
+          {services.map((svc) => (
             <div key={svc.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
                 <h3 className="font-display text-base font-bold">{svc.name}</h3>

@@ -89,7 +89,7 @@ export function GlobalStatePreviewBanner({
     empty: {
       icon: <Inbox className="w-5 h-5" />,
       title: 'No records match this workspace view',
-      body: 'No synthetic records are displayed. Clear your filters or configure source subscriptions to populate this view.',
+      body: 'Clear your filters or broaden the selected markets to see more records.',
       ctaLabel: 'Restore Active Feed',
       cta: onReset,
     },

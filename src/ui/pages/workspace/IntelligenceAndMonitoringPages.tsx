@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   Bell,
   Bookmark,
   CheckCheck,
@@ -10,7 +11,6 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
-  HelpCircle,
   MessageSquare,
   Plus,
   Printer,
@@ -21,13 +21,11 @@ import {
   X,
 } from 'lucide-react';
 import { WorkspaceLayout } from '../../components/layout/WorkspaceLayout';
-import { CinematicVideoBackdrop } from '../../components/media/CinematicVideoBackdrop';
 import { CategorySplitRing, DiscoveryTrendChart, HorizontalBarChart } from '../../components/ui/Charts';
 import { EmptyStatePanel } from '../../components/ui/StateViews';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
 import {
-  DISCOVERY_TREND_SERIES,
   formatCurrencyValue,
   formatDisplayDate,
 } from '../../data/fixtures';
@@ -55,35 +53,21 @@ export function IntelligenceWorkspacePage() {
   const { navigate } = useRouter();
   const { opportunities, savedAnalyses, toggleSaveAnalysis, onboarding, pushToast } = useAppState();
   const [activeTab, setActiveTab] = useState<AiModuleTab>('overview');
-  const [primaryId, setPrimaryId] = useState(opportunities[0].id);
-  const [compareId, setCompareId] = useState(opportunities[2].id);
+  const [primaryId, setPrimaryId] = useState(opportunities[0]?.id ?? '');
+  const [compareId, setCompareId] = useState(opportunities[2]?.id ?? opportunities[1]?.id ?? '');
   const [docFilter, setDocFilter] = useState<string>('All');
   const [reqCatFilter, setReqCatFilter] = useState<string>('All');
 
   const [chatInput, setChatInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [chatHistory, setChatHistory] = useState<ResearchMessage[]>([
-    {
-      id: 'msg-1',
-      role: 'user',
-      text: 'Summarize the biggest blockers for UK-CCS-2026-0841 against our current Meridian profile.',
-      timestamp: '09:12 UTC',
-    },
-    {
-      id: 'msg-2',
-      role: 'assistant',
-      text: 'Based on UK-CCS-2026-0841 documentation vs your saved profile: (1) Verified Match — Active ISO/IEC 27001:2022 and HL7 FHIR delivery experience align with §6.1 and §3.2. (2) Unverified Gap — UK Cyber Essentials Plus certification expiry is not stored in your profile and is mandatory prior to award (Clarification Batch 1). (3) Unverified Financial Standing — Audited turnover of GBP 2.5M+ across the last 2 years must be confirmed by your finance lead before Selection Questionnaire submission.',
-      citations: ['ITT-Volume-1-Specification.pdf §4.2, §6.1, §6.2', 'Clarification Q&A Batch 1'],
-      timestamp: '09:12 UTC',
-    },
-  ]);
+  const [chatHistory, setChatHistory] = useState<ResearchMessage[]>([]);
 
   const primary = opportunities.find((o) => o.id === primaryId) || opportunities[0];
-  const secondary = opportunities.find((o) => o.id === compareId) || opportunities[1];
+  const secondary = opportunities.find((o) => o.id === compareId) || opportunities[1] || opportunities[0];
 
   const handleSendChat = (promptText?: string) => {
     const content = (promptText ?? chatInput).trim();
-    if (!content) return;
+    if (!content || !primary) return;
     const userMsg: ResearchMessage = {
       id: `u-${Date.now()}`,
       role: 'user',
@@ -99,7 +83,7 @@ export function IntelligenceWorkspacePage() {
         {
           id: `a-${Date.now()}`,
           role: 'assistant',
-          text: `Structured intelligence summary for ${primary.referenceNumber}: Live generative reasoning requires connecting the server-side Gemini API key. Currently indexed clauses show ${primary.requirements.length} published requirements and status "${primary.eligibility.status}" (${primary.eligibility.confidenceLabel}). Next recommended step: ${primary.eligibility.recommendedNextSteps[0] || 'Review source specification directly.'}`,
+          text: `Published notice summary for ${primary.referenceNumber}: the source lists ${primary.requirements.length} requirements and the current evidence assessment is "${primary.eligibility.status}" (${primary.eligibility.confidenceLabel}). Next recommended step: ${primary.eligibility.recommendedNextSteps[0] || 'Review the source specification directly.'}`,
           citations: primary.eligibility.evidenceReferences,
           timestamp: 'Just now',
         },
@@ -119,6 +103,29 @@ export function IntelligenceWorkspacePage() {
     { id: 'report', label: 'Printable Report' },
   ];
 
+  if (!primary) {
+    return (
+      <WorkspaceLayout title="AI Intelligence" breadcrumb="Intelligence / Research & Eligibility">
+        <div className="p-10 rounded-lg oppsift-card text-center space-y-3 max-w-xl mx-auto">
+          <Sparkles className="w-8 h-8 mx-auto text-[#94A3B8]" />
+          <h1 className="font-display text-lg font-bold">No opportunity selected for analysis</h1>
+          <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
+            Analysis is produced from a stored opportunity notice. Open a notice from discovery to review its
+            published requirements and evidence.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/discover')}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl oppsift-sidebar-active text-white text-xs font-semibold"
+          >
+            <span>Browse opportunities</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </WorkspaceLayout>
+    );
+  }
+
   const filteredCriteria = primary.eligibility.criteriaMatrix.filter(
     (c) => reqCatFilter === 'All' || c.category === reqCatFilter
   );
@@ -127,12 +134,13 @@ export function IntelligenceWorkspacePage() {
     <WorkspaceLayout title="AI Intelligence Research Workspace" breadcrumb="Intelligence / Research & Eligibility">
       <div className="space-y-6">
         {/* Workspace Header + Selector + Boundary Notice */}
-        <div className="p-4 rounded-2xl oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+        <div className="p-4 rounded-lg oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
           <div className="flex items-start gap-2.5">
             <Sparkles className="w-4 h-4 text-[#A33B59] dark:text-[#E8A4B5] shrink-0 mt-0.5" />
             <p className="text-[#64748B] dark:text-[#CBD5E1]">
-              <span className="font-semibold text-[#172033] dark:text-[#F8FAFC]">Provenance &amp; Integration Boundary:</span>{' '}
-              OppSift separates verbatim official requirements from AI interpretation. Unknown items are never shown as confirmed eligibility. Live generative re-analysis awaits Gemini API backend activation.
+              <span className="font-semibold text-[#172033] dark:text-[#F8FAFC]">Evidence standard:</span>{' '}
+              OppSift separates verbatim official requirements from interpretation. Items that are not evidenced in
+              the notice are shown as unverified, never as confirmed eligibility.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -153,7 +161,7 @@ export function IntelligenceWorkspacePage() {
         </div>
 
         {/* 8-Module Navigation Strip */}
-        <div className="flex items-center gap-1.5 p-1.5 rounded-2xl oppsift-card max-w-full overflow-x-auto no-print">
+        <div className="flex items-center gap-1.5 p-1.5 rounded-lg oppsift-card max-w-full overflow-x-auto no-print">
           {modules.map((m) => (
             <button
               key={m.id}
@@ -216,7 +224,7 @@ export function IntelligenceWorkspacePage() {
                   key={tool.tab}
                   type="button"
                   onClick={() => setActiveTab(tool.tab)}
-                  className="text-left p-5 rounded-2xl oppsift-card hover:border-[#A33B59] transition-colors space-y-2"
+                  className="text-left p-5 rounded-lg oppsift-card hover:border-[#A33B59] transition-colors space-y-2"
                 >
                   <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-white/8 flex items-center justify-center">
                     {tool.icon}
@@ -228,7 +236,7 @@ export function IntelligenceWorkspacePage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-7 p-5 rounded-2xl oppsift-card space-y-3 min-w-0">
+              <div className="lg:col-span-7 p-5 rounded-lg oppsift-card space-y-3 min-w-0">
                 <h3 className="font-display text-base font-semibold">Recent &amp; Saved Analyses</h3>
                 <div className="divide-y divide-[#E2E8F0] dark:divide-white/8">
                   {savedAnalyses.map((an) => (
@@ -265,12 +273,12 @@ export function IntelligenceWorkspacePage() {
                 </div>
               </div>
 
-              <div className="lg:col-span-5 p-5 rounded-2xl oppsift-card space-y-4 min-w-0">
+              <div className="lg:col-span-5 p-5 rounded-lg oppsift-card space-y-4 min-w-0">
                 <h3 className="font-display text-base font-semibold">Workspace Analysis Quota &amp; Tasks</h3>
                 <div className="p-3.5 rounded-xl bg-[#F8FAFC] dark:bg-white/6 border border-[#E2E8F0] dark:border-white/10 text-xs space-y-1">
                   <p className="font-semibold">Monthly AI Briefs Used: <span className="font-mono">8 / 250</span></p>
                   <p className="text-[#64748B] dark:text-[#CBD5E1]">
-                    Structured eligibility indexing active; generative document re-analysis invokes server-side Gemini inference.
+                    Every requirement is linked to the published source clause used to assess it.
                   </p>
                 </div>
                 <div className="space-y-2 text-xs">
@@ -297,7 +305,7 @@ export function IntelligenceWorkspacePage() {
         {/* Module B: Detailed Opportunity Intelligence Analysis */}
         {activeTab === 'analysis' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-7 p-6 rounded-2xl oppsift-card space-y-5 text-xs min-w-0">
+            <div className="lg:col-span-7 p-6 rounded-lg oppsift-card space-y-5 text-xs min-w-0">
               <div>
                 <p className="font-mono text-[#A33B59] dark:text-[#E8A4B5] font-semibold">
                   {primary.referenceNumber} · {primary.category} · {primary.countryName}
@@ -358,7 +366,7 @@ export function IntelligenceWorkspacePage() {
             </div>
 
             <div className="lg:col-span-5 space-y-5 min-w-0">
-              <div className="p-6 rounded-2xl oppsift-card space-y-3 text-xs">
+              <div className="p-6 rounded-lg oppsift-card space-y-3 text-xs">
                 <h3 className="font-display text-base font-semibold">Required Documents ({primary.documents.length})</h3>
                 {primary.documents.map((doc) => (
                   <div key={doc.id} className="p-3 rounded-xl border border-[#E2E8F0] dark:border-white/10 flex items-center justify-between">
@@ -375,7 +383,7 @@ export function IntelligenceWorkspacePage() {
                 ))}
               </div>
 
-              <div className="p-6 rounded-2xl oppsift-card space-y-3 text-xs">
+              <div className="p-6 rounded-lg oppsift-card space-y-3 text-xs">
                 <h3 className="font-display text-base font-semibold">Missing Information &amp; Source Citations</h3>
                 {primary.eligibility.missingInformation.length === 0 ? (
                   <p className="text-[#16A34A]">No missing profile fields flagged.</p>
@@ -399,7 +407,7 @@ export function IntelligenceWorkspacePage() {
         {/* Module C: Eligibility Intelligence Matrix */}
         {activeTab === 'eligibility' && (
           <div className="space-y-5">
-            <div className="p-6 rounded-2xl oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="p-6 rounded-lg oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold text-[#A33B59] dark:text-[#E8A4B5]">
                   Profile Comparison: {onboarding.organisationName} vs {primary.referenceNumber}
@@ -419,7 +427,7 @@ export function IntelligenceWorkspacePage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl oppsift-card">
+            <div className="overflow-x-auto rounded-lg oppsift-card">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
                   <tr>
@@ -463,7 +471,7 @@ export function IntelligenceWorkspacePage() {
               </table>
             </div>
 
-            <div className="p-5 rounded-2xl oppsift-card space-y-2 text-xs">
+            <div className="p-5 rounded-lg oppsift-card space-y-2 text-xs">
               <h3 className="font-display text-sm font-semibold">Recommended Verification Steps</h3>
               <ul className="space-y-1.5 text-[#64748B] dark:text-[#CBD5E1]">
                 {primary.eligibility.recommendedNextSteps.map((s) => (
@@ -480,7 +488,7 @@ export function IntelligenceWorkspacePage() {
         {/* Module D: Requirements Extraction */}
         {activeTab === 'extraction' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-4 p-5 rounded-2xl oppsift-card space-y-3 text-xs min-w-0">
+            <div className="lg:col-span-4 p-5 rounded-lg oppsift-card space-y-3 text-xs min-w-0">
               <h2 className="font-display text-base font-semibold">Indexed Documents ({primary.documents.length})</h2>
               <button
                 type="button"
@@ -512,7 +520,7 @@ export function IntelligenceWorkspacePage() {
               ))}
             </div>
 
-            <div className="lg:col-span-8 p-6 rounded-2xl oppsift-card space-y-4 text-xs min-w-0">
+            <div className="lg:col-span-8 p-6 rounded-lg oppsift-card space-y-4 text-xs min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-display text-base font-semibold">Categorised Requirement Breakdown</h2>
                 <div className="flex flex-wrap gap-1">
@@ -555,7 +563,7 @@ export function IntelligenceWorkspacePage() {
         {/* Module E: Risk & Suitability */}
         {activeTab === 'risks' && (
           <div className="space-y-4">
-            <div className="p-5 rounded-2xl oppsift-card text-xs">
+            <div className="p-5 rounded-lg oppsift-card text-xs">
               <h2 className="font-display text-base font-bold">Risk, Blocker &amp; Completeness Register</h2>
               <p className="text-[#64748B] dark:text-[#CBD5E1] mt-1">
                 Explicitly marks whether each risk comes from a verified notice clause or AI-assisted suitability inference.
@@ -563,7 +571,7 @@ export function IntelligenceWorkspacePage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {primary.eligibility.riskObservations.map((r, idx) => (
-                <div key={idx} className="p-5 rounded-2xl oppsift-card space-y-2 text-xs">
+                <div key={idx} className="p-5 rounded-lg oppsift-card space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold flex items-center gap-1.5">
                       <ShieldAlert className={`w-4 h-4 ${r.severity === 'High' ? 'text-[#DC2626]' : 'text-[#D97706]'}`} />
@@ -586,7 +594,7 @@ export function IntelligenceWorkspacePage() {
         {/* Module F: Enterprise AI Research Workspace */}
         {activeTab === 'research' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-4 p-5 rounded-2xl oppsift-card space-y-4 text-xs min-w-0">
+            <div className="lg:col-span-4 p-5 rounded-lg oppsift-card space-y-4 text-xs min-w-0">
               <h2 className="font-display text-base font-semibold">Research Context</h2>
               <div className="p-3.5 rounded-xl bg-[#F8FAFC] dark:bg-white/6 border border-[#E2E8F0] dark:border-white/10 space-y-1">
                 <p className="font-mono text-[#A33B59] dark:text-[#E8A4B5]">{primary.referenceNumber}</p>
@@ -612,16 +620,22 @@ export function IntelligenceWorkspacePage() {
               </div>
             </div>
 
-            <div className="lg:col-span-8 rounded-2xl oppsift-card flex flex-col overflow-hidden min-h-[420px] min-w-0">
+            <div className="lg:col-span-8 rounded-lg oppsift-card flex flex-col overflow-hidden min-h-[420px] min-w-0">
               <div className="px-5 py-3.5 border-b border-[#E2E8F0] dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span className="font-display font-semibold text-sm">Structured Opportunity Q&amp;A</span>
-                <span className="text-[#64748B] dark:text-[#CBD5E1]">Requires Gemini API backend for live inference</span>
+                <span className="text-[#64748B] dark:text-[#CBD5E1]">Answers use the published notice fields</span>
               </div>
               <div className="flex-1 p-4 sm:p-5 space-y-4 overflow-y-auto max-h-[380px]">
+                {chatHistory.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-[#E2E8F0] dark:border-white/15 px-5 py-8 text-center text-xs text-[#64748B] dark:text-[#CBD5E1]">
+                    No research questions yet. Ask about published requirements, documents or deadlines for this
+                    notice.
+                  </div>
+                )}
                 {chatHistory.map((m) => (
                   <div
                     key={m.id}
-                    className={`p-4 rounded-2xl text-xs space-y-2 ${
+                    className={`p-4 rounded-lg text-xs space-y-2 ${
                       m.role === 'user'
                         ? 'ml-2 sm:ml-8 bg-[#541B32] text-white'
                         : 'mr-2 sm:mr-8 bg-[#F8FAFC] dark:bg-white/6 border border-[#E2E8F0] dark:border-white/10'
@@ -686,7 +700,7 @@ export function IntelligenceWorkspacePage() {
 
         {/* Module G: Side-by-Side Comparison */}
         {activeTab === 'compare' && (
-          <section className="p-6 rounded-2xl oppsift-card space-y-4">
+          <section className="p-6 rounded-lg oppsift-card space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-base font-semibold">Side-by-Side Intelligence Comparison</h2>
@@ -752,7 +766,7 @@ export function IntelligenceWorkspacePage() {
 
         {/* Module H: Printable Analysis Report */}
         {activeTab === 'report' && (
-          <div className="p-8 rounded-2xl oppsift-card space-y-6">
+          <div className="p-8 rounded-lg oppsift-card space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E2E8F0] dark:border-white/10 pb-4">
               <div>
                 <p className="text-xs font-mono text-[#A33B59] dark:text-[#E8A4B5]">OPPSIFT EXECUTIVE INTELLIGENCE BRIEF</p>
@@ -847,7 +861,7 @@ export function AlertsMonitoringPage() {
   return (
     <WorkspaceLayout title="Alerts & Active Monitoring" breadcrumb="Monitoring / Alerts">
       <div className="space-y-6">
-        <div className="p-5 rounded-2xl oppsift-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-5 rounded-lg oppsift-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="font-display text-base font-semibold">Alert Rules &amp; Watchdogs</h2>
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
@@ -864,9 +878,28 @@ export function AlertsMonitoringPage() {
           </button>
         </div>
 
+        {alertRules.length === 0 && (
+          <div className="p-10 rounded-lg oppsift-card text-center space-y-2">
+            <Bell className="w-6 h-6 mx-auto text-[#94A3B8]" />
+            <h3 className="font-display text-base font-semibold">No alert rules configured</h3>
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] max-w-md mx-auto">
+              Create a rule to be notified about new matches, deadline changes and amendments in the markets you
+              follow.
+            </p>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl oppsift-sidebar-active text-white text-xs font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Configure your first alert</span>
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {alertRules.map((rule) => (
-            <div key={rule.id} className="p-5 rounded-2xl oppsift-card space-y-3">
+            <div key={rule.id} className="p-5 rounded-lg oppsift-card space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-[#164E8B] dark:text-[#38BDF8]">{rule.triggerType}</span>
                 <span className={rule.status === 'Active' ? 'text-[#16A34A] font-semibold' : 'text-[#64748B] font-semibold'}>
@@ -897,7 +930,7 @@ export function AlertsMonitoringPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <form
               onSubmit={handleCreateRule}
-              className="w-full max-w-xl rounded-2xl border border-[#E2E8F0] dark:border-white/15 bg-white dark:bg-[#161224] p-6 space-y-4 shadow-2xl"
+              className="w-full max-w-xl rounded-lg border border-[#E2E8F0] dark:border-white/15 bg-white dark:bg-[#161224] p-6 space-y-4 shadow-2xl"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-lg font-bold">Configure Monitoring Alert Rule</h3>
@@ -1097,7 +1130,7 @@ export function NotificationsCentrePage() {
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div className="lg:col-span-6 divide-y divide-[#E2E8F0] dark:divide-white/8 rounded-2xl oppsift-card overflow-hidden min-w-0">
+            <div className="lg:col-span-6 divide-y divide-[#E2E8F0] dark:divide-white/8 rounded-lg oppsift-card overflow-hidden min-w-0">
               {list.map((n) => (
                 <button
                   key={n.id}
@@ -1126,7 +1159,7 @@ export function NotificationsCentrePage() {
             </div>
 
             {activeNotif && (
-              <div className="lg:col-span-6 p-6 rounded-2xl oppsift-card space-y-4 min-w-0">
+              <div className="lg:col-span-6 p-6 rounded-lg oppsift-card space-y-4 min-w-0">
                 <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-[#CBD5E1]">
                   <span className="font-semibold text-[#164E8B] dark:text-[#38BDF8]">{activeNotif.type} Event</span>
                   <span className="font-mono">{activeNotif.timestamp}</span>
@@ -1161,20 +1194,84 @@ export function NotificationsCentrePage() {
 }
 
 export function AnalyticsPage() {
-  const { countries } = useAppState();
+  const { countries, opportunities, pipeline } = useAppState();
   const [regionScope, setRegionScope] = useState('All');
   const [intelTab, setIntelTab] = useState<'global' | 'country' | 'sector'>('global');
   const scopedCountries = countries.filter((c) => regionScope === 'All' || c.region === regionScope);
 
+  const categoryColors: Record<OpportunityCategory, string> = {
+    'Government Tender': '#EC4899',
+    'Public Procurement': '#A855F7',
+    'Grant & Funding': '#38BDF8',
+    RFP: '#164E8B',
+    'Commercial Contract': '#0EA5E9',
+  };
+
+  const categorySegments = (Object.keys(categoryColors) as OpportunityCategory[])
+    .map((category) => ({
+      label: category,
+      value: opportunities.filter((o) => o.category === category).length,
+      color: categoryColors[category],
+    }))
+    .filter((segment) => segment.value > 0);
+
+  const deadlineBuckets = [
+    { label: '0–14 days (Urgent)', min: -1, max: 14, accent: 'burgundy' as const },
+    { label: '15–30 days (Active Prep)', min: 14, max: 30, accent: 'burgundy' as const },
+    { label: '31–60 days (Pipeline)', min: 30, max: 60, accent: 'blue' as const },
+    { label: '60+ days (Early Watch)', min: 60, max: Number.POSITIVE_INFINITY, accent: 'blue' as const },
+  ].map((bucket) => ({
+    label: bucket.label,
+    accent: bucket.accent,
+    value: opportunities.filter((o) => {
+      const days = Math.ceil((new Date(o.deadlineDate).getTime() - Date.now()) / 86_400_000);
+      return Number.isFinite(days) && days > bucket.min && days <= bucket.max;
+    }).length,
+  }));
+
+  const sectorCounts = opportunities.reduce<Record<string, number>>((acc, o) => {
+    if (!o.sector) return acc;
+    acc[o.sector] = (acc[o.sector] ?? 0) + 1;
+    return acc;
+  }, {});
+  const sectorItems = Object.entries(sectorCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([label, value], index) => ({
+      label,
+      value,
+      sublabel: `${Math.round((value / Math.max(opportunities.length, 1)) * 100)}% of indexed notices`,
+      accent: index % 2 === 0 ? ('burgundy' as const) : ('blue' as const),
+    }));
+
+  const trendData = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, index) => {
+      const start = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+      const published = opportunities.filter((o) => {
+        const d = new Date(o.publicationDate);
+        return !Number.isNaN(d.getTime()) && d >= start && d < end;
+      });
+      const tracked = pipeline.filter((item) => {
+        const d = new Date(item.addedAt);
+        return !Number.isNaN(d.getTime()) && d >= start && d < end;
+      });
+      return {
+        label: start.toLocaleDateString('en-GB', { month: 'short' }),
+        total: published.length,
+        matched: published.filter((o) => o.matchScore >= 70).length,
+        tracked: tracked.length,
+      };
+    });
+  }, [opportunities, pipeline]);
+
+  const hasAnalytics = opportunities.length > 0;
+
   return (
     <WorkspaceLayout title="Global, Country & Sector Analytics" breadcrumb="Analytics / Market Intelligence">
       <div className="space-y-6">
-        <CinematicVideoBackdrop
-          playlistIds={['global-markets', 'energy-sustainability', 'research-innovation']}
-          overlayTone="navy"
-          className="rounded-lg border border-[#E2E8F0] dark:border-white/10"
-          showControls={true}
-        >
+        <div className="rounded-lg oppsift-executive-card text-white border border-[#E2E8F0] dark:border-white/10">
           <div className="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-[#38BDF8]">Market &amp; Sector Intelligence</p>
@@ -1196,7 +1293,7 @@ export function AnalyticsPage() {
               <option value="North America">North America</option>
             </select>
           </div>
-        </CinematicVideoBackdrop>
+        </div>
 
         <div className="oppsift-intel-rule pt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1 p-1 rounded-lg oppsift-card max-w-full overflow-x-auto">
@@ -1222,35 +1319,32 @@ export function AnalyticsPage() {
           </span>
         </div>
 
-        {intelTab === 'global' && (
+        {!hasAnalytics && (
+          <EmptyStatePanel
+            title="No analytics available yet"
+            description="Analytics are calculated from indexed opportunities. They will appear once the database returns records for your scope."
+          />
+        )}
+
+        {hasAnalytics && intelTab === 'global' && (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-7 p-5 rounded-lg oppsift-card min-w-0">
                 <h2 className="font-display text-base font-semibold mb-4">Publication, Match &amp; Pipeline Trends</h2>
-                <DiscoveryTrendChart data={DISCOVERY_TREND_SERIES} />
+                <DiscoveryTrendChart data={trendData} />
               </div>
               <div className="lg:col-span-5 p-5 rounded-lg oppsift-card min-w-0">
                 <h2 className="font-display text-base font-semibold mb-4">Category Composition</h2>
-                <CategorySplitRing
-                  segments={[
-                    { label: 'Government Tender', value: 842, color: '#EC4899' },
-                    { label: 'Public Procurement', value: 718, color: '#A855F7' },
-                    { label: 'Grant & Funding', value: 524, color: '#38BDF8' },
-                    { label: 'RFP & Commercial', value: 659, color: '#164E8B' },
-                  ]}
-                />
+                {categorySegments.length > 0 ? (
+                  <CategorySplitRing segments={categorySegments} />
+                ) : (
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">No categorised records yet.</p>
+                )}
               </div>
             </div>
             <div className="p-5 rounded-lg oppsift-card">
               <h3 className="font-display text-base font-semibold mb-4">Deadline Window Distribution</h3>
-              <HorizontalBarChart
-                items={[
-                  { label: '0–14 days (Urgent)', value: 184, accent: 'burgundy' },
-                  { label: '15–30 days (Active Prep)', value: 492, accent: 'burgundy' },
-                  { label: '31–60 days (Pipeline)', value: 816, accent: 'blue' },
-                  { label: '60+ days (Early Watch)', value: 641, accent: 'blue' },
-                ]}
-              />
+              <HorizontalBarChart items={deadlineBuckets} />
             </div>
           </>
         )}
@@ -1258,29 +1352,29 @@ export function AnalyticsPage() {
         {intelTab === 'country' && (
           <div className="p-6 rounded-lg oppsift-card space-y-5">
             <h2 className="font-display text-base font-semibold">Indexed Notices &amp; Freshness by Jurisdiction</h2>
-            <HorizontalBarChart
-              items={scopedCountries.map((c) => ({
-                label: `${c.name} (${c.currency})`,
-                value: c.sampleRecordCount,
-                sublabel: `${c.coverageStatus} · ${c.activeSourcesCount} sources`,
-                accent: 'blue',
-              }))}
-            />
+            {scopedCountries.length > 0 ? (
+              <HorizontalBarChart
+                items={scopedCountries.map((c) => ({
+                  label: `${c.name} (${c.currency})`,
+                  value: c.sampleRecordCount,
+                  sublabel: `${c.coverageStatus} · ${c.activeSourcesCount} sources`,
+                  accent: 'blue',
+                }))}
+              />
+            ) : (
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">No jurisdictions match this scope.</p>
+            )}
           </div>
         )}
 
         {intelTab === 'sector' && (
           <div className="p-6 rounded-lg oppsift-card space-y-5">
             <h2 className="font-display text-base font-semibold">Sector Demand &amp; Funding Concentration</h2>
-            <HorizontalBarChart
-              items={[
-                { label: 'Healthcare & Life Sciences', value: 312, sublabel: 'UK / EU lead', accent: 'burgundy' },
-                { label: 'Cybersecurity & Federal IT', value: 289, sublabel: 'US / DE lead', accent: 'blue' },
-                { label: 'Energy Grid & Decarbonisation', value: 244, sublabel: 'EU / CA lead', accent: 'burgundy' },
-                { label: 'Water & Environmental Systems', value: 196, sublabel: 'SG / AU lead', accent: 'blue' },
-                { label: 'Smart Mobility & Logistics', value: 168, sublabel: 'DE / SG lead', accent: 'burgundy' },
-              ]}
-            />
+            {sectorItems.length > 0 ? (
+              <HorizontalBarChart items={sectorItems} />
+            ) : (
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">No sector metadata is available yet.</p>
+            )}
           </div>
         )}
       </div>
@@ -1347,7 +1441,7 @@ export function ReportsPage() {
   return (
     <WorkspaceLayout title="Reporting Studio" breadcrumb="Analytics / Reports">
       <div className="space-y-6">
-        <div className="p-5 rounded-2xl oppsift-card space-y-4">
+        <div className="p-5 rounded-lg oppsift-card space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-[#F1F5F9] dark:bg-white/6">
               {(['Country', 'Sector', 'Eligibility', 'Pipeline'] as const).map((t) => (
@@ -1423,7 +1517,7 @@ export function ReportsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 p-6 rounded-2xl oppsift-card space-y-4 min-w-0">
+          <div className="lg:col-span-8 p-6 rounded-lg oppsift-card space-y-4 min-w-0">
             <h2 className="font-display text-lg font-bold">{reportType} Intelligence Report ({scopedOpps.length} rows)</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -1453,7 +1547,7 @@ export function ReportsPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-4 p-6 rounded-2xl oppsift-card space-y-3 text-xs min-w-0">
+          <div className="lg:col-span-4 p-6 rounded-lg oppsift-card space-y-3 text-xs min-w-0">
             <h3 className="font-display text-base font-semibold">Saved &amp; Exported Reports</h3>
             <div className="space-y-2.5">
               {savedReports.map((rep) => (
@@ -1508,7 +1602,7 @@ export function MatchedOpportunitiesPage() {
   return (
     <WorkspaceLayout title="Matched for You" breadcrumb="Workspace / Matched Opportunities">
       <div className="space-y-6">
-        <div className="p-5 rounded-2xl oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs">
+        <div className="p-5 rounded-lg oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs">
           <div className="space-y-1 max-w-2xl">
             <p className="font-semibold text-[#A33B59] dark:text-[#E8A4B5]">
               Profile Calibration · {onboarding.organisationName}
@@ -1569,7 +1663,7 @@ export function MatchedOpportunitiesPage() {
             {matchedList.map(({ opp, inPreferredCountry, inPreferredSector, calibratedScore }) => {
               const isSaved = savedIds.includes(opp.id);
               return (
-                <article key={opp.id} className="p-5 rounded-2xl oppsift-card flex flex-col justify-between gap-4">
+                <article key={opp.id} className="p-5 rounded-lg oppsift-card flex flex-col justify-between gap-4">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                       <span className="font-mono font-bold text-[#541B32] dark:text-[#E8A4B5]">

@@ -383,7 +383,15 @@ export type CheckoutStateMode =
   | 'cancelled'
   | 'verification_pending'
   | 'expired'
-  | 'duplicate_prevented';
+  | 'duplicate_prevented'
+  | 'unavailable';
+
+export type BillingConnectionState =
+  | 'unconfigured'
+  | 'loading'
+  | 'ready'
+  | 'unauthenticated'
+  | 'error';
 
 export interface PlanEntitlements {
   searchesMonthly: number | 'Custom';
@@ -457,6 +465,8 @@ export interface InvoiceRecord {
   providerReference: string;
   customerName: string;
   planName: string;
+  /** Provider-hosted receipt or invoice document, when one is supplied. */
+  receiptUrl?: string;
 }
 
 export interface TransactionRecord {
@@ -546,53 +556,39 @@ export interface UserSessionRecord {
   id: string;
   device: string;
   location: string;
-  authMethod: 'Neon Auth Password' | 'Google OAuth';
+  authMethod: 'Neon Auth Password' | 'Google OAuth' | 'Neon Managed Auth';
   lastActive: string;
   current: boolean;
 }
 
-/* ---------------- Cinematic Media & Visual Identity Types ---------------- */
+/* ---------------- Photographic Background Slideshow Types ---------------- */
 
-export type CinematicPlaylistId =
+export type PhotographicThemeId =
   | 'global-cities'
   | 'international-trade'
+  | 'ports-logistics'
   | 'infrastructure'
   | 'international-business'
-  | 'procurement'
   | 'global-markets'
   | 'research-innovation'
   | 'energy-sustainability'
   | 'agriculture-development'
   | 'connectivity-emerging';
 
-export interface CinematicPlaylistMeta {
-  id: CinematicPlaylistId;
+export interface PhotographicThemeMeta {
+  id: PhotographicThemeId;
   label: string;
   description: string;
-  intendedSurface: string;
 }
 
-export interface CinematicVideoAsset {
+export interface PhotographicAsset {
   id: string;
-  playlistId: CinematicPlaylistId;
+  theme: PhotographicThemeId;
   title: string;
   provider: 'Wikimedia Commons' | 'NASA Image & Video Library';
-  creator: string;
-  sourcePageUrl: string;
-  streamUrl: string;
-  posterUrl: string;
-  licenseName: string;
-  licenseUrl: string;
-  commercialVerified: boolean;
-  embedVerified: boolean;
-  attributionRequired: boolean;
-  attributionText: string;
-  intendedSection: string;
-  aspectRatio: string;
-  durationSeconds: number;
+  license: string;
   width: number;
   height: number;
-  status: 'Approved' | 'Fallback';
+  imageUrl: string;
+  sourceUrl: string;
 }
-
-

@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   AlertTriangle,
   Bell,
   Bookmark,
-  Check,
   Compass,
-  ExternalLink,
   FileText,
-  Film,
   LayoutDashboard,
   Plug,
   Search,
@@ -18,12 +15,7 @@ import { OppSiftLogo } from '../../components/brand/OppSiftLogo';
 import { WorkspaceLayout } from '../../components/layout/WorkspaceLayout';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
-import {
-  CINEMATIC_MEDIA_MANIFEST,
-  CINEMATIC_PLAYLISTS,
-  getMediaCountsSummary,
-} from '../../data/cinematicMedia';
-import { CinematicPlaylistId, GlobalStateMode } from '../../types/oppsift';
+import { GlobalStateMode } from '../../types/oppsift';
 
 export function IntegrationsPage() {
   const { integrations, toggleIntegration, pushToast } = useAppState();
@@ -34,6 +26,16 @@ export function IntegrationsPage() {
         <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
           Only platform-supported integrations are displayed. Connect or configure authorised services below.
         </p>
+        {integrations.length === 0 && (
+          <div className="p-10 rounded-lg oppsift-card text-center space-y-2">
+            <Plug className="w-6 h-6 mx-auto text-[#94A3B8]" />
+            <h3 className="font-display text-base font-semibold">No integrations available</h3>
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] max-w-md mx-auto">
+              Supported integrations appear here when they are available for your organisation. Existing connections
+              and their permissions are listed once authorised.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {integrations.map((intg) => (
             <div key={intg.id} className="p-5 oppsift-card flex flex-col justify-between gap-4">
@@ -186,12 +188,6 @@ export function FirstTimeUserExperiencePage() {
 export function BrandSystemPage() {
   const { setGlobalStateMode } = useAppState();
   const { navigate } = useRouter();
-  const [selectedPlaylist, setSelectedPlaylist] = useState<'all' | CinematicPlaylistId>('all');
-  const mediaSummary = getMediaCountsSummary();
-  const visibleClips =
-    selectedPlaylist === 'all'
-      ? CINEMATIC_MEDIA_MANIFEST
-      : CINEMATIC_MEDIA_MANIFEST.filter((c) => c.playlistId === selectedPlaylist);
 
   const burgundySwatches = [
     { name: 'Deep Burgundy', hex: '#251019' },
@@ -306,90 +302,6 @@ export function BrandSystemPage() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="p-6 oppsift-card space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="font-display text-base font-semibold flex items-center gap-2">
-                <Film className="w-4 h-4 text-[#A33B59] dark:text-[#E8A4B5]" />
-                <span>Verified Cinematic Media &amp; Licensing Registry</span>
-              </h3>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">
-                {mediaSummary.approvedCount}/{mediaSummary.totalClips} commercially cleared clips across {mediaSummary.playlistCount} themed playlists ({mediaSummary.providers.join(' & ')}).
-              </p>
-            </div>
-            <select
-              value={selectedPlaylist}
-              onChange={(e) => setSelectedPlaylist(e.target.value as 'all' | CinematicPlaylistId)}
-              className="h-9 px-3 rounded-md border border-[#E2E8F0] dark:border-white/15 bg-white dark:bg-[#0B1F3A] text-xs font-medium"
-            >
-              <option value="all">All 10 Playlists ({mediaSummary.totalClips} clips)</option>
-              {Object.values(CINEMATIC_PLAYLISTS).map((pl) => (
-                <option key={pl.id} value={pl.id}>
-                  {pl.label} (5)
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-            {Object.values(CINEMATIC_PLAYLISTS).map((pl) => {
-              const count = CINEMATIC_MEDIA_MANIFEST.filter((c) => c.playlistId === pl.id).length;
-              return (
-                <button
-                  key={pl.id}
-                  type="button"
-                  onClick={() => setSelectedPlaylist(selectedPlaylist === pl.id ? 'all' : pl.id)}
-                  className={`p-3 rounded-md border text-left transition-colors ${
-                    selectedPlaylist === pl.id
-                      ? 'border-[#A33B59] bg-[#FFF1F2] dark:bg-[#541B32]/40'
-                      : 'border-[#E2E8F0] dark:border-white/10 hover:border-[#A33B59]/50'
-                  }`}
-                >
-                  <p className="text-xs font-semibold truncate">{pl.label}</p>
-                  <p className="text-[11px] font-mono text-[#64748B] dark:text-[#94A3B8] mt-1">{count} clips · Verified</p>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="overflow-x-auto max-h-80 overflow-y-auto rounded-md border border-[#E2E8F0] dark:border-white/10">
-            <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 bg-[#F8FAFC] dark:bg-[#1C2433] text-[#64748B] dark:text-[#CBD5E1]">
-                <tr>
-                  <th className="py-2.5 px-3 font-semibold">Title</th>
-                  <th className="py-2.5 px-3 font-semibold">Playlist</th>
-                  <th className="py-2.5 px-3 font-semibold">Provider</th>
-                  <th className="py-2.5 px-3 font-semibold">License</th>
-                  <th className="py-2.5 px-3 font-semibold">Resolution</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Source</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8F0] dark:divide-white/8">
-                {visibleClips.map((clip) => (
-                  <tr key={clip.id} className="hover:bg-[#F8FAFC] dark:hover:bg-white/4">
-                    <td className="py-2 px-3 font-medium max-w-[240px] truncate">{clip.title}</td>
-                    <td className="py-2 px-3 text-[#64748B] dark:text-[#94A3B8]">{clip.playlistId}</td>
-                    <td className="py-2 px-3">{clip.provider}</td>
-                    <td className="py-2 px-3 font-mono text-[11px] text-[#16A34A]">{clip.licenseName}</td>
-                    <td className="py-2 px-3 font-mono tabular-nums text-[11px]">{clip.width}×{clip.height}</td>
-                    <td className="py-2 px-3 text-right">
-                      <a
-                        href={clip.sourcePageUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[#164E8B] dark:text-[#38BDF8] hover:underline"
-                      >
-                        <span>Inspect</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </section>
 

@@ -48,7 +48,7 @@ export function SavedOpportunitiesPage() {
   return (
     <WorkspaceLayout title="Saved Opportunities" breadcrumb="Personal Workspace / Saved">
       <div className="space-y-5">
-        <div className="p-4 rounded-2xl oppsift-card flex flex-col sm:flex-row gap-3">
+        <div className="p-4 rounded-lg oppsift-card flex flex-col sm:flex-row gap-3">
           <input
             type="search"
             value={search}
@@ -78,7 +78,7 @@ export function SavedOpportunitiesPage() {
             onAction={() => navigate('/discover')}
           />
         ) : (
-          <div className="divide-y divide-[#E2E8F0] dark:divide-white/8 rounded-2xl oppsift-card overflow-hidden">
+          <div className="divide-y divide-[#E2E8F0] dark:divide-white/8 rounded-lg oppsift-card overflow-hidden">
             {savedList.map((opp) => (
               <div key={opp.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="min-w-0">
@@ -152,7 +152,7 @@ export function SavedSearchesPage() {
             {savedSearches.map((s) => (
               <div
                 key={s.id}
-                className="p-5 rounded-2xl oppsift-card flex flex-col justify-between gap-4"
+                className="p-5 rounded-lg oppsift-card flex flex-col justify-between gap-4"
               >
                 <div>
                   <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-[#CBD5E1]">
@@ -244,7 +244,7 @@ export function SearchHistoryPage() {
             onAction={() => navigate('/discover')}
           />
         ) : (
-          <div className="divide-y divide-[#E2E8F0] dark:divide-white/8 rounded-2xl oppsift-card overflow-hidden">
+          <div className="divide-y divide-[#E2E8F0] dark:divide-white/8 rounded-lg oppsift-card overflow-hidden">
             {searchHistory.map((h) => (
               <div key={h.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -312,7 +312,7 @@ export function MyOpportunitiesPage() {
   return (
     <WorkspaceLayout title="My Opportunities Pipeline" breadcrumb="Personal Workspace / Pipeline">
       <div className="space-y-5">
-        <div className="p-4 rounded-2xl oppsift-card flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 rounded-lg oppsift-card flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5 flex-1">
             <input
               type="search"
@@ -372,7 +372,7 @@ export function MyOpportunitiesPage() {
                 return (
                   <div
                     key={stage}
-                    className="rounded-2xl oppsift-card p-3 space-y-2.5"
+                    className="rounded-lg oppsift-card p-3 space-y-2.5"
                   >
                     <div className="flex items-center justify-between text-xs font-semibold">
                       <span>{stage}</span>
@@ -433,7 +433,7 @@ export function MyOpportunitiesPage() {
             </div>
           </div>
         ) : view === 'table' ? (
-          <div className="overflow-x-auto rounded-2xl oppsift-card">
+          <div className="overflow-x-auto rounded-lg oppsift-card">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
                 <tr>
@@ -503,7 +503,7 @@ export function MyOpportunitiesPage() {
               return (
                 <div
                   key={item.id}
-                  className="p-5 rounded-2xl oppsift-card flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="p-5 rounded-lg oppsift-card flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="space-y-1.5 min-w-0">
                     <p className="text-xs text-[#A33B59] dark:text-[#E8A4B5] font-semibold">
@@ -557,16 +557,22 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
   const [tab, setTab] = useState<'tasks' | 'documents' | 'milestones' | 'notes'>('tasks');
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskOwner, setNewTaskOwner] = useState('E. Vance');
-  const [newTaskDue, setNewTaskDue] = useState('2026-12-03');
+  const [newTaskOwner, setNewTaskOwner] = useState('');
+  const [newTaskDue, setNewTaskDue] = useState(
+    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+  );
   const [newTaskPriority, setNewTaskPriority] = useState<PriorityLevel>('Medium');
 
-  if (!item) {
+  if (!item || !opp) {
     return (
       <WorkspaceLayout title="Opportunity Preparation" breadcrumb="Personal Workspace / Preparation">
         <EmptyStatePanel
-          title="No preparation workspace selected"
-          description="Add an opportunity to your pipeline to access checklists and milestones."
+          title={item ? 'Opportunity details unavailable' : 'No preparation workspace selected'}
+          description={
+            item
+              ? 'The source notice for this preparation workspace is no longer available. Your notes and tasks remain stored.'
+              : 'Add an opportunity to your pipeline to access checklists and milestones.'
+          }
           actionLabel="Go to Pipeline"
           onAction={() => navigate('/my-opportunities')}
         />
@@ -597,7 +603,7 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
         </button>
 
         {/* Header + Stage & Priority Selectors */}
-        <section className="p-6 rounded-2xl oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <section className="p-6 rounded-lg oppsift-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
               {opp.countryName} · {opp.referenceNumber} · Closing {formatDisplayDate(opp.deadlineDate)} ({getDaysRemaining(opp.deadlineDate)}d left)
@@ -638,7 +644,7 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
         </section>
 
         {/* Preparation Sub-navigation */}
-        <div className="flex items-center gap-1.5 p-1.5 rounded-2xl oppsift-card max-w-full overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1.5 rounded-lg oppsift-card max-w-full overflow-x-auto">
           {[
             { id: 'tasks' as const, label: `Checklist & Tasks (${item.tasks.length})` },
             { id: 'documents' as const, label: `Preparation Docs (${item.documents.length})` },
@@ -659,7 +665,7 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
         </div>
 
         {tab === 'tasks' && (
-          <div className="p-6 rounded-2xl oppsift-card space-y-5">
+          <div className="p-6 rounded-lg oppsift-card space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-base font-semibold">Preparation Checklist</h3>
               <span className="font-mono text-xs tabular-nums text-[#A33B59] dark:text-[#E8A4B5] font-semibold">
@@ -735,7 +741,7 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
         )}
 
         {tab === 'documents' && (
-          <div className="p-6 rounded-2xl oppsift-card space-y-4 text-xs">
+          <div className="p-6 rounded-lg oppsift-card space-y-4 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="font-display text-base font-semibold">Response Documents &amp; Compliance Files</h3>
@@ -777,7 +783,7 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
 
         {tab === 'milestones' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
-            <div className="p-6 rounded-2xl oppsift-card space-y-3">
+            <div className="p-6 rounded-lg oppsift-card space-y-3">
               <h3 className="font-display text-base font-semibold">Milestones &amp; Gates</h3>
               {item.milestones.map((m) => (
                 <div key={m.id} className="p-3.5 rounded-xl border border-[#E2E8F0] dark:border-white/10 flex items-center justify-between">
@@ -789,7 +795,7 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
                 </div>
               ))}
             </div>
-            <div className="p-6 rounded-2xl oppsift-card space-y-3">
+            <div className="p-6 rounded-lg oppsift-card space-y-3">
               <h3 className="font-display text-base font-semibold">Preparation Activity History</h3>
               <div className="space-y-2.5">
                 {item.activityLog.map((act) => (
@@ -807,7 +813,7 @@ export function OpportunityPreparationPage({ pipelineId }: { pipelineId: string 
         )}
 
         {tab === 'notes' && (
-          <div className="p-6 rounded-2xl oppsift-card space-y-3">
+          <div className="p-6 rounded-lg oppsift-card space-y-3">
             <h3 className="font-display text-base font-semibold">Team Preparation Notes</h3>
             <textarea
               rows={6}

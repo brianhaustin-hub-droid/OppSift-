@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ArrowRight,
   Bell,
-  Check,
   ChevronDown,
   Compass,
   Database,
@@ -18,23 +17,23 @@ import {
   PlanTierCard,
 } from '../../components/billing/BillingComponents';
 import { PublicLayout } from '../../components/layout/PublicLayout';
-import { CinematicVideoBackdrop } from '../../components/media/CinematicVideoBackdrop';
+import { PhotographicBackdrop } from '../../components/media/PhotographicBackdrop';
 import { HorizontalBarChart } from '../../components/ui/Charts';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
-import { BILLING_PROVIDER_CONFIG } from '../../data/billingConfig';
+import { ANNUAL_DISCOUNT_PERCENT, BILLING_PROVIDER_CONFIG } from '../../data/billingConfig';
 import { formatCurrencyValue } from '../../data/fixtures';
-import { BillingFrequency, CinematicPlaylistId, OpportunityCategory, PlanTierConfig } from '../../types/oppsift';
+import { BillingFrequency, OpportunityCategory, PhotographicThemeId, PlanTierConfig } from '../../types/oppsift';
 
 function PublicHeroBanner({
-  playlistIds,
+  initialTheme = 'global-cities',
   overlayTone = 'burgundy-navy',
   kicker,
   title,
   subtitle,
   rightSlot,
 }: {
-  playlistIds: CinematicPlaylistId[];
+  initialTheme?: PhotographicThemeId;
   overlayTone?: 'burgundy' | 'navy' | 'burgundy-navy';
   kicker: string;
   title: string;
@@ -42,13 +41,13 @@ function PublicHeroBanner({
   rightSlot?: React.ReactNode;
 }) {
   return (
-    <CinematicVideoBackdrop
-      playlistIds={playlistIds}
+    <PhotographicBackdrop
+      initialTheme={initialTheme}
       overlayTone={overlayTone}
+      minHeightClass="min-h-[320px] sm:min-h-[380px]"
       className="border-b border-white/10"
-      showControls={true}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8 lg:pt-14 lg:pb-10">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-14 pb-12 lg:pt-20 lg:pb-16">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold tracking-wide text-[#E8A4B5]">{kicker}</p>
@@ -64,7 +63,7 @@ function PublicHeroBanner({
           {rightSlot && <div className="shrink-0">{rightSlot}</div>}
         </div>
       </div>
-    </CinematicVideoBackdrop>
+    </PhotographicBackdrop>
   );
 }
 
@@ -95,14 +94,14 @@ export function PublicHomepage() {
 
   return (
     <PublicLayout>
-      {/* Hero Section with Cinematic Global Intelligence Backdrop */}
-      <CinematicVideoBackdrop
-        playlistIds={['global-cities', 'international-trade', 'infrastructure']}
+      {/* Hero Section with Automatic 300-Photo Global Slideshow */}
+      <PhotographicBackdrop
+        initialTheme="global-cities"
         overlayTone="burgundy-navy"
+        minHeightClass="min-h-[580px] lg:min-h-[660px]"
         className="border-b border-white/10"
-        showControls={true}
       >
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-12 lg:pt-16 lg:pb-14">
+        <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-14 pb-14 lg:pt-20 lg:pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
             <div className="lg:col-span-6 flex flex-col justify-center">
               <p className="text-xs font-semibold tracking-wide text-[#E8A4B5]">
@@ -251,7 +250,7 @@ export function PublicHomepage() {
             </div>
           </div>
         </section>
-      </CinematicVideoBackdrop>
+      </PhotographicBackdrop>
 
       {/* Opportunity Categories Overview */}
       <section className="border-t border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923] py-16">
@@ -529,7 +528,7 @@ export function PublicProductPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['international-business', 'research-innovation']}
+        initialTheme="international-business"
         overlayTone="navy"
         kicker="Product Architecture"
         title="Seven integrated capabilities from notice discovery to bid readiness"
@@ -588,7 +587,7 @@ export function PublicOpportunitiesPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['procurement', 'international-trade']}
+        initialTheme="international-trade"
         overlayTone="burgundy-navy"
         kicker="Opportunity Categories"
         title="Explore supported opportunity categories"
@@ -691,7 +690,7 @@ export function PublicMarketsPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['global-markets', 'global-cities']}
+        initialTheme="global-markets"
         overlayTone="burgundy-navy"
         kicker="Global Market Intelligence"
         title="Supported International Markets & Coverage"
@@ -904,7 +903,7 @@ export function PublicSourcesPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['connectivity-emerging', 'infrastructure']}
+        initialTheme="connectivity-emerging"
         overlayTone="navy"
         kicker="Source Transparency"
         title="Official Data Source Ecosystem"
@@ -1003,7 +1002,7 @@ export function PublicSolutionsPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['infrastructure', 'energy-sustainability', 'agriculture-development']}
+        initialTheme="infrastructure"
         overlayTone="burgundy"
         kicker="Solutions"
         title="Built for every organisation pursuing structured opportunities"
@@ -1045,7 +1044,7 @@ export function PublicHowItWorksPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['international-business', 'procurement']}
+        initialTheme="ports-logistics"
         overlayTone="burgundy-navy"
         kicker="Workflow"
         title="How OppSift Works"
@@ -1079,7 +1078,7 @@ export function PublicAboutPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['global-cities', 'energy-sustainability']}
+        initialTheme="energy-sustainability"
         overlayTone="burgundy-navy"
         kicker="About OppSift"
         title="Clarity and integrity for global opportunity intelligence"
@@ -1145,10 +1144,12 @@ export function PublicContactPage({ initialSubmitted = false }: { initialSubmitt
         <div className="lg:col-span-7">
           {submitted ? (
             <div className="p-8 rounded-xl border border-[#16A34A]/30 bg-white dark:bg-[#171923] space-y-3">
-              <p className="text-sm font-semibold text-[#16A34A]">Inquiry validated and queued</p>
+              <p className="text-sm font-semibold text-[#16A34A]">Inquiry received</p>
               <h2 className="font-display text-xl font-bold">Thank you, {name}</h2>
               <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">
-                Your inquiry regarding <span className="font-medium text-[#172033] dark:text-[#F8FAFC]">{topic}</span> is ready for dispatch via the backend mail endpoint.
+                We have your inquiry about{' '}
+                <span className="font-medium text-[#172033] dark:text-[#F8FAFC]">{topic}</span>. Our team will reply
+                to {email || 'the email address you provided'} within one business day.
               </p>
               <button
                 type="button"
@@ -1171,7 +1172,7 @@ export function PublicContactPage({ initialSubmitted = false }: { initialSubmitt
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Elena Vance"
+                    placeholder="Your full name"
                     className="w-full h-10 px-3 rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-[#F8FAFC] dark:bg-[#1C2433] text-sm"
                   />
                 </div>
@@ -1297,7 +1298,7 @@ export function PublicPricingPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['procurement', 'international-business']}
+        initialTheme="global-markets"
         overlayTone="burgundy-navy"
         kicker="Commercial Plans"
         title="Transparent plans aligned to your global opportunity volume"
@@ -1344,6 +1345,13 @@ export function PublicPricingPage() {
             </p>
           </div>
           <PlanComparisonMatrix catalog={visiblePlans} />
+          <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] max-w-3xl">
+            Annual billing is charged for twelve months at the monthly rate shown
+            {ANNUAL_DISCOUNT_PERCENT > 0
+              ? `, including the published ${ANNUAL_DISCOUNT_PERCENT}% annual discount`
+              : '. No annual discount is currently applied'}
+            . Taxes are calculated by the Merchant of Record at checkout.
+          </p>
         </section>
 
         {/* Merchant of Record & Team Sales Banner */}
@@ -1354,7 +1362,7 @@ export function PublicPricingPage() {
             </p>
             <h3 className="font-display text-lg font-bold">Global Tax Compliance &amp; Authoritative Invoices</h3>
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] leading-relaxed">
-              {BILLING_PROVIDER_CONFIG.taxNote} OppSift never stores raw payment card numbers. All renewals, receipts, cancellations, and refunds are synchronised directly from verified {BILLING_PROVIDER_CONFIG.providerName} webhook events.
+              {BILLING_PROVIDER_CONFIG.taxNote} OppSift never stores raw payment card numbers. Renewals, receipts, cancellations and refunds are synchronised from payment confirmations issued by {BILLING_PROVIDER_CONFIG.providerName}.
             </p>
             <p className="text-[11px] font-mono text-[#64748B] dark:text-[#94A3B8]">
               Supported Billing Currencies: {BILLING_PROVIDER_CONFIG.supportedCurrencies.join(' · ')}
@@ -1447,7 +1455,7 @@ export function PublicGettingStartedPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['international-business', 'research-innovation']}
+        initialTheme="international-business"
         overlayTone="navy"
         kicker="Getting Started"
         title="Launch your OppSift intelligence workspace in four steps"
@@ -1522,7 +1530,7 @@ export function PublicDocsPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['research-innovation', 'connectivity-emerging']}
+        initialTheme="research-innovation"
         overlayTone="navy"
         kicker="Documentation"
         title="Platform Documentation & Reference"
@@ -1573,7 +1581,7 @@ export function PublicSecurityPage() {
   return (
     <PublicLayout>
       <PublicHeroBanner
-        playlistIds={['connectivity-emerging', 'procurement']}
+        initialTheme="connectivity-emerging"
         overlayTone="navy"
         kicker="Security & Trust"
         title="Enterprise Security & Data Provenance"

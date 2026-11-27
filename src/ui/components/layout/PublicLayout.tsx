@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Film, Menu, Moon, Sun, X } from 'lucide-react';
-import { useAppState } from '../../context/AppStateContext';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import { useRouter } from '../../context/RouterContext';
 import { useTheme } from '../../context/ThemeContext';
 import { OppSiftLogo } from '../brand/OppSiftLogo';
@@ -9,7 +8,6 @@ import { DataSourceBanner } from '../ui/DataSourceBanner';
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { path, navigate } = useRouter();
   const { resolvedTheme, toggleTheme } = useTheme();
-  const { reduceBackgroundMotion, setReduceBackgroundMotion } = useAppState();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -138,14 +136,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 >
                   {resolvedTheme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
                   <span>{resolvedTheme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReduceBackgroundMotion(!reduceBackgroundMotion)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#E2E8F0] dark:border-[#263244] text-xs font-medium text-[#172033] dark:text-[#F8FAFC] hover:bg-[#F1F5F9] dark:hover:bg-[#1C2433]"
-                >
-                  <Film className="w-3.5 h-3.5" />
-                  <span>{reduceBackgroundMotion ? 'Motion: Paused' : 'Motion: Active'}</span>
                 </button>
               </div>
             </div>

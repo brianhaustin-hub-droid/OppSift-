@@ -10,10 +10,12 @@ import {
   createKenyaPpipSourceConnector,
   createNestSourceConnector,
   createOcpBulkSourceConnector,
+  createPncpSourceConnector,
   createSamGovSourceConnector,
   createTedSourceConnector,
   createTenderNedSourceConnector,
 } from "../../intelligence/api-client-source-connectors";
+import { pncpModalities } from "../../intelligence/pncp-api";
 import { createWorldBankProcurementConnector } from "../../intelligence/world-bank-procurement";
 import { createHtmlListSourceConnector } from "../../intelligence/html-list-connector";
 import {
@@ -1378,5 +1380,26 @@ export function getSourceExecutionProfiles(
     ["planned-eg-misr-petroleum", mainMarketProfile(egyptMisrPetroleumSite, "EG")],
     ["planned-eg-acud", mainMarketProfile(egyptAcudSite, "EG")],
     ["planned-ma-pmmp", mainMarketProfile(moroccoPmmpSite, "MA")],
+    // Brazil PNCP public consultation API (migration 0049). The consultation
+    // endpoint accepts one modality per request, so the connector walks the
+    // published modality list and maps each modality name to a government tender.
+    ["pncp-api", {
+      kind: "native" as const,
+      priority: 30,
+      mappings: (source) => pncpModalities.map((modality) => ({
+        sourceId: source.id,
+        countryCode: "BR",
+        sourceTerm: modality.name,
+        category: "government" as const,
+        globalType: "tender",
+      })),
+      createConnector(source, options) {
+        return createPncpSourceConnector(source, {
+          currentCursor: options.currentCursor,
+          maximumPages: 10,
+          windowDays: 7,
+        });
+      },
+    }],
   ]);
 }

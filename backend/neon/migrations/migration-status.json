@@ -422,6 +422,24 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-22T22:45:44.569Z"
+    },
+    {
+      "version": "0048",
+      "file": "0048_expand_latam_middle_east_asia_pacific_coverage.sql",
+      "dependsOn": [
+        "0047"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-26T05:09:24.005Z"
+    },
+    {
+      "version": "0049",
+      "file": "0049_activate_brazil_pncp.sql",
+      "dependsOn": [
+        "0048"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-26T05:30:58.108Z"
     }
   ]
 }

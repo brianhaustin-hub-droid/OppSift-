@@ -50,7 +50,7 @@ export function AdminConsolePage({
     <WorkspaceLayout title="Administration & Platform Operations" breadcrumb={`Admin / ${section}`}>
       <div className="space-y-6">
         {!isAdminAuthorized ? (
-          <div className="p-10 rounded-2xl oppsift-card max-w-xl mx-auto text-center space-y-4">
+          <div className="p-10 rounded-lg oppsift-card max-w-xl mx-auto text-center space-y-4">
             <ShieldAlert className="w-10 h-10 mx-auto text-[#DC2626]" />
             <h2 className="font-display text-lg font-bold">Administrative permissions required</h2>
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] max-w-md mx-auto">
@@ -66,7 +66,7 @@ export function AdminConsolePage({
           </div>
         ) : (
           <>
-            <div className="p-4 rounded-2xl oppsift-card flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="p-4 rounded-lg oppsift-card flex flex-wrap items-center justify-between gap-3 text-xs">
               <p className="text-[#64748B] dark:text-[#CBD5E1]">
                 Protected administrative console. Platform Administrator permissions active.
               </p>
@@ -88,7 +88,7 @@ export function AdminConsolePage({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 p-1.5 rounded-2xl oppsift-card max-w-full overflow-x-auto">
+            <div className="flex items-center gap-1.5 p-1.5 rounded-lg oppsift-card max-w-full overflow-x-auto">
               {tabs.map((t) => (
                 <button
                   key={t.id}
@@ -114,13 +114,13 @@ export function AdminConsolePage({
                     { label: 'Active Jurisdictions', value: `${countries.filter((c) => c.coverageStatus === 'Active').length}` },
                     { label: 'Failed Sync Jobs (24h)', value: `${ingestionJobs.filter((j) => j.status === 'Failed').length}` },
                   ].map((m) => (
-                    <div key={m.label} className="p-4 rounded-2xl oppsift-card">
+                    <div key={m.label} className="p-4 rounded-lg oppsift-card">
                       <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">{m.label}</p>
                       <p className="mt-1 font-display text-2xl font-bold tabular-nums">{m.value}</p>
                     </div>
                   ))}
                 </div>
-                <div className="p-5 rounded-2xl oppsift-card">
+                <div className="p-5 rounded-lg oppsift-card">
                   <h2 className="font-display text-base font-semibold mb-3">Recent Ingestion Jobs</h2>
                   <div className="space-y-2 text-xs">
                     {ingestionJobs.slice(0, 4).map((j) => (
@@ -137,7 +137,7 @@ export function AdminConsolePage({
             )}
 
             {section === 'sources' && (
-              <div className="overflow-x-auto rounded-2xl oppsift-card">
+              <div className="overflow-x-auto rounded-lg oppsift-card">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
                     <tr>
@@ -172,7 +172,7 @@ export function AdminConsolePage({
             )}
 
             {section === 'coverage' && (
-              <div className="overflow-x-auto rounded-2xl oppsift-card">
+              <div className="overflow-x-auto rounded-lg oppsift-card">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
                     <tr>
@@ -199,7 +199,7 @@ export function AdminConsolePage({
             )}
 
             {section === 'ingestion' && (
-              <div className="overflow-x-auto rounded-2xl oppsift-card">
+              <div className="overflow-x-auto rounded-lg oppsift-card">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
                     <tr>
@@ -259,7 +259,7 @@ export function AdminConsolePage({
                     { title: 'Missing Disclosed Value', value: '12.5%', note: 'Explicitly rendered as "Value not disclosed"' },
                     { title: 'Source Attribution Completeness', value: '100%', note: 'All indexed records retain canonical portal links' },
                   ].map((q) => (
-                    <div key={q.title} className="p-5 rounded-2xl oppsift-card">
+                    <div key={q.title} className="p-5 rounded-lg oppsift-card">
                       <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">{q.title}</p>
                       <p className="mt-2 font-display text-2xl font-bold tabular-nums">{q.value}</p>
                       <p className="mt-1 text-xs text-[#64748B] dark:text-[#CBD5E1]">{q.note}</p>
@@ -267,7 +267,7 @@ export function AdminConsolePage({
                   ))}
                 </div>
 
-                <div className="overflow-x-auto rounded-2xl oppsift-card">
+                <div className="overflow-x-auto rounded-lg oppsift-card">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-[#F8FAFC] dark:bg-white/6 text-[#64748B] dark:text-[#CBD5E1]">
                       <tr>
@@ -299,7 +299,7 @@ export function AdminConsolePage({
         {/* Ingestion Job Log Modal */}
         {selectedJob && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="w-full max-w-xl rounded-2xl border border-[#E2E8F0] dark:border-white/15 bg-white dark:bg-[#161224] p-6 space-y-4 text-xs shadow-2xl">
+            <div className="w-full max-w-xl rounded-lg border border-[#E2E8F0] dark:border-white/15 bg-white dark:bg-[#161224] p-6 space-y-4 text-xs shadow-2xl">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-mono text-[#A33B59] dark:text-[#E8A4B5]">{selectedJob.id}</p>

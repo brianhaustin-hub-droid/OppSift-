@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Activity,
   ArrowRight,
@@ -14,7 +14,6 @@ import {
   Search,
   Sparkles,
   TrendingDown,
-  TrendingUp,
   X,
   Zap,
 } from 'lucide-react';
@@ -23,11 +22,7 @@ import { WorkspaceLayout } from '../../components/layout/WorkspaceLayout';
 import { DiscoveryTrendChart, KpiSparkline } from '../../components/ui/Charts';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
-import {
-  DISCOVERY_TREND_SERIES,
-  formatDisplayDate,
-  getDaysRemaining,
-} from '../../data/fixtures';
+import { formatDisplayDate, getDaysRemaining } from '../../data/fixtures';
 
 function CountryMiniFlag({ code }: { code: string }) {
   if (code === 'US') {
@@ -123,9 +118,16 @@ export function DashboardPage() {
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const activePlan = planCatalog.find((p) => p.id === subscription.planId) ?? planCatalog[0];
-  const firstName = onboarding.fullName.split(' ')[0] || 'Elena';
+  const firstName = onboarding.fullName.trim().split(' ')[0] || '';
   const totalAvailableCount = countries.reduce((acc, c) => acc + c.sampleRecordCount, 0);
-  const activeOppsCount = opportunities.filter((o) => o.status !== 'Closed').length;
+
+  const windowDays = windowRange === '30d' ? 30 : windowRange === '90d' ? 90 : 365;
+  const windowStart = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const windowOpportunities = opportunities.filter((o) => {
+    const published = new Date(o.publicationDate).getTime();
+    return Number.isFinite(published) && published >= windowStart;
+  });
+  const activeOppsCount = windowOpportunities.filter((o) => o.status !== 'Closed').length;
   const expiringSoonCount = opportunities.filter((o) => {
     const d = getDaysRemaining(o.deadlineDate);
     return d >= 0 && d <= 21;
@@ -142,24 +144,45 @@ export function DashboardPage() {
     (completenessFields.filter((f) => f && f.trim().length > 0).length / completenessFields.length) * 100
   );
 
-  const trendData =
-    chartWindow === '30d'
-      ? [
-          { label: 'Wk 1', total: 620, matched: 210, tracked: 115 },
-          { label: 'Wk 2', total: 690, matched: 245, tracked: 140 },
-          { label: 'Wk 3', total: 740, matched: 290, tracked: 168 },
-          { label: 'Wk 4', total: 810, matched: 325, tracked: 192 },
-        ]
-      : chartWindow === '12m'
-      ? [
-          { label: 'Jan', total: 1210, matched: 400, tracked: 195 },
-          { label: 'Mar', total: 1480, matched: 490, tracked: 240 },
-          { label: 'May', total: 1620, matched: 540, tracked: 280 },
-          { label: 'Jul', total: 2150, matched: 740, tracked: 410 },
-          { label: 'Sep', total: 2480, matched: 890, tracked: 510 },
-          { label: 'Oct', total: 2743, matched: 1020, tracked: 615 },
-        ]
-      : DISCOVERY_TREND_SERIES;
+  const trendData = useMemo(() => {
+    const now = new Date();
+
+    const summarize = (start: Date, end: Date, label: string) => {
+      const published = opportunities.filter((o) => {
+        const d = new Date(o.publicationDate);
+        return !Number.isNaN(d.getTime()) && d >= start && d < end;
+      });
+      const tracked = pipeline.filter((p) => {
+        const d = new Date(p.addedAt);
+        return !Number.isNaN(d.getTime()) && d >= start && d < end;
+      });
+      return {
+        label,
+        total: published.length,
+        matched: published.filter((o) => o.matchScore >= 70).length,
+        tracked: tracked.length,
+      };
+    };
+
+    if (chartWindow === '30d') {
+      return [0, 1, 2, 3].map((week) => {
+        const end = new Date(now);
+        end.setDate(end.getDate() - (3 - week) * 7);
+        const start = new Date(end);
+        start.setDate(start.getDate() - 7);
+        return summarize(start, end, `Wk ${week + 1}`);
+      });
+    }
+
+    const months = chartWindow === '6m' ? 6 : 12;
+    return Array.from({ length: months }, (_, index) => {
+      const start = new Date(now.getFullYear(), now.getMonth() - (months - 1 - index), 1);
+      const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+      const label = start.toLocaleDateString('en-GB', { month: 'short' });
+      return summarize(start, end, label);
+    });
+  }, [opportunities, pipeline, chartWindow]);
+  const sparklineValues = trendData.map((point) => point.total);
 
   const topCountries = [...countries]
     .sort((a, b) => b.sampleRecordCount - a.sampleRecordCount)
@@ -222,7 +245,7 @@ export function DashboardPage() {
             </div>
             <div className="min-w-0">
               <h2 className="font-display text-2xl sm:text-[26px] font-bold tracking-tight text-[#172033] dark:text-white">
-                Welcome back, {firstName}!
+                {firstName ? `Welcome back, ${firstName}!` : 'Welcome to your workspace'}
               </h2>
               <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#CBD5E1]">
                 Discover global tenders, RFPs, grants and commercial opportunities across {countries.filter((c) => c.coverageStatus === 'Active').length} active jurisdictions
@@ -265,16 +288,14 @@ export function DashboardPage() {
                   <span className="font-display text-2xl font-bold tabular-nums text-[#172033] dark:text-white">
                     {totalAvailableCount.toLocaleString()}
                   </span>
-                  <span className="inline-flex items-center gap-0.5 text-[11px] font-mono font-semibold text-[#16A34A] dark:text-[#34D399]">
-                    <TrendingUp className="w-3 h-3" />
-                    12.5%
-                  </span>
                 </div>
               </div>
             </div>
-            <div className="px-1 pt-1">
-              <KpiSparkline values={[14, 17, 15, 21, 27, 45]} tone="burgundy" idSuffix="1" />
-            </div>
+            {sparklineValues.some((value) => value > 0) && (
+              <div className="px-1 pt-1">
+                <KpiSparkline values={sparklineValues} tone="burgundy" idSuffix="1" />
+              </div>
+            )}
           </button>
 
           {/* KPI 2 — Intelligence Blue */}
@@ -288,21 +309,19 @@ export function DashboardPage() {
                 <CheckCircle2 className="w-4 h-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-[#64748B] dark:text-white/80 truncate">Active Curated Notices</p>
+                <p className="text-xs font-medium text-[#64748B] dark:text-white/80 truncate">Open Notices Published</p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="font-display text-2xl font-bold tabular-nums text-[#172033] dark:text-white">
-                    {activeOppsCount} / {opportunities.length}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-[11px] font-mono font-semibold text-[#16A34A] dark:text-[#34D399]">
-                    <TrendingUp className="w-3 h-3" />
-                    8.7%
+                    {activeOppsCount} / {windowOpportunities.length}
                   </span>
                 </div>
               </div>
             </div>
-            <div className="px-1 pt-1">
-              <KpiSparkline values={[10, 14, 18, 20, 29, 44]} tone="blue" idSuffix="2" />
-            </div>
+            {sparklineValues.some((value) => value > 0) && (
+              <div className="px-1 pt-1">
+                <KpiSparkline values={sparklineValues} tone="blue" idSuffix="2" />
+              </div>
+            )}
           </button>
 
           {/* KPI 3 — Burgundy */}
@@ -321,15 +340,8 @@ export function DashboardPage() {
                   <span className="font-display text-2xl font-bold tabular-nums text-[#172033] dark:text-white">
                     {savedIds.length}
                   </span>
-                  <span className="inline-flex items-center gap-0.5 text-[11px] font-mono font-semibold text-[#16A34A] dark:text-[#34D399]">
-                    <TrendingUp className="w-3 h-3" />
-                    6.1%
-                  </span>
                 </div>
               </div>
-            </div>
-            <div className="px-1 pt-1">
-              <KpiSparkline values={[8, 12, 11, 18, 26, 40]} tone="burgundy" idSuffix="3" />
             </div>
           </button>
 
@@ -355,9 +367,6 @@ export function DashboardPage() {
                   </span>
                 </div>
               </div>
-            </div>
-            <div className="px-1 pt-1">
-              <KpiSparkline values={[10, 13, 19, 17, 27, 46]} tone="blue" idSuffix="4" />
             </div>
           </button>
         </section>
@@ -402,6 +411,11 @@ export function DashboardPage() {
               </button>
             </div>
             <div className="divide-y divide-[#E2E8F0] dark:divide-white/8">
+              {topCountries.length === 0 && (
+                <p className="py-3 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                  Country coverage is unavailable until the database returns records.
+                </p>
+              )}
               {topCountries.map((country) => (
                 <button
                   key={country.code}
@@ -567,6 +581,11 @@ export function DashboardPage() {
               </button>
             </div>
             <div className="divide-y divide-[#E2E8F0] dark:divide-white/8">
+              {recentOpportunities.length === 0 && (
+                <p className="py-3 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                  No opportunities have been published yet.
+                </p>
+              )}
               {recentOpportunities.map((opp) => (
                 <button
                   key={opp.id}
@@ -612,6 +631,11 @@ export function DashboardPage() {
               </button>
             </div>
             <div className="divide-y divide-[#E2E8F0] dark:divide-white/8">
+              {notifications.length === 0 && (
+                <p className="py-3 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                  No activity yet. Alerts and amendments will appear here.
+                </p>
+              )}
               {notifications.slice(0, 3).map((n) => (
                 <button
                   key={n.id}
