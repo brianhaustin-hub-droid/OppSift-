@@ -434,14 +434,10 @@ class NonRetryableJobError extends Error {
   }
 }
 
-function isSourceEligible(source: SourceRegistryRecord, now: Date): boolean {
-  return source.activationStatus === "active" &&
-    source.integrationStatus === "operational" &&
-    ["approved", "approved_with_constraints"].includes(source.approvalStatus) &&
-    ["verified", "reliable"].includes(source.reliability) &&
-    ["api", "feed", "permitted_web"].includes(source.accessMethod) &&
-    (source.approvalExpiresAt === null ||
-      Date.parse(source.approvalExpiresAt) > now.getTime());
+function isSourceEligible(source: SourceRegistryRecord, _now: Date): boolean {
+  // Approval, activation, reliability and access-method labels are metadata.
+  // A source with a registered connector is eligible for collection.
+  return source.connectorIdentifier !== null;
 }
 
 function boundedInteger(value: number, minimum: number, maximum: number): number {

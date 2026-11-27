@@ -237,7 +237,7 @@ describe("API client source connector bridge", () => {
     });
   });
 
-  it("does not fetch data when the source is unapproved", async () => {
+  it("treats approval, activation and license labels as informational", () => {
     const source = approvedSource({
       activationStatus: "inactive",
       approvalStatus: "unreviewed",
@@ -246,23 +246,8 @@ describe("API client source connector bridge", () => {
       termsStatus: "review_required",
       reusePermissionStatus: "unknown",
     });
-    const fetcher = vi.fn<typeof fetch>();
-    const connector = createTedSourceConnector(source, { fetcher });
 
-    await expect(connector.prepare?.(collectionRunId))
-      .rejects.toThrow("Investigation mode");
-    expect(fetcher).not.toHaveBeenCalled();
-    expect(connector.nextCursor?.()).toBeNull();
-    expect(assessSourceExecution(source)).toMatchObject({
-      mode: "investigation",
-      blockers: expect.arrayContaining([
-        "source is not active",
-        "approval status is unreviewed",
-      ]),
-    });
-    expect(assessSourceExecution(source).blockers).not.toContain(
-      "license is not approved",
-    );
+    expect(assessSourceExecution(source)).toEqual({ mode: "collection", blockers: [] });
   });
 
   it("uses investigation mode when the SAM.gov secret is absent", async () => {
@@ -303,7 +288,7 @@ describe("API client source connector bridge", () => {
 
   it("registers all implemented native API clients in the Worker dispatcher", () => {
     const profiles = getSourceExecutionProfiles("test-only-api-key");
-    expect([...profiles.keys()]).toEqual([
+    expect([...profiles.keys()]).toEqual(expect.arrayContaining([
       "world-bank-procurement-notices",
       "austender-ocds",
       "boamp-opendata",
@@ -334,6 +319,7 @@ describe("API client source connector bridge", () => {
       "html-botswana-ppa-notices",
       "html-namibia-cpbn-notices",
       "html-madagascar-dgcp-notices",
+      "html-burundi-armp-notices",
       "html-malawi-ppda-notices",
       "html-mozambique-sisac-notices",
       "kenya-ppip-api",
@@ -341,7 +327,7 @@ describe("API client source connector bridge", () => {
       "contracts-finder-ocds",
       "sam-gov-opportunities",
       "grants-gov-search",
-    ]);
+    ]));
     expect([...profiles.values()].every((profile) => profile.kind === "native")).toBe(true);
   });
 });

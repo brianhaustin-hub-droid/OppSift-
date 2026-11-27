@@ -13,6 +13,7 @@ type WorkerEnv = {
   INGESTION_QUEUE: QueueProducer<DispatchWakeup>;
   BROWSER?: unknown;
   SAM_GOV_API_KEY?: string;
+  GPPA_CMS_API_TOKEN?: string;
   PROBE_TOKEN?: string;
   COLLECTOR_RUNNER_URL?: string;
   COLLECTOR_RUNNER_HMAC_KEY?: string;
@@ -53,6 +54,13 @@ const PROBE_ALLOWED_HOSTS = new Set([
   "registry.open-contracting.org",
   // African candidates
   "publicprocurement.govmu.org",
+  "ppda.mw",
+  "www.ppda.mw",
+  "dgcmef.gov.bf",
+  "www.dgcmef.gov.bf",
+  "gppa.gm",
+  "www.gppa.gm",
+  "cms.gppa.gm",
   "nocopo.bpp.gov.ng",
   "bpp.gov.ng",
   "www.bpp.gov.ng",
@@ -73,6 +81,8 @@ const PROBE_ALLOWED_HOSTS = new Set([
   "www.gppagal.gov.gm",
   "nppa.gov.sl",
   "www.nppa.gov.sl",
+  "egpuganda.go.ug",
+  "www.egpuganda.go.ug",
   "armp.sn",
   "www.armp.sn",
   "marchespublics.sn",
@@ -207,7 +217,7 @@ export default {
 };
 
 export async function runScheduledOrchestration(env: WorkerEnv): Promise<void> {
-  const profiles = getSourceExecutionProfiles(env.SAM_GOV_API_KEY);
+  const profiles = getSourceExecutionProfiles(env.SAM_GOV_API_KEY, env.GPPA_CMS_API_TOKEN);
   const executor = createHyperdriveDatabaseExecutor(env.HYPERDRIVE);
   const repository = new NeonIngestionRepository(executor, "oppsift-orchestrator");
   try {
@@ -288,7 +298,7 @@ export async function processDispatchQueueBatch(
 }
 
 async function dispatchQueuedJobs(env: WorkerEnv): Promise<void> {
-  const profiles = getSourceExecutionProfiles(env.SAM_GOV_API_KEY);
+  const profiles = getSourceExecutionProfiles(env.SAM_GOV_API_KEY, env.GPPA_CMS_API_TOKEN);
   if (profiles.size === 0) return;
   const executor = createHyperdriveDatabaseExecutor(env.HYPERDRIVE);
   const repository = new NeonIngestionRepository(executor, "oppsift-queue-consumer");

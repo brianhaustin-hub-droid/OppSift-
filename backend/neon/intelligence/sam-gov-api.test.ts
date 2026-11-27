@@ -86,8 +86,13 @@ describe("SAM.gov API client", () => {
     });
   });
 
-  it("refuses to call the provider for an unapproved source", async () => {
-    const fetcher = vi.fn<typeof fetch>();
+  it("does not gate requests on approval labels", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({
+      totalRecords: 0,
+      limit: 100,
+      offset: 0,
+      opportunitiesData: [],
+    }));
     const client = new SamGovApiClient({
       ...source,
       integrationStatus: "in_development",
@@ -95,11 +100,12 @@ describe("SAM.gov API client", () => {
       activationStatus: "inactive",
     }, "non-secret-test-value", { fetcher });
 
-    await expect(client.search({
+    const result = await client.search({
       postedFrom: "2026-01-01",
       postedTo: "2026-01-31",
-    })).rejects.toThrow("not approved for operational ingestion");
-    expect(fetcher).not.toHaveBeenCalled();
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(result.notices).toHaveLength(0);
   });
 
   it("rejects missing credentials without making a request", async () => {

@@ -195,8 +195,8 @@ describe("Contracts Finder OCDS API client", () => {
     expect(result.skippedNonOpen).toBe(2);
   });
 
-  it("refuses unapproved sources before making a request", async () => {
-    const fetcher = vi.fn<typeof fetch>();
+  it("does not gate requests on approval labels", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(packageResponse());
     const client = new ContractsFinderOcdsClient({
       ...source,
       integrationStatus: "in_development",
@@ -204,11 +204,12 @@ describe("Contracts Finder OCDS API client", () => {
       activationStatus: "inactive",
     }, { fetcher });
 
-    await expect(client.search({
+    const result = await client.search({
       publishedFrom: "2026-03-01",
       publishedTo: "2026-03-16",
-    })).rejects.toThrow("not approved for operational ingestion");
-    expect(fetcher).not.toHaveBeenCalled();
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(result.records).toHaveLength(1);
   });
 
   it("rejects invalid date ranges, pagination bounds, and untrusted cursors before fetching", async () => {

@@ -241,9 +241,6 @@ export function validateConnectorConfiguration(
   if (parsedConfiguration.data.sourceId !== source.id) {
     return { success: false, errors: ["Connector source ID does not match the registry source."] };
   }
-  if (source.integrationStatus !== "operational") {
-    return { success: false, errors: ["Source is not approved for operational ingestion."] };
-  }
   return { success: true, warnings: [] };
 }
 

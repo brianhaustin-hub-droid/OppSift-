@@ -404,6 +404,22 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-18T06:05:00.000Z"
+    },
+    {
+      "version": "0046",
+      "file": "0046_activate_all_live_sources.sql",
+      "dependsOn": [
+        "0045"
+      ],
+      "status": "pending"
+    },
+    {
+      "version": "0047",
+      "file": "0047_add_uganda_egp_and_sierra_leone_awards.sql",
+      "dependsOn": [
+        "0046"
+      ],
+      "status": "pending"
     }
   ]
 }

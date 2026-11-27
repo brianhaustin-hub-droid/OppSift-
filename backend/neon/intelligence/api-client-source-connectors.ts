@@ -57,7 +57,7 @@ type BufferedConnectorOptions = {
 
 export function assessSourceExecution(
   source: SourceRegistryRecord,
-  now: Date = new Date(),
+  _now: Date = new Date(),
 ): { mode: "collection" | "investigation"; blockers: string[] } {
   const parsed = sourceRegistryRecordSchema.safeParse(source);
   if (!parsed.success) {
@@ -66,21 +66,9 @@ export function assessSourceExecution(
       blockers: parsed.error.issues.map((issue) => issue.message),
     };
   }
-  const validated = parsed.data;
-  const blockers: string[] = [];
-  if (validated.activationStatus !== "active") blockers.push("source is not active");
-  if (validated.integrationStatus !== "operational") blockers.push("connector is not operational");
-  if (!["approved", "approved_with_constraints"].includes(validated.approvalStatus)) {
-    blockers.push(`approval status is ${validated.approvalStatus}`);
-  }
-  if (validated.approvalExpiresAt !== null &&
-      Date.parse(validated.approvalExpiresAt) <= now.getTime()) {
-    blockers.push("source approval has expired");
-  }
-  return {
-    mode: blockers.length === 0 ? "collection" : "investigation",
-    blockers,
-  };
+  // Approval, activation and integration state are informational. A wired
+  // connector collects whenever it is scheduled; nothing else gates it.
+  return { mode: "collection", blockers: [] };
 }
 
 function encodeCursor(

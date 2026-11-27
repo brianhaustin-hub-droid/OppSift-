@@ -328,7 +328,7 @@ describe("durable ingestion orchestration", () => {
     });
   });
 
-  it("never blocks on conditional approval constraints and fails closed for expired approvals", async () => {
+  it("never blocks on approval labels: every wired source collects", async () => {
     const conditional = source({
       approvalStatus: "approved_with_constraints",
       reusePermissionStatus: "conditional",
@@ -357,13 +357,13 @@ describe("durable ingestion orchestration", () => {
       { now: () => now },
     );
     expect(result).toMatchObject({
-      enqueued: 2,
+      enqueued: 3,
       skippedUnsupported: 1,
-      rejectedByRepository: 1,
+      rejectedByRepository: 0,
     });
-    expect(repository.enqueuedInputs).toHaveLength(2);
+    expect(repository.enqueuedInputs).toHaveLength(3);
     expect(repository.enqueuedInputs.map((input) => input.sourceId)).toEqual(
-      expect.arrayContaining([conditional.id, unenforced.id]),
+      expect.arrayContaining([conditional.id, unenforced.id, expired.id]),
     );
   });
 

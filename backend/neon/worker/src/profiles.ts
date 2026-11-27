@@ -15,20 +15,23 @@ import {
   createTenderNedSourceConnector,
 } from "../../intelligence/api-client-source-connectors";
 import { createWorldBankProcurementConnector } from "../../intelligence/world-bank-procurement";
+import { createGambiaGppaSourceConnector } from "../../intelligence/gambia-gppa-api";
+import { createUgandaEgpSourceConnector } from "../../intelligence/uganda-egp";
 import { createHtmlListSourceConnector } from "../../intelligence/html-list-connector";
 import {
   southSudanSite,
   indiaSite,
   philippinesSite,
   sierraLeoneSite,
+  sierraLeoneAwardsSite,
   mauritiusSite,
   coteIvoireAppelSite,
   coteIvoireAttributionSite,
   beninSite,
   senegalSite,
-  gambiaSite,
   nigerSite,
   burkinaFasoSite,
+  burundiSite,
   botswanaSite,
   namibiaSite,
   madagascarSite,
@@ -128,6 +131,7 @@ const SAM_GOV_NOTICE_TYPES = [
 
 export function getSourceExecutionProfiles(
   samGovApiKey?: string,
+  gppaApiToken?: string,
 ): ReadonlyMap<string, SourceExecutionProfile> {
   return new Map<string, SourceExecutionProfile>([
     ["world-bank-procurement-notices", {
@@ -489,6 +493,38 @@ export function getSourceExecutionProfiles(
         });
       },
     }],
+    ["html-sierra-leone-awards", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "SL",
+        sourceTerm: "Contract Award",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, sierraLeoneAwardsSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["html-uganda-egp-notices", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "UG",
+        sourceTerm: "Bid Notice",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createUgandaEgpSourceConnector(source, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
     ["html-mauritius", {
       kind: "native" as const,
       priority: 250,
@@ -580,7 +616,8 @@ export function getSourceExecutionProfiles(
         globalType: "tender",
       }],
       createConnector(source, options) {
-        return createHtmlListSourceConnector(source, gambiaSite, {
+        return createGambiaGppaSourceConnector(source, {
+          token: gppaApiToken,
           currentCursor: options.currentCursor,
         });
       },
@@ -661,6 +698,22 @@ export function getSourceExecutionProfiles(
       }],
       createConnector(source, options) {
         return createHtmlListSourceConnector(source, madagascarSite, {
+          currentCursor: options.currentCursor,
+        });
+      },
+    }],
+    ["html-burundi-armp-notices", {
+      kind: "native" as const,
+      priority: 250,
+      mappings: (source) => [{
+        sourceId: source.id,
+        countryCode: "BI",
+        sourceTerm: "Avis d'appel d'offres",
+        category: "government" as const,
+        globalType: "tender",
+      }],
+      createConnector(source, options) {
+        return createHtmlListSourceConnector(source, burundiSite, {
           currentCursor: options.currentCursor,
         });
       },

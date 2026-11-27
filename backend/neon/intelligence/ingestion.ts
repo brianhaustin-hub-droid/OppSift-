@@ -152,11 +152,7 @@ export async function runIngestion(
   }
 
   const validatedSource = sourceRegistryRecordSchema.safeParse(source);
-  if (
-    !validatedSource.success ||
-    validatedSource.data.id !== connector.sourceId ||
-    validatedSource.data.integrationStatus !== "operational"
-  ) {
+  if (!validatedSource.success || validatedSource.data.id !== connector.sourceId) {
     const summary: IngestionSummary = {
       runId,
       status: "failed",

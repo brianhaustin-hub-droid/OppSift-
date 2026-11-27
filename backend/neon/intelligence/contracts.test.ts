@@ -147,13 +147,14 @@ describe("global intelligence data contracts", () => {
         reusePermissionStatus: "unknown",
       }).success,
     ).toBe(true);
-    // Governance still matters: an unreviewed source cannot be active.
+    // Approval labels are informational: an unreviewed source can still be
+    // active and collect.
     expect(
       sourceRegistryRecordSchema.safeParse({
         ...source,
         approvalStatus: "unreviewed",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
     // Conditional approvals are no longer constrained by license enforcement.
     expect(
       sourceRegistryRecordSchema.safeParse({

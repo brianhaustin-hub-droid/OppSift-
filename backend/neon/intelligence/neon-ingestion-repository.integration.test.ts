@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import type { CategoryMapping, NormalizedOpportunity } from "./contracts";
 import { normalizeOpportunity, parsedSourceOpportunitySchema } from "./contracts";
-import { IngestionRepositoryError, JobLeaseError, NeonIngestionRepository } from "./neon-ingestion-repository";
+import { JobLeaseError, NeonIngestionRepository } from "./neon-ingestion-repository";
 import type { RawSourceRecordEnvelope } from "./persistence-contracts";
 import { createMigratedTestDatabase } from "../testing/pglite-database";
 
@@ -103,53 +103,40 @@ describe("Neon ingestion repository against isolated PostgreSQL", () => {
     await context?.database.close();
   });
 
-  it("retrieves approved active sources and rejects inactive or unapproved sources", async () => {
+  it("retrieves every registered source regardless of approval labels", async () => {
     expect(await repository.getSourceForIngestion(sourceOneId)).toMatchObject({
       id: sourceOneId,
       approvalStatus: "approved",
       activationStatus: "active",
       reusePermissionStatus: "permitted",
     });
-    expect(await repository.getSourceForIngestion(inactiveSourceId)).toBeNull();
-    expect(await repository.getSourceForIngestion(expiredSourceId)).toBeNull();
+    expect(await repository.getSourceForIngestion(inactiveSourceId)).toMatchObject({
+      id: inactiveSourceId,
+      activationStatus: "inactive",
+    });
+    expect(await repository.getSourceForIngestion(expiredSourceId)).toMatchObject({
+      id: expiredSourceId,
+    });
     expect(await repository.getSourceForIngestion("00000000-0000-0000-0000-000000000001"))
       .toBeNull();
-    expect(await repository.listApprovedActiveSources()).toHaveLength(2);
+    expect((await repository.listApprovedActiveSources()).map((source) => source.id))
+      .toEqual(expect.arrayContaining([sourceOneId, sourceTwoId, expiredSourceId]));
     await expect(repository.storeRawRecord(rawEnvelope(sourceOneId, "reject", "a")))
       .resolves.toMatchObject({ inserted: true });
     await expect(repository.storeRawRecord(rawEnvelope(inactiveSourceId, "reject", "b")))
-      .rejects.toBeInstanceOf(IngestionRepositoryError);
+      .resolves.toMatchObject({ inserted: true });
   });
 
-  it("does not queue or claim a source whose approval expired", async () => {
-    await expect(repository.enqueueJob({
+  it("queues and claims a source even when its approval timestamp expired", async () => {
+    const queued = await repository.enqueueJob({
       sourceId: expiredSourceId,
       jobType: "incremental_sync",
-      idempotencyKey: "expired-source-must-not-queue",
-    })).rejects.toThrow("not authorized");
-
-    const queued = await repository.enqueueJob({
-      sourceId: sourceOneId,
-      jobType: "incremental_sync",
-      idempotencyKey: "expires-before-claim",
+      idempotencyKey: "expired-source-still-collects",
     });
-
-    await context.executor.query(
-      `UPDATE public.opportunity_sources
-       SET approval_expires_at = now() - interval '1 minute'
-       WHERE id = $1`,
-      [sourceOneId],
-    );
-    expect(await repository.claimNextJob("expired-source-test")).toBeNull();
-    const state = await context.executor.query<{ status: string }>(
-      `SELECT status FROM public.ingestion_jobs WHERE id = $1`,
-      [queued.id],
-    );
-    expect(state.rows[0]?.status).toBe("dead_lettered");
-    await context.executor.query(
-      `UPDATE public.opportunity_sources SET approval_expires_at = NULL WHERE id = $1`,
-      [sourceOneId],
-    );
+    const claimed = await repository.claimNextJob("expired-source-test");
+    expect(claimed?.job.id).toBe(queued.id);
+    if (!claimed) throw new Error("Expected the expired source to be claimable.");
+    await repository.completeJob(claimed.lease);
   });
 
   it("persists raw source records idempotently and retains checksum revisions", async () => {
@@ -183,6 +170,10 @@ describe("Neon ingestion repository against isolated PostgreSQL", () => {
   });
 
   it("persists versioned cursor state with job-lease and optimistic-version protection", async () => {
+    await context.executor.query(
+      `UPDATE public.ingestion_jobs SET status = 'succeeded'
+       WHERE status IN ('pending', 'running')`,
+    );
     const queued = await repository.enqueueJob({
       sourceId: sourceOneId,
       jobType: "incremental_sync",
@@ -310,6 +301,10 @@ describe("Neon ingestion repository against isolated PostgreSQL", () => {
   });
 
   it("atomically claims jobs, expires leases, retries and dead-letters exhausted jobs", async () => {
+    await context.executor.query(
+      `UPDATE public.ingestion_jobs SET status = 'succeeded'
+       WHERE status IN ('pending', 'running')`,
+    );
     const concurrentJob = await repository.enqueueJob({
       sourceId: sourceOneId,
       jobType: "health_check",

@@ -235,44 +235,9 @@ export const sourceRegistryRecordSchema = z.object({
       path: ["rateLimitRequests"],
     });
   }
-  // License, terms, reuse-permission and attribution constraints are recorded
-  // as informational metadata only. They never gate approval, activation, or
-  // collection: this platform aggregates public open data without license
-  // restrictions.
-  if (
-    source.activationStatus === "active" &&
-    (
-      source.integrationStatus !== "operational" ||
-      !source.connectorIdentifier ||
-      !["approved", "approved_with_constraints"].includes(source.approvalStatus)
-    )
-  ) {
-    context.addIssue({
-      code: "custom",
-      message: "Active collection requires an operational connector and an approved source.",
-      path: ["activationStatus"],
-    });
-  }
-  if (
-    source.integrationStatus === "operational" &&
-    source.activationStatus !== "active"
-  ) {
-    context.addIssue({
-      code: "custom",
-      message: "Operational source integration requires explicit active approval.",
-      path: ["integrationStatus"],
-    });
-  }
-  if (
-    source.approvalStatus === "denied" &&
-    (source.activationStatus === "active" || source.integrationStatus === "operational")
-  ) {
-    context.addIssue({
-      code: "custom",
-      message: "Denied sources must remain inactive and non-operational.",
-      path: ["approvalStatus"],
-    });
-  }
+  // License, terms, approval and attribution fields are informational metadata.
+  // They never gate activation, integration, or collection: the platform owner
+  // decides which public sources run, and every wired connector is live.
 });
 
 export type SourceRegistryRecord = z.infer<typeof sourceRegistryRecordSchema>;

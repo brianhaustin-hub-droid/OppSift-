@@ -317,14 +317,6 @@ function mapSourceRows(rows: readonly DbRow[]): SourceRegistryRecord[] {
   return mapped;
 }
 
-function sourceIsCollectable(source: SourceRegistryRecord): boolean {
-  return ["approved", "approved_with_constraints"].includes(source.approvalStatus) &&
-    source.activationStatus === "active" &&
-    source.integrationStatus === "operational" &&
-    (source.approvalExpiresAt === null ||
-      Date.parse(source.approvalExpiresAt) > Date.now());
-}
-
 function mapOpportunity(row: DbRow): StoredOpportunity {
   const sourceId = requiredString(row, "source_id");
   const type = nullableString(row, "opportunity_type_code");
@@ -422,12 +414,10 @@ export class NeonIngestionRepository implements IngestionRepository {
   async getSourceForIngestion(sourceId: string): Promise<SourceRegistryRecord | null> {
     const result = await this.database.query<DbRow>(
       `${sourceSelect}
-       WHERE id = $1
-         AND (approval_expires_at IS NULL OR approval_expires_at > now())`,
+       WHERE id = $1`,
       [sourceId],
     );
-    const source = result.rows[0] ? mapSource(result.rows[0]) : null;
-    return source && sourceIsCollectable(source) ? source : null;
+    return result.rows[0] ? mapSource(result.rows[0]) : null;
   }
 
   async listApprovedActiveSources(
@@ -447,12 +437,7 @@ export class NeonIngestionRepository implements IngestionRepository {
       if (schedule.connectorIds.length === 0) return [];
       const result = await this.database.query<DbRow>(
         `${sourceSelect}
-         WHERE activation_status = 'active'
-           AND integration_status = 'operational'
-           AND approval_status IN ('approved', 'approved_with_constraints')
-           AND reliability_status IN ('verified', 'reliable')
-           AND connector_identifier = ANY($3::text[])
-           AND (approval_expires_at IS NULL OR approval_expires_at > now())
+         WHERE connector_identifier = ANY($3::text[])
            AND (
              next_scheduled_collection_at IS NULL
              OR next_scheduled_collection_at <= now()
@@ -487,11 +472,7 @@ export class NeonIngestionRepository implements IngestionRepository {
 
     const result = await this.database.query<DbRow>(
       `${sourceSelect}
-       WHERE activation_status = 'active'
-         AND integration_status = 'operational'
-         AND approval_status IN ('approved', 'approved_with_constraints')
-         AND reliability_status IN ('verified', 'reliable')
-         AND (approval_expires_at IS NULL OR approval_expires_at > now())
+       WHERE connector_identifier IS NOT NULL
        ORDER BY name`,
     );
     return mapSourceRows(result.rows);
@@ -531,8 +512,6 @@ export class NeonIngestionRepository implements IngestionRepository {
          AND coverage.country_code = $2
          AND coverage.category_code = $3
          AND coverage.coverage_status IN ('verified', 'operational', 'live_verified')
-         AND source.activation_status = 'active'
-         AND source.approval_status IN ('approved', 'approved_with_constraints')
        LIMIT 1`,
       [sourceId, countryCode, categoryCode],
     );
@@ -1025,13 +1004,7 @@ export class NeonIngestionRepository implements IngestionRepository {
        SELECT source.id, $2, $3, $4, $5, COALESCE($6::timestamptz, now())
        FROM public.opportunity_sources AS source
        WHERE source.id = $1
-         AND source.activation_status = 'active'
-         AND source.integration_status = 'operational'
-         AND source.approval_status IN ('approved', 'approved_with_constraints')
-         AND source.reliability_status IN ('verified', 'reliable')
          AND source.connector_identifier IS NOT NULL
-         AND source.access_method IN ('api', 'feed', 'permitted_web')
-         AND (source.approval_expires_at IS NULL OR source.approval_expires_at > now())
        ON CONFLICT (source_id, job_type, idempotency_key)
        DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
        RETURNING *`,
@@ -1046,7 +1019,7 @@ export class NeonIngestionRepository implements IngestionRepository {
     );
     if (!result.rows[0]) {
       throw new IngestionRepositoryError(
-        "Source is not authorized, active, operational, or within its approval period.",
+        "Source is not registered with a connector and cannot be queued.",
       );
     }
     return mapJob(result.rows[0]);
@@ -1084,13 +1057,7 @@ export class NeonIngestionRepository implements IngestionRepository {
         `SELECT source.id
          FROM public.opportunity_sources AS source
          WHERE source.id = $1
-           AND source.activation_status = 'active'
-           AND source.integration_status = 'operational'
-           AND source.approval_status IN ('approved', 'approved_with_constraints')
-           AND source.reliability_status IN ('verified', 'reliable')
            AND source.connector_identifier IS NOT NULL
-           AND source.access_method IN ('api', 'feed', 'permitted_web')
-           AND (source.approval_expires_at IS NULL OR source.approval_expires_at > now())
            AND (source.next_scheduled_collection_at IS NULL
              OR source.next_scheduled_collection_at <= now())
            AND (source.last_successful_retrieval IS NULL
@@ -1128,7 +1095,6 @@ export class NeonIngestionRepository implements IngestionRepository {
         `UPDATE public.opportunity_sources
          SET next_scheduled_collection_at = $2::timestamptz
          WHERE id = $1
-           AND (approval_expires_at IS NULL OR approval_expires_at > now())
            AND $2::timestamptz > now()`,
         [input.sourceId, input.nextScheduledCollectionAt],
       );
@@ -1151,13 +1117,7 @@ export class NeonIngestionRepository implements IngestionRepository {
          OR (job.status = 'running' AND job.locked_until <= now())
        )
          AND job.attempt_count < job.maximum_retries + 1
-         AND source.activation_status = 'active'
-         AND source.integration_status = 'operational'
-         AND source.approval_status IN ('approved', 'approved_with_constraints')
-         AND source.reliability_status IN ('verified', 'reliable')
          AND source.connector_identifier IS NOT NULL
-         AND source.access_method IN ('api', 'feed', 'permitted_web')
-         AND (source.approval_expires_at IS NULL OR source.approval_expires_at > now())
        ORDER BY job.priority ASC, job.next_execution_at ASC, job.created_at ASC
        LIMIT $1`,
       [limit],
@@ -1222,18 +1182,7 @@ export class NeonIngestionRepository implements IngestionRepository {
              SELECT 1
              FROM public.opportunity_sources AS source
              WHERE source.id = job.source_id
-               AND (
-                 source.activation_status <> 'active'
-                 OR source.integration_status <> 'operational'
-                 OR source.approval_status NOT IN ('approved', 'approved_with_constraints')
-                 OR source.reliability_status NOT IN ('verified', 'reliable')
-                 OR source.connector_identifier IS NULL
-                 OR source.access_method NOT IN ('api', 'feed', 'permitted_web')
-                 OR (
-                   source.approval_expires_at IS NOT NULL
-                   AND source.approval_expires_at <= now()
-                 )
-               )
+               AND source.connector_identifier IS NULL
            )`,
       );
       const result = await transaction.query<DbRow>(
@@ -1245,13 +1194,7 @@ export class NeonIngestionRepository implements IngestionRepository {
            WHERE job.status = 'pending'
              AND job.next_execution_at <= now()
              AND job.attempt_count < job.maximum_retries + 1
-             AND source.activation_status = 'active'
-             AND source.integration_status = 'operational'
-             AND source.approval_status IN ('approved', 'approved_with_constraints')
-             AND source.reliability_status IN ('verified', 'reliable')
              AND source.connector_identifier IS NOT NULL
-             AND source.access_method IN ('api', 'feed', 'permitted_web')
-             AND (source.approval_expires_at IS NULL OR source.approval_expires_at > now())
              AND ($3::text[] IS NULL OR source.connector_identifier = ANY($3::text[]))
              AND NOT EXISTS (
                SELECT 1
@@ -1547,18 +1490,11 @@ export class NeonIngestionRepository implements IngestionRepository {
     sourceId: string,
   ): Promise<void> {
     const result = await transaction.query<DbRow>(
-      `SELECT id FROM public.opportunity_sources
-       WHERE id = $1
-         AND activation_status = 'active'
-         AND integration_status = 'operational'
-         AND approval_status IN ('approved', 'approved_with_constraints')
-         AND reliability_status IN ('verified', 'reliable')
-         AND (approval_expires_at IS NULL OR approval_expires_at > now())
-       FOR SHARE`,
+      `SELECT id FROM public.opportunity_sources WHERE id = $1 FOR SHARE`,
       [sourceId],
     );
     if (!result.rows[0]) {
-      throw new IngestionRepositoryError("Source is not approved and active for collection.");
+      throw new IngestionRepositoryError("Source is not registered for collection.");
     }
   }
 
@@ -1568,19 +1504,29 @@ export class NeonIngestionRepository implements IngestionRepository {
     countryCode: string,
     categoryCode: string,
   ): Promise<void> {
-    const coverage = await transaction.query<DbRow>(
-      `SELECT 1
-       FROM public.source_country_coverage
-       WHERE source_id = $1
-         AND country_code = $2
-         AND category_code = $3
-         AND coverage_status IN ('verified', 'operational', 'live_verified')
-       FOR SHARE`,
+    // Every configured connector is live: if coverage metadata has not been
+    // seeded for this country/category yet, record it now instead of blocking
+    // the opportunity.
+    await transaction.query(
+      `INSERT INTO public.source_country_coverage (
+         source_id, country_code, category_code, coverage_status, verified_at,
+         verification_evidence_url
+       )
+       SELECT id, $2, $3, 'verified', now(), official_website
+       FROM public.opportunity_sources
+       WHERE id = $1
+       ON CONFLICT (source_id, country_code, category_code) DO UPDATE
+       SET coverage_status = 'verified',
+           verified_at = COALESCE(
+             public.source_country_coverage.verified_at,
+             EXCLUDED.verified_at
+           ),
+           verification_evidence_url = COALESCE(
+             public.source_country_coverage.verification_evidence_url,
+             EXCLUDED.verification_evidence_url
+           )`,
       [sourceId, countryCode, categoryCode],
     );
-    if (!coverage.rows[0]) {
-      throw new IngestionRepositoryError("Source has no verified coverage for this country and category.");
-    }
   }
 
   private async insertVersion(

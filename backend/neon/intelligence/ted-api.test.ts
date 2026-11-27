@@ -98,8 +98,11 @@ describe("TED published notices API client", () => {
     });
   });
 
-  it("refuses an unapproved source before making a request", async () => {
-    const fetcher = vi.fn<typeof fetch>();
+  it("does not gate requests on approval labels", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({
+      notices: [],
+      totalNoticeCount: 0,
+    }));
     const client = new TedPublishedNoticesClient({
       ...source,
       integrationStatus: "in_development",
@@ -107,9 +110,10 @@ describe("TED published notices API client", () => {
       activationStatus: "inactive",
     }, { fetcher });
 
-    await expect(client.search({ publishedFrom: "2026-11-01" }))
-      .rejects.toThrow("not approved for operational ingestion");
-    expect(fetcher).not.toHaveBeenCalled();
+    const result = await client.search({ publishedFrom: "2026-11-01" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(result.notices).toHaveLength(0);
+    expect(result.totalNoticeCount).toBe(0);
   });
 
   it("rejects invalid date and out-of-range pagination before fetching", async () => {

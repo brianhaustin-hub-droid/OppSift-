@@ -23,10 +23,9 @@ function parseFlexibleDate(value: string | null | undefined): string | null {
   if (!value) return null;
   const v = value.trim();
   if (!v) return null;
-  const direct = Date.parse(v);
-  if (!Number.isNaN(direct)) return new Date(direct).toISOString();
-  // dd/mm/yyyy or dd-mm-yyyy or dd.mm.yyyy
-  const m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  // Parse day-first dates before Date.parse: Date.parse("02-11-2026") reads it
+  // as February 11 (US month-first) and silently swaps publication/closing.
+  const m = v.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
   if (m) {
     const day = Number(m[1]);
     const month = Number(m[2]) - 1;
@@ -36,7 +35,36 @@ function parseFlexibleDate(value: string | null | undefined): string | null {
     const d = new Date(Date.UTC(year, month, day, hour, minute));
     if (!Number.isNaN(d.getTime())) return d.toISOString();
   }
+  const direct = Date.parse(v);
+  if (!Number.isNaN(direct)) return new Date(direct).toISOString();
   return null;
+}
+
+const FRENCH_MONTHS: Readonly<Record<string, number>> = {
+  janvier: 1, fevrier: 2, février: 2, mars: 3, avril: 4, mai: 5, juin: 6,
+  juillet: 7, aout: 8, août: 8, septembre: 9, octobre: 10, novembre: 11, decembre: 12, décembre: 12,
+};
+
+/** Parses French long dates such as "21 octobre 2026". */
+function parseFrenchDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const match = /(\d{1,2})\s+([A-Za-zéûôà]+)\s+(\d{4})/u.exec(value);
+  if (!match) return null;
+  const month = FRENCH_MONTHS[match[2].toLowerCase()];
+  if (!month) return null;
+  const date = new Date(Date.UTC(Number(match[3]), month - 1, Number(match[1])));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/** Small deterministic FNV-1a hash used to keep repeated listing rows distinct. */
+function shortHash(value: string): string {
+  let hash = 0xcbf29ce484222325n;
+  const mask = 0xffffffffffffffffn;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= BigInt(value.charCodeAt(index));
+    hash = (hash * 0x100000001b3n) & mask;
+  }
+  return hash.toString(16).padStart(16, "0").slice(0, 12);
 }
 
 function slugifyId(prefix: string, seed: string): string {
@@ -124,24 +152,131 @@ export const southSudanSite: HtmlSiteConfig = {
   },
 };
 
-/** Sierra Leone NPPA - Tender Portal bids. */
+/**
+ * Sierra Leone NPPA - Tender Portal bids (`/bid/` TablePress listing).
+ *
+ * One table row is one bid. The previous connector keyed rows by description
+ * text only, so two bids that share a description (different buyers or
+ * different bid documents) overwrote each other and the run reported fewer
+ * records than the listing had rows. Row identity now includes the bidding
+ * organization, both dates, the description and the bid document URL.
+ */
 export const sierraLeoneSite: HtmlSiteConfig = {
-  listUrl: "https://nppa.gov.sl/tenders",
-  selector: "table tbody tr, article, .tender, .views-row, a[href*='tender']",
+  listUrl: "https://nppa.gov.sl/bid/",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  selector: "table#tablepress-1 tbody tr, table.tablepress tbody tr",
   extract(row, _document, baseUrl) {
-    const link = row.querySelector("a[href]");
-    const href = text(link?.getAttribute("href"));
-    const titleText = text(link?.textContent) ?? text(row.textContent);
-    if (!titleText || titleText.length < 6) return null;
-    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
-    const externalId = `sl-${titleText.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    const cells = [...row.querySelectorAll("td")];
+    if (cells.length < 4) return null;
+    const organization = text(cells[0]?.textContent);
+    const postedText = text(cells[1]?.textContent);
+    const expirationText = text(cells[2]?.textContent);
+    const description = text(cells[3]?.textContent);
+    const href = text(cells[4]?.querySelector("a[href]")?.getAttribute("href"));
+    if (!description || description.length < 6) return null;
+    const sourceUrl = resolveHref(href, baseUrl, "/bid/");
+    const publishedAt = parseFlexibleDate(postedText);
+    const closingAt = parseFlexibleDate(expirationText);
+    const rowIdentity = [organization, postedText, expirationText, description, href ?? ""].join("|");
+    const descriptionSlug = description.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 80).replace(/^-+|-+$/gu, "");
+    const externalId = `sl-nppa-${descriptionSlug || "bid"}-${shortHash(rowIdentity)}`;
     const parsed: ParsedSourceOpportunity = {
-      externalId, title: titleText.slice(0, 1000), description: null, sourceCategoryTerm: "Tender Notice",
-      referenceNumber: null, countryCode: "SL", region: null, city: null, issuingInstitution: null, procuringOrganization: null,
-      publisher: "National Public Procurement Authority (Sierra Leone)", publishedAt: null, sourceDeadlineText: null, closingAt: null, timeZone: "Africa/Freetown",
-      status: "unknown", sourceUrl, canonicalUrl: null, currency: null, amount: null, originalValues: { title: titleText, url: sourceUrl },
+      externalId,
+      title: description.slice(0, 1000),
+      description: organization ? `Bidding organization: ${organization}` : null,
+      sourceCategoryTerm: "Tender Notice",
+      referenceNumber: href?.split("/").pop()?.slice(0, 200) ?? null,
+      countryCode: "SL",
+      region: null,
+      city: null,
+      issuingInstitution: null,
+      procuringOrganization: organization,
+      publisher: "National Public Procurement Authority (Sierra Leone)",
+      publishedAt,
+      sourceDeadlineText: expirationText?.slice(0, 500) ?? null,
+      closingAt,
+      timeZone: "Africa/Freetown",
+      status: deadlineStatus(closingAt, new Date()),
+      sourceUrl,
+      canonicalUrl: null,
+      currency: null,
+      amount: null,
+      originalValues: { organization, postedText, expirationText, description, documentLink: href, url: sourceUrl },
     };
-    return { externalId, sourceUrl, parsed, payload: { title: titleText, url: sourceUrl } };
+    return { externalId, sourceUrl, parsed, payload: { organization, postedText, expirationText, description, url: sourceUrl } };
+  },
+};
+
+/**
+ * Sierra Leone NPPA contract awards register.
+ *
+ * The same TablePress/WPDataTables portal publishes five award tables with
+ * identical columns: entity, contract description, procurement number, contract
+ * value, funder, winner, address, owner, signed date, method, completion.
+ */
+export const sierraLeoneAwardsSite: HtmlSiteConfig = {
+  listUrl: "https://nppa.gov.sl/contract-awards/",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  selector: "table.wpDataTable tbody tr, table#table_1 tbody tr, table#table_2 tbody tr, table#table_3 tbody tr, table#table_4 tbody tr, table#table_5 tbody tr",
+  extract(row, _document, baseUrl) {
+    const cells = [...row.querySelectorAll("td")].map((cell) => text(cell.textContent));
+    if (cells.length < 10) return null;
+    const organization = cells[1];
+    const description = cells[2];
+    const referenceNumber = cells[3];
+    const contractValue = cells[4];
+    const winner = cells[6];
+    const signedText = cells[9];
+    if (!description || description.length < 6) return null;
+    const sourceUrl = resolveHref(null, baseUrl, "/contract-awards/");
+    const signedAt = parseFlexibleDate(signedText);
+    const identity = [organization, description, referenceNumber, contractValue, winner, signedText].join("|");
+    const externalId = referenceNumber
+      ? `sl-nppa-award-${referenceNumber.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 100)}-${shortHash(identity)}`
+      : `sl-nppa-award-${shortHash(identity)}`;
+    const parsed: ParsedSourceOpportunity = {
+      externalId,
+      title: description.slice(0, 1000),
+      description: [winner ? `Awarded to ${winner}` : null, contractValue ? `Contract value ${contractValue}` : null]
+        .filter(Boolean)
+        .join("; ")
+        .slice(0, 4000) || null,
+      sourceCategoryTerm: "Contract Award",
+      referenceNumber: referenceNumber?.slice(0, 200) ?? null,
+      countryCode: "SL",
+      region: null,
+      city: null,
+      issuingInstitution: null,
+      procuringOrganization: organization?.slice(0, 300) ?? null,
+      publisher: "National Public Procurement Authority (Sierra Leone)",
+      publishedAt: signedAt,
+      sourceDeadlineText: null,
+      closingAt: null,
+      timeZone: "Africa/Freetown",
+      status: "awarded",
+      sourceUrl,
+      canonicalUrl: null,
+      currency: null,
+      amount: null,
+      originalValues: {
+        organization,
+        referenceNumber,
+        contractValue,
+        funder: cells[5],
+        winner,
+        signedDate: signedText,
+        method: cells[10] ?? null,
+        completion: cells[11] ?? null,
+        url: sourceUrl,
+      },
+    };
+    return { externalId, sourceUrl, parsed, payload: parsed.originalValues };
   },
 };
 
@@ -325,29 +460,104 @@ export const nigerSite: HtmlSiteConfig = {
   },
 };
 
-/** Burkina Faso - armp.gov.bf public procurement notices. */
+/**
+ * Burkina Faso - DGCMEF "Appels d'offre" (Quotidien des marchés publics).
+ * The ARMP/ARCOP host armp.gov.bf no longer resolves; DGCMEF is the official
+ * publisher of the daily tender bulletin.
+ */
 export const burkinaFasoSite: HtmlSiteConfig = {
-  listUrl: "https://armp.gov.bf/",
-  useBrowser: true,
+  listUrl: "https://dgcmef.gov.bf/fr/appels-d-offre",
   headers: {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   },
-  selector: "article, .post, .views-row, table tbody tr, a[href*='avis'], a[href*='marche']",
+  selector: "table.cols-2 tbody tr, table tbody tr",
   extract(row, _document, baseUrl) {
-    const link = row.querySelector("a[href]");
+    const cells = [...row.querySelectorAll("td")];
+    if (cells.length < 2) return null;
+    const link = cells[0]?.querySelector("a[href]") ?? cells[1]?.querySelector("a[href]");
     const href = text(link?.getAttribute("href"));
-    const title = text(link?.textContent) ?? text(row.querySelector("h1, h2, h3")?.textContent) ?? text(row.textContent);
+    const title = text(link?.textContent) ?? text(cells[0]?.textContent);
     if (!title || title.length < 6) return null;
-    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
-    const externalId = `bf-${title.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    if (/^titre$/iu.test(title)) return null;
+    const fileLink = cells[1]?.querySelector("a[href]") ?? null;
+    const fileHref = text(fileLink?.getAttribute("href"));
+    const fileLabel = text(fileLink?.textContent) ?? null;
+    const sourceUrl = resolveHref(href, baseUrl, "/fr/appels-d-offre");
+    const publishedAt = parseFrenchDate(title);
+    const reference = href?.match(/node\/(\d+)/u)?.[1] ?? null;
+    const externalId = `bf-dgcmef-${reference ?? shortHash(`${title}|${fileHref ?? ""}`)}`;
     const parsed: ParsedSourceOpportunity = {
-      externalId, title: title.slice(0, 1000), description: null, sourceCategoryTerm: "Invitation for Bids",
-      referenceNumber: null, countryCode: "BF", region: null, city: null, issuingInstitution: null, procuringOrganization: null,
-      publisher: "ARMP Burkina Faso", publishedAt: null, sourceDeadlineText: null, closingAt: null, timeZone: "Africa/Ouagadougou",
-      status: "unknown", sourceUrl, canonicalUrl: null, currency: null, amount: null, originalValues: { title, url: sourceUrl },
+      externalId,
+      title: title.slice(0, 1000),
+      description: fileLabel ? `Tender bulletin file: ${fileLabel}` : null,
+      sourceCategoryTerm: "Invitation for Bids",
+      referenceNumber: reference,
+      countryCode: "BF",
+      region: null,
+      city: null,
+      issuingInstitution: null,
+      procuringOrganization: null,
+      publisher: "Direction Générale du Contrôle des Marchés Publics et des Engagements Financiers (DGCMEF) - Burkina Faso",
+      publishedAt,
+      sourceDeadlineText: null,
+      closingAt: null,
+      timeZone: "Africa/Ouagadougou",
+      status: "open",
+      sourceUrl,
+      canonicalUrl: null,
+      currency: null,
+      amount: null,
+      originalValues: { title, fileLabel, documentLink: fileHref, url: sourceUrl },
     };
-    return { externalId, sourceUrl, parsed, payload: { title, url: sourceUrl } };
+    return { externalId, sourceUrl, parsed, payload: { title, fileLabel, documentLink: fileHref, url: sourceUrl } };
+  },
+};
+
+/** Burundi - ARMP notice cards (`avis d'appel d'offres`). */
+export const burundiSite: HtmlSiteConfig = {
+  listUrl: "https://armp.gov.bi/",
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  },
+  selector: "article.elementor-post",
+  extract(row, _document, baseUrl) {
+    const link = row.querySelector("h1 a[href], h2 a[href], h3 a[href], .elementor-heading-title a[href]") ??
+      row.querySelector("a[href*='archives/']:not([href*='/date/'])");
+    const href = text(link?.getAttribute("href"));
+    const title = text(link?.textContent) ?? text(row.querySelector("h1, h2, h3")?.textContent);
+    if (!title || title.length < 10) return null;
+    if (!/appel|avis|manifestation|march[eé]|consultation|fourniture|travaux|prestation|acquisition|bien|service/iu.test(title)) return null;
+    const sourceUrl = resolveHref(href, baseUrl, "/");
+    const dateText = text(row.querySelector("time")?.textContent) ?? text(row.querySelector(".elementor-post-info__item--type-date")?.textContent);
+    const publishedAt = parseFlexibleDate(dateText);
+    const reference = (row.getAttribute("id") ?? "").replace(/^post-/u, "") || href?.match(/archives\/(\d+)/u)?.[1] || null;
+    const externalId = `bi-armp-${reference ?? shortHash(`${title}|${sourceUrl}`)}`;
+    const parsed: ParsedSourceOpportunity = {
+      externalId,
+      title: title.slice(0, 1000),
+      description: null,
+      sourceCategoryTerm: "Avis d'appel d'offres",
+      referenceNumber: reference,
+      countryCode: "BI",
+      region: null,
+      city: null,
+      issuingInstitution: null,
+      procuringOrganization: null,
+      publisher: "Autorité de Régulation des Marchés Publics (ARMP) - Burundi",
+      publishedAt,
+      sourceDeadlineText: null,
+      closingAt: null,
+      timeZone: "Africa/Bujumbura",
+      status: "open",
+      sourceUrl,
+      canonicalUrl: null,
+      currency: null,
+      amount: null,
+      originalValues: { title, dateText, url: sourceUrl },
+    };
+    return { externalId, sourceUrl, parsed, payload: { title, dateText, url: sourceUrl } };
   },
 };
 
@@ -465,49 +675,58 @@ export const madagascarSite: HtmlSiteConfig = {
 };
 
 /**
- * Malawi — ppdamlawi.org public procurement notices.
+ * Malawi — PPDA procurement notices table (`ppda.mw/tenders`).
+ * Rewritten against the live portal: title, institution, reference number,
+ * publish and closing dates, and the attachment document per row.
  */
 export const malawiSite: HtmlSiteConfig = {
-  listUrl: "https://ppda.mw/procurement-notices/",
+  listUrl: "https://ppda.mw/tenders",
   headers: {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   },
-  useBrowser: true,
-  selector: "article, .elementor-post, .post, .views-row, table tbody tr, li, a[href*='notice'], a[href*='tender'], a[href*='procurement']",
+  selector: "table#tenderstable tbody tr, table.table tbody tr",
   extract(row, _document, baseUrl) {
-    const link = row.querySelector("a[href]");
-    const href = text(link?.getAttribute("href"));
-    const title = text(link?.textContent) ?? text(row.querySelector("h1, h2, h3, .elementor-post__title, .entry-title")?.textContent);
+    const cells = [...row.querySelectorAll("td")];
+    if (cells.length < 5) return null;
+    const title = text(cells[0]?.textContent);
+    const institution = text(cells[1]?.textContent);
+    const referenceNumber = text(cells[2]?.textContent);
+    const publishedText = text(cells[3]?.textContent);
+    const closingText = text(cells[4]?.textContent);
+    const attachmentHref = text(cells[5]?.querySelector("a[href]")?.getAttribute("href"));
     if (!title || title.length < 8) return null;
-    if (/^read more$|^home$|^about/i.test(title)) return null;
-    const sourceUrl = href ? new URL(href.replace(/&amp;/gu, "&"), baseUrl).toString() : new URL(baseUrl).toString();
-    if (!/notice|tender|procurement|bid|advert/i.test(`${title} ${sourceUrl}`)) return null;
-    const externalId = `mw-${title.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 120)}`;
+    const sourceUrl = resolveHref(attachmentHref, baseUrl, "/tenders");
+    const publishedAt = parseFlexibleDate(publishedText);
+    const closingAt = parseFlexibleDate(closingText);
+    const externalId = `mw-ppda-${(referenceNumber ?? `${title}-${closingText ?? ""}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gu, "-")
+      .slice(0, 160)}`;
     const parsed: ParsedSourceOpportunity = {
       externalId,
       title: title.slice(0, 1000),
-      description: null,
-      sourceCategoryTerm: "Procurement Notice",
-      referenceNumber: null,
+      description: institution ? `Institution: ${institution}` : null,
+      sourceCategoryTerm: "Invitation for Bids",
+      referenceNumber: referenceNumber?.slice(0, 200) ?? null,
       countryCode: "MW",
       region: null,
       city: null,
       issuingInstitution: null,
-      procuringOrganization: null,
+      procuringOrganization: institution,
       publisher: "Public Procurement and Disposal of Assets Authority (Malawi)",
-      publishedAt: null,
-      sourceDeadlineText: null,
-      closingAt: null,
+      publishedAt,
+      sourceDeadlineText: closingText?.slice(0, 500) ?? null,
+      closingAt,
       timeZone: "Africa/Blantyre",
-      status: "unknown",
+      status: deadlineStatus(closingAt, new Date()),
       sourceUrl,
       canonicalUrl: null,
       currency: null,
       amount: null,
-      originalValues: { title, url: sourceUrl },
+      originalValues: { title, institution, referenceNumber, publishedText, closingText, documentLink: attachmentHref, url: sourceUrl },
     };
-    return { externalId, sourceUrl, parsed, payload: { title, url: sourceUrl } };
+    return { externalId, sourceUrl, parsed, payload: { title, institution, referenceNumber, closingText, url: sourceUrl } };
   },
 };
 
