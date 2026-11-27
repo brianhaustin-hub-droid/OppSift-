@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, Moon, Sun, X } from 'lucide-react';
+import { LanguageSwitcher } from '../../../i18n/LanguageSwitcher';
+import { useI18n } from '../../../i18n/I18nContext';
 import { useRouter } from '../../context/RouterContext';
 import { useTheme } from '../../context/ThemeContext';
 import { OppSiftLogo } from '../brand/OppSiftLogo';
@@ -8,14 +10,15 @@ import { DataSourceBanner } from '../ui/DataSourceBanner';
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { path, navigate } = useRouter();
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { label: 'Product', href: '/product' },
-    { label: 'Opportunities', href: '/opportunities' },
-    { label: 'Markets', href: '/markets' },
-    { label: 'Sources', href: '/sources' },
-    { label: 'Pricing', href: '/pricing' },
+    { label: t('nav.product'), href: '/product' },
+    { label: t('nav.opportunities'), href: '/opportunities' },
+    { label: t('nav.markets'), href: '/markets' },
+    { label: t('nav.sources'), href: '/sources' },
+    { label: t('nav.pricing'), href: '/pricing' },
   ];
 
   return (
@@ -53,12 +56,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-3 shrink-0">
+            <LanguageSwitcher />
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
               className="hidden sm:inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-[#541B32] hover:bg-[#A33B59] text-white transition-colors whitespace-nowrap shrink-0"
             >
-              Open Workspace
+              {t('nav.openWorkspace')}
             </button>
             <button
               type="button"

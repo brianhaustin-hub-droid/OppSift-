@@ -139,6 +139,36 @@ contractors, founders, consultants, and organisations.
     licence review of the portal terms is still advisable.
 - The other 30 portals added by 0048 have no connector and therefore produce no
   opportunities; they stay `not_started`/`inactive` until each has a verified live sample.
+- **Why some markets look thin (measured, not hidden):** of the 101 jurisdictions,
+  57 are covered by exactly one registered portal and 78 are `Partial`. Kenya (38),
+  Ghana (18) and Egypt (16) carry the deep source sets; Brazil has one operational
+  connector. The catalogue itself is complete — 176 sources and 214 coverage rows are
+  publicly readable — but a market only shows live notices once its portal has a
+  working connector.
+- **Migration 0050 (`opportunity_source_links`)**: a three-column public view
+  (`opportunity_id`, `source_id`, `source_url`) for opportunities whose source is
+  approved, active and operational. It gives every record an outbound "open original
+  notice" link without exposing the stored source payloads.
+
+## 4b. Provenance links and the language kit
+
+- Every opportunity now has a stable public URL, `/o/<opportunity-id>`, rendered by
+  `PublicOpportunityPage`. It needs no workspace seat: it re-reads the live record,
+  links out to the issuing notice, offers copy-link, and detects the notice language.
+- `OpportunityDetailPage` no longer falls back to `opportunities[0]` when a deep link
+  misses; a bad link shows the empty state instead of an unrelated notice.
+- Source detail pages now list their own notices: opportunities carry a real
+  `sourceId` resolved from `opportunity_source_links` (it was always empty before).
+- Country pages count a source against **every** jurisdiction in its coverage set, so
+  multi-country feeds (World Bank 30 markets, TED 10) no longer disappear.
+- **Language kit** (`src/i18n/`): `I18nProvider` with browser detection, a persisted
+  user choice, `<html lang>/<html dir>` switching, and catalogue fallback to English.
+  Shipped locales: English, Portuguese, Spanish, French and Arabic (RTL).
+  `detectLanguage()` classifies notice text (script + stopword scoring, `und` when it
+  cannot tell), and `translateDataValue()` localises controlled database values
+  (status, category, availability, coverage). Free-text notices are never rewritten:
+  the original wording is shown with the detected language beside it.
+  Tests: `src/i18n/i18n.test.ts` (11 cases).
 - Regions (frontend groupings):
   - North America: US, Canada (2)
   - Europe: GB, DE, FR, NL, IE, IT, ES, SE, PL, DK, BE (11)

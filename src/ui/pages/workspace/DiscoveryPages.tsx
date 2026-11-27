@@ -1225,7 +1225,12 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
   }
 
   const countryOpps = opportunities.filter((o) => o.countryCode === country.code);
-  const countrySources = sources.filter((s) => s.countryCode === country.code);
+  // A source counts for every jurisdiction it covers, not only the first one it
+  // was registered against; otherwise multi-country feeds disappear from all
+  // but their primary market.
+  const countrySources = sources.filter((s) =>
+    s.countryCodes.includes(country.code) || s.countryCode === country.code,
+  );
 
   return (
     <WorkspaceLayout title={`${country.name} Opportunity Discovery`} breadcrumb={`Discovery / Country / ${country.code}`}>

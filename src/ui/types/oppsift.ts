@@ -170,7 +170,10 @@ export interface CountryCoverage {
 export interface DataSourceRecord {
   id: string;
   name: string;
+  /** Primary country, used for grouping labels. */
   countryCode: string;
+  /** Every country this source covers; a multi-country feed counts once per jurisdiction. */
+  countryCodes: string[];
   countryName: string;
   category: string;
   officialWebsite: string;

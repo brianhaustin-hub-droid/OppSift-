@@ -44,7 +44,9 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
   } = useAppState();
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
 
-  const opp = opportunities.find((o) => o.id === opportunityId) || opportunities[0];
+  // Never fall back to an arbitrary notice: a deep link must show the requested
+  // opportunity or an honest empty state.
+  const opp = opportunities.find((o) => o.id === opportunityId) ?? null;
 
   if (!opp) {
     return (
@@ -83,9 +85,10 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
     { id: 'requirements', label: `Requirements (${opp.requirements.length})` },
   ];
 
+  const shareUrl = `${window.location.origin}/o/${opp.id}`;
   const handleCopyLink = () => {
-    navigator.clipboard?.writeText(`${window.location.origin}/opportunity/${opp.id}`);
-    pushToast('info', `Copied notice link for ${opp.referenceNumber}.`);
+    navigator.clipboard?.writeText(shareUrl);
+    pushToast('info', `Copied public link for ${opp.referenceNumber}.`);
   };
 
   return (

@@ -27,6 +27,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { LanguageSwitcher } from '../../../i18n/LanguageSwitcher';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -320,6 +321,8 @@ export function WorkspaceLayout({
                 <span>Compare ({compareIds.length})</span>
               </button>
             )}
+
+            <LanguageSwitcher />
 
             {/* Dual-Theme Moon/Sun Switcher */}
             <div

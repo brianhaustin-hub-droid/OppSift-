@@ -55,6 +55,15 @@ type SourceRow = {
 
 type CoverageLinkRow = { source_id: string; country_code: string };
 
+// Public projection of a notice's provenance: the URL of the issuing source
+// record plus the source it came from. Read from a view so the raw source
+// records (and their stored payloads) stay private.
+type SourceLinkRow = {
+  opportunity_id: string;
+  source_id: string;
+  source_url: string | null;
+};
+
 type CountryRow = {
   alpha2_code: string;
   name: string;
@@ -297,6 +306,7 @@ function toSource(
     id: row.id,
     name: row.name,
     countryCode: primaryCode,
+    countryCodes: [...countryCodes],
     countryName: scopeName,
     category: row.supported_categories?.join(', ') || row.source_category || 'Public procurement',
     officialWebsite: row.official_website,
@@ -503,6 +513,28 @@ export function useLiveData(): LiveData {
           if (!opportunities.some((item) => item.id === award.id)) opportunities.push(award);
         }
 
+        // Provenance is optional: a database that has not yet had the public
+        // link view applied still shows the feed, just without outbound
+        // notice links. It must never blank the opportunity table.
+        const linkResult = await fetchAll<SourceLinkRow>((from, to) =>
+          db
+            .from('opportunity_source_links')
+            .select('opportunity_id, source_id, source_url')
+            .range(from, to),
+        );
+        const linkByOpportunity = new Map<string, SourceLinkRow>();
+        if (!linkResult.error) {
+          for (const link of linkResult.rows) {
+            if (link?.opportunity_id) linkByOpportunity.set(link.opportunity_id, link);
+          }
+        }
+        const withProvenance = opportunities.map((item) => {
+          const link = linkByOpportunity.get(item.id);
+          return link
+            ? { ...item, sourceId: link.source_id ?? '', sourceUrl: link.source_url ?? item.sourceUrl }
+            : item;
+        });
+
         const countryCodesBySource = new Map<string, string[]>();
         for (const link of coverageResult.rows) {
           if (!link?.source_id || !link.country_code) continue;
@@ -525,8 +557,10 @@ export function useLiveData(): LiveData {
         const countries = buildCountries(opportunities, sources, countryResult.rows, truthResult.rows);
 
         setState({
-          opportunities,
-          awards: awards.length > 0 ? awards : opportunities.filter((item) => item.status === 'Awarded'),
+          opportunities: withProvenance,
+          awards: awards.length > 0
+            ? withProvenance.filter((item) => awards.some((award) => award.id === item.id))
+            : withProvenance.filter((item) => item.status === 'Awarded'),
           sources,
           countries,
           totalOpportunities: opportunities.length,

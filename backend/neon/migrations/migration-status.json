@@ -440,6 +440,15 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-26T05:30:58.108Z"
+    },
+    {
+      "version": "0050",
+      "file": "0050_public_opportunity_links.sql",
+      "dependsOn": [
+        "0049"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-27T12:59:28.196Z"
     }
   ]
 }

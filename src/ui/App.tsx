@@ -5,7 +5,9 @@
 
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { I18nProvider } from '../i18n/I18nContext';
 import { PublicLayout } from './components/layout/PublicLayout';
+import { PublicOpportunityPage } from './pages/public/PublicOpportunityPage';
 import { ToastContainer } from './components/ui/StateViews';
 import { AppStateProvider, useAppState } from './context/AppStateContext';
 import { RouterProvider, useRouter } from './context/RouterContext';
@@ -130,7 +132,7 @@ function AppRoutes() {
 
   const renderRoute = () => {
     // Public Website & Legal
-    if (path === '/') return <PublicHomepage />;
+        if (path === '/') return <PublicHomepage />;
     if (path === '/product') return <PublicProductPage />;
     if (path === '/opportunities') return <PublicOpportunitiesPage />;
     if (path === '/markets') return <PublicMarketsPage />;
@@ -149,6 +151,13 @@ function AppRoutes() {
     if (path === '/terms' || path === '/legal/terms') return <PublicTermsPage />;
     if (path === '/cookies' || path === '/legal/cookies') return <PublicCookiesPage />;
     if (path === '/legal/dpa') return <PublicDataProcessingPage />;
+
+    // Shareable opportunity link. Public on purpose: every stored opportunity
+    // has a stable URL that can be sent to a colleague without a workspace seat.
+    if (path.startsWith('/o/')) {
+      const sharedId = path.replace('/o/', '');
+      return <PublicOpportunityPage opportunityId={sharedId} />;
+    }
 
     // Authentication & Onboarding (legacy /login, /register and /verify-email
     // URLs are kept and rendered by the current auth screens)
@@ -259,11 +268,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <ThemeProvider>
-      <RouterProvider>
-        <AppStateProvider>
-          <AppRoutes />
-        </AppStateProvider>
-      </RouterProvider>
+      <I18nProvider>
+        <RouterProvider>
+          <AppStateProvider>
+            <AppRoutes />
+          </AppStateProvider>
+        </RouterProvider>
+      </I18nProvider>
     </ThemeProvider>
   );
 }
