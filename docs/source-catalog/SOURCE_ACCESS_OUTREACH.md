@@ -35,22 +35,37 @@ failure, so this class of mistake is caught automatically from now on.
 The domain does not exist, so there is nothing to negotiate: the registry is
 out of date. The action is research, not outreach — find the agency's current
 portal from the parent ministry or the national procurement authority, verify
-it answers, then update `official_website`.
+it answers over HTTPS, then update `official_website`. Verified in migration
+`0056_group_a_url_repairs.sql` (applied dev + prod, 27 Nov 2026).
 
-| Source | Registered URL | Observed |
+### Group A — re-pointed (8 of 12)
+
+Replacement verified with a real HTTPS request (2xx) before the registry was
+changed. `official_website` and `api_or_feed_url` moved together where they
+were the same registered portal.
+
+| Source | Old registered URL | New registered URL | Verified | Notes |
+| --- | --- | --- | --- | --- |
+| Burkina Faso ARMP | `https://armp.gov.bf/` | `https://arcop.bf/` | 200 OK (11.5 s) | Agency renamed ARCOP (Autorité de Régulation des Commandes Publiques) |
+| Gambia PPAG | `https://gppagal.gov.gm/` | `https://gppa.gm/` | 200 OK | Gambia Public Procurement Authority |
+| Malawi PPDA | `https://ppdamlawi.org/` | `https://www.ppda.mw/` | 200 OK | Public Procurement and Disposal of Assets Authority |
+| Namibia CPBN | `https://cpbn.gov.na/` | `https://www.cpbn.com.na/` | 200 OK | Central Procurement Board of Namibia |
+| Xarid — Uzbekistan | `https://xarid.mf.uz/` | `https://xarid.uzex.uz/` | 200 OK | UZEX special procurement portal |
+| Niger ARMP | `https://armp.ne/` | `https://www.marchespublics.ne/` | 200 OK | `armp-niger.org` now redirects to csi-freight.com — hijacked, do not use |
+| Mozambique SISAC | `https://sisac.mf.gov.mz/` | `https://ufsa.gov.mz/` | 200 OK at verification (now 503) | UFSA regulator site; original SISAC e-procurement system is gone. Site currently returns 503/403 — may be intermittent; kept because the old host does not resolve at all |
+| GAGS — Egypt | `https://gags.gov.eg/` | `https://www.eps-gags.gov.eg/` | 200 OK | General Authority for Government Services |
+
+### Group A — unconfirmed (4 of 12)
+
+No verified HTTPS replacement. Each stays in the registry untouched (still
+pointing at the dead host) and remains an outreach/research item.
+
+| Source | Registered URL | Why unconfirmed |
 | --- | --- | --- |
-| Burkina Faso ARMP | `https://armp.gov.bf/` | `ENOTFOUND` |
-| GAGS — Egypt | `https://gags.gov.eg/` | `ENOTFOUND` on apex; `www` answers with a certificate for a different hostname |
-| Gambia PPAG | `https://gppagal.gov.gm/` | `ENOTFOUND` |
-| General Contracting Portal (Egypt) | `https://gcs.digitalegypt.gov.eg/` | `ENOTFOUND` |
-| Helwan University | `https://helwan.edu.eg/` | `ENOTFOUND` on apex; `www` present but chain incomplete |
-| Madagascar DGCP | `https://dgcp.gov.ml/` | `ENOTFOUND` — note the `.ml` (Mali) TLD on a Madagascar source: the registry row is wrong, not the internet |
-| Malawi PPDA | `https://ppdamlawi.org/` | `ENOTFOUND` |
-| Mozambique SISAC | `https://sisac.mf.gov.mz/` | `ENOTFOUND` |
-| Namibia CPBN | `https://cpbn.gov.na/` | `ENOTFOUND` |
-| Niger ARMP | `https://armp.ne/` | `ENOTFOUND` |
-| Xarid — Uzbekistan | `https://xarid.mf.uz/` | `ENOTFOUND` |
-| Botswana PPRA | `https://www.ppra.co.bw/` | apex does not resolve; `www` accepts the connection but never replies |
+| Botswana PPRA | `https://ppra.co.bw/` (apex) / `https://www.ppra.co.bw/` (www) | apex `ENOTFOUND`; `www` accepts the connection but never replies (timeout); only `https://ipms.ppadb.co.bw/` (IPMS registration portal) answers — not the agency portal itself. http-only portals cannot be re-pointed (`^https://` check) |
+| General Contracting Portal (Egypt) | `https://gcs.digitalegypt.gov.eg/` | `ENOTFOUND` on apex; `https://etenders.gov.eg/` and `http://gcs.digitalegypt.gov.eg/` both time out. No verified HTTPS endpoint |
+| Helwan University | `https://helwan.edu.eg/` | apex `ENOTFOUND`; `www.helwan.edu.eg` has an incomplete certificate chain (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`); `https://hu.edu.eg/` answers 403 (different host, blocked, not verified) |
+| Madagascar DGCP | `https://dgcp.gov.ml/` | `ENOTFOUND` — note the `.ml` (Mali) TLD on a Madagascar source: the registry row is wrong, not the internet. `https://armp.mg/` has a certificate altname mismatch. http-only portals cannot be re-pointed (`^https://` check) |
 
 ## Group B — certificate problems the publisher must fix — 10 sources
 
@@ -185,7 +200,9 @@ a query) and **Mombasa County** returns 500 on its feed path.
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | PPRA Kenya (website) | fixed | — | — | — | re-pointed to apex host, answers 200 |
 | 2 | Volta River Authority | fixed | — | — | — | re-pointed to `www`, answers 200 |
-| 3–58 | the sources listed above | A–E | unassigned | not yet | — | open |
+| 3–10 | Group A re-pointed (Burkina, Gambia, Malawi, Namibia, Xarid, Niger, Mozambique, GAGS) | A | done | — | — | re-pointed in migration 0056, 7 of 8 answer 200 (Mozambique 503) |
+| 11–14 | Group A unconfirmed (Botswana PPRA, Egypt GCS portal, Helwan University, Madagascar DGCP) | A | unassigned | not yet | — | open — no verified HTTPS replacement |
+| 15–58 | remaining sources (Groups B–F) | B–F | unassigned | not yet | — | open |
 
 The tracker is deliberately empty apart from what has actually happened: no
 publisher has been contacted yet, and this file should not claim otherwise.

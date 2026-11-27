@@ -33,9 +33,12 @@ and stored opportunity records. A live check never changes a source's
 | API / feed | 16 | 4 | 10 | 5 |
 
 * **144 of 215 endpoints answered** and **130 of 180 sources answered at least
-  one endpoint** (72.2%).
-* **101 countries checked: 70 where every registered source answered,
-  31 partial, 0 with no answering source.** No country is left unverified.
+  one endpoint** (72.2%) in the original run. After Group A re-points
+  (migration 0056, 27 Nov 2026) 7 more sources answer, so **137 of 180
+  sources** answer at least one endpoint and 51 answer nothing.
+* **101 countries checked: 71 where every registered source answered,
+  30 partial, 0 with no answering source** after the Group A re-points. No
+  country is left unverified.
 * Failures by cause: `blocked` 17, `timeout` 16, `dns_not_found` 12,
   `tls_incomplete_chain` 6, `http_error` 6, `not_a_feed` 6, `tls_expired` 4,
   `connection_reset` 2, `tls_name_mismatch` 2.
