@@ -32,6 +32,10 @@ export interface SourceLiveStatus {
   answeredLatencyMs: number | null;
   answeredTargetKind: 'feed' | 'website' | null;
   answeredCheckedAt: string | null;
+  /** Content-Type of the newest request, when the endpoint sent one. */
+  contentType: string | null;
+  /** Content-Type of the newest request that answered. */
+  answeredContentType: string | null;
 }
 
 export interface CountryLiveSummary {
@@ -70,6 +74,8 @@ type LiveRow = {
   answered_target_kind: string | null;
   answered_target_url: string | null;
   answered_checked_at: string | null;
+  last_content_type: string | null;
+  answered_content_type: string | null;
 };
 
 type LiveQuery = {
@@ -96,6 +102,8 @@ const LIVE_COLUMNS = [
   'answered_target_kind',
   'answered_target_url',
   'answered_checked_at',
+  'last_content_type',
+  'answered_content_type',
 ].join(', ');
 
 const LIVE_LIMIT = 500;
@@ -147,6 +155,21 @@ function targetLabel(kind: string | null): string {
   return 'registered URL';
 }
 
+/**
+ * Names what a feed endpoint delivered, so an HTML tender page is never read as
+ * a working data feed just because it answered HTTP 200.
+ */
+function feedPayloadLabel(contentType: string | null): string | null {
+  if (!contentType) return null;
+  const type = contentType.toLowerCase();
+  if (type.includes('json')) return 'JSON feed';
+  if (type.includes('xml')) return 'XML feed';
+  if (type.includes('csv')) return 'CSV feed';
+  if (type.includes('gzip') || type.includes('zip') || type.includes('octet-stream')) return 'dataset download';
+  if (type.includes('html')) return 'HTML page, not a feed';
+  return null;
+}
+
 /** "Answered · HTTP 200 · 908 ms · official website · 12 min ago". */
 export function describeLiveCheck(row: SourceLiveStatus, now = Date.now()): string {
   if (!row.checkedAt || !row.outcome) return 'Not yet checked';
@@ -156,9 +179,27 @@ export function describeLiveCheck(row: SourceLiveStatus, now = Date.now()): stri
     parts.push(row.latencyMs >= 1000 ? `${(row.latencyMs / 1000).toFixed(1)} s` : `${row.latencyMs} ms`);
   }
   parts.push(targetLabel(row.targetKind));
+  if (row.targetKind === 'feed') {
+    const payload = feedPayloadLabel(row.contentType);
+    if (payload) parts.push(payload);
+  }
   const age = formatLiveAge(row.checkedAt, now);
   if (age) parts.push(age);
   return parts.join(' · ');
+}
+
+/**
+ * A feed that answered with a web page instead of data, stated separately: the
+ * source is reachable through its website, but nobody should read its feed as
+ * a working data surface.
+ */
+export function feedPayloadNote(row: SourceLiveStatus | null | undefined, now = Date.now()): string | null {
+  if (!row || row.targetKind !== 'feed' || !row.contentType) return null;
+  if (!row.contentType.toLowerCase().includes('html')) return null;
+  const age = formatLiveAge(row.checkedAt, now);
+  return `Feed check: HTML page, not a feed${row.httpStatus !== null ? ` (HTTP ${row.httpStatus})` : ''}${
+    age ? ` · ${age}` : ''
+  }`;
 }
 
 /**
@@ -176,6 +217,7 @@ export function describeLiveStatus(row: SourceLiveStatus, now = Date.now()): str
         latencyMs: row.answeredLatencyMs,
         targetKind: row.answeredTargetKind,
         checkedAt: row.answeredCheckedAt,
+        contentType: row.answeredContentType,
       },
       now,
     );
@@ -190,27 +232,25 @@ export function liveOutcomeTone(outcome: LiveOutcome | null): string {
   return 'text-[#64748B] dark:text-[#CBD5E1]';
 }
 
-function summarize(statuses: readonly SourceLiveStatus[], declaredSourceCount: number): CountryLiveSummary {
-  const sourceCount = Math.max(declaredSourceCount, statuses.length);
-  let checkedCount = 0;
-  let answeredCount = 0;
-  let lastCheckedAt: string | null = null;
-  for (const status of statuses) {
-    if (status.checkedAt) {
-      checkedCount += 1;
-      if (!lastCheckedAt || status.checkedAt > lastCheckedAt) lastCheckedAt = status.checkedAt;
-    }
-    if (status.answeredTargets > 0) answeredCount += 1;
-  }
-  const failedCount = Math.max(0, checkedCount - answeredCount);
-  const unseen = Math.max(0, sourceCount - checkedCount);
+/** The one place coverage is decided, used by both the per-country and index reads. */
+function buildSummary(
+  declaredSourceCount: number,
+  checkedCount: number,
+  answeredCount: number,
+  lastCheckedAt: string | null,
+): CountryLiveSummary {
+  const sourceCount = Math.max(0, declaredSourceCount);
+  const checked = Math.min(checkedCount, sourceCount);
+  const answered = Math.min(answeredCount, checked);
+  const failedCount = Math.max(0, checked - answered);
+  const unseen = Math.max(0, sourceCount - checked);
 
   const coverage: LiveCoverage =
-    checkedCount === 0
+    checked === 0
       ? 'unchecked'
-      : answeredCount === sourceCount && sourceCount > 0
+      : answered === sourceCount && sourceCount > 0
         ? 'verified'
-        : answeredCount > 0
+        : answered > 0
           ? 'partial'
           : 'failed';
 
@@ -227,11 +267,35 @@ function summarize(statuses: readonly SourceLiveStatus[], declaredSourceCount: n
   const detail =
     coverage === 'unchecked'
       ? `${sourceCount} registered source${sourceCount === 1 ? '' : 's'} awaiting a live check`
-      : `${answeredCount} of ${sourceCount} sources answered${age ? ` · checked ${age}` : ''}${
+      : `${answered} of ${sourceCount} sources answered${age ? ` · checked ${age}` : ''}${
           failedCount > 0 ? ` · ${failedCount} did not answer` : ''
         }${unseen > 0 ? ` · ${unseen} unchecked` : ''}`;
 
-  return { sourceCount, checkedCount, answeredCount, failedCount, lastCheckedAt, coverage, label, detail };
+  return {
+    sourceCount,
+    checkedCount: checked,
+    answeredCount: answered,
+    failedCount,
+    lastCheckedAt,
+    coverage,
+    label,
+    detail,
+  };
+}
+
+function summarize(statuses: readonly SourceLiveStatus[], declaredSourceCount: number): CountryLiveSummary {
+  const sourceCount = Math.max(declaredSourceCount, statuses.length);
+  let checkedCount = 0;
+  let answeredCount = 0;
+  let lastCheckedAt: string | null = null;
+  for (const status of statuses) {
+    if (status.checkedAt) {
+      checkedCount += 1;
+      if (!lastCheckedAt || status.checkedAt > lastCheckedAt) lastCheckedAt = status.checkedAt;
+    }
+    if (status.answeredTargets > 0) answeredCount += 1;
+  }
+  return buildSummary(sourceCount, checkedCount, answeredCount, lastCheckedAt);
 }
 
 function parseLiveRows(rows: readonly LiveRow[]): Map<string, SourceLiveStatus> {
@@ -258,6 +322,8 @@ function parseLiveRows(rows: readonly LiveRow[]): Map<string, SourceLiveStatus> 
           ? row.answered_target_kind
           : null,
       answeredCheckedAt: row.answered_checked_at,
+      contentType: row.last_content_type,
+      answeredContentType: row.answered_content_type,
     });
   }
   return bySourceId;
@@ -342,6 +408,135 @@ export function useCountryLiveStatus(countryCode: string, declaredSourceCount = 
       cancelled = true;
     };
   }, [countryCode, declaredSourceCount]);
+
+  return state;
+}
+
+export interface CountryLiveEntry extends CountryLiveSummary {
+  countryCode: string;
+}
+
+export interface CountryLiveIndexTotals {
+  countries: number;
+  verified: number;
+  partial: number;
+  failed: number;
+  unchecked: number;
+  sources: number;
+  answered: number;
+  lastCheckedAt: string | null;
+}
+
+export interface CountryLiveIndexState {
+  byCountry: Map<string, CountryLiveEntry>;
+  totals: CountryLiveIndexTotals;
+  loading: boolean;
+  error: string | null;
+}
+
+type CountryLiveRow = {
+  country_code: string;
+  source_count: number | string | null;
+  checked_count: number | string | null;
+  answered_count: number | string | null;
+  last_checked_at: string | null;
+};
+
+const EMPTY_TOTALS: CountryLiveIndexTotals = {
+  countries: 0,
+  verified: 0,
+  partial: 0,
+  failed: 0,
+  unchecked: 0,
+  sources: 0,
+  answered: 0,
+  lastCheckedAt: null,
+};
+
+/** Short label for a country row in a list. */
+export function liveCountryTag(entry: CountryLiveEntry | undefined): string {
+  if (!entry) return 'not checked';
+  if (entry.coverage === 'verified') return 'verified live';
+  if (entry.coverage === 'partial') return 'partially verified';
+  if (entry.coverage === 'failed') return 'no source answered';
+  return 'check pending';
+}
+
+export function liveCoverageTone(coverage: LiveCoverage): string {
+  if (coverage === 'verified') return 'text-[#16A34A]';
+  if (coverage === 'partial') return 'text-[#D97706]';
+  if (coverage === 'failed') return 'text-[#DC2626]';
+  return 'text-[#64748B] dark:text-[#CBD5E1]';
+}
+
+/**
+ * Live status for every country in one read, from the stored roll-up view.
+ *
+ * Lists (All Markets, the Explorer's country filter) need the same evidence the
+ * country page shows, without one request per country. A country with no row
+ * is absent from the map and renders as "not checked" — never as verified.
+ */
+export function useCountryLiveIndex(): CountryLiveIndexState {
+  const [state, setState] = useState<CountryLiveIndexState>(() => ({
+    byCountry: new Map(),
+    totals: EMPTY_TOTALS,
+    loading: neonClient !== null,
+    error: null,
+  }));
+
+  useEffect(() => {
+    if (!neonClient) {
+      setState({ byCountry: new Map(), totals: EMPTY_TOTALS, loading: false, error: null });
+      return;
+    }
+    const db = neonClient as unknown as { from(table: string): LiveQuery };
+    let cancelled = false;
+    setState({ byCountry: new Map(), totals: EMPTY_TOTALS, loading: true, error: null });
+
+    void (async () => {
+      try {
+        const result = await db
+          .from('country_live_summary')
+          .select('country_code, source_count, checked_count, answered_count, last_checked_at')
+          .range(0, LIVE_LIMIT - 1);
+        if (cancelled) return;
+        if (result.error) {
+          setState({ byCountry: new Map(), totals: EMPTY_TOTALS, loading: false, error: errorMessage(result.error) });
+          return;
+        }
+        const rows = (Array.isArray(result.data) ? result.data : []) as CountryLiveRow[];
+        const byCountry = new Map<string, CountryLiveEntry>();
+        const totals: CountryLiveIndexTotals = { ...EMPTY_TOTALS };
+        for (const row of rows) {
+          if (!row?.country_code) continue;
+          const code = row.country_code.toUpperCase();
+          const summary = buildSummary(
+            asNumber(row.source_count) ?? 0,
+            asNumber(row.checked_count) ?? 0,
+            asNumber(row.answered_count) ?? 0,
+            row.last_checked_at,
+          );
+          byCountry.set(code, { ...summary, countryCode: code });
+          totals.countries += 1;
+          totals.sources += summary.sourceCount;
+          totals.answered += summary.answeredCount;
+          totals[summary.coverage] += 1;
+          if (summary.lastCheckedAt && (!totals.lastCheckedAt || summary.lastCheckedAt > totals.lastCheckedAt)) {
+            totals.lastCheckedAt = summary.lastCheckedAt;
+          }
+        }
+        setState({ byCountry, totals, loading: false, error: null });
+      } catch (error) {
+        if (!cancelled) {
+          setState({ byCountry: new Map(), totals: EMPTY_TOTALS, loading: false, error: errorMessage(error) });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return state;
 }

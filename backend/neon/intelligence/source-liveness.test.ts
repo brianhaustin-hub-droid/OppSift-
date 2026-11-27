@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  alternateHostUrl,
+  classifyFailure,
   classifyLiveStatus,
   describeLiveCheck,
+  describePayload,
   formatLiveAge,
+  isMachineReadablePayload,
   isLiveCheckFresh,
   summarizeCountryLive,
 } from './source-liveness';
@@ -86,6 +90,40 @@ describe('isLiveCheckFresh', () => {
     expect(isLiveCheckFresh('2026-11-27T01:00:00.000Z', now)).toBe(true);
     expect(isLiveCheckFresh('2026-11-25T15:00:00.000Z', now)).toBe(false);
     expect(isLiveCheckFresh(null, now)).toBe(false);
+  });
+});
+
+describe('classifyFailure', () => {
+  it('names the cause a publisher can act on', () => {
+    expect(classifyFailure('CERT_HAS_EXPIRED: certificate has expired', 'unreachable')).toBe('tls_expired');
+    expect(
+      classifyFailure('UNABLE_TO_VERIFY_LEAF_SIGNATURE: unable to verify the first certificate', 'unreachable'),
+    ).toBe('tls_incomplete_chain');
+    expect(classifyFailure('getaddrinfo ENOTFOUND dgcp.gov.ml', 'unreachable')).toBe('dns_not_found');
+    expect(classifyFailure('No response within 25 s: UND_ERR_CONNECT_TIMEOUT', 'unreachable')).toBe('timeout');
+    expect(classifyFailure(null, 'blocked')).toBe('blocked');
+    expect(classifyFailure('Not a feed: answered HTTP 200 with html', 'error')).toBe('not_a_feed');
+  });
+});
+
+describe('alternateHostUrl', () => {
+  it('offers the other host when the registered one may be the wrong one', () => {
+    expect(alternateHostUrl('https://www.ppra.go.ke/')).toBe('https://ppra.go.ke/');
+    expect(alternateHostUrl('https://vra.com/media/tenders.php')).toBe('https://www.vra.com/media/tenders.php');
+  });
+
+  it('does not invent a host for a URL that has none', () => {
+    expect(alternateHostUrl('not a url')).toBeNull();
+  });
+});
+
+describe('describePayload', () => {
+  it('tells a machine feed from an HTML page', () => {
+    expect(isMachineReadablePayload(describePayload('application/json', '{"results":[]}'))).toBe(true);
+    expect(isMachineReadablePayload(describePayload('application/gzip', null))).toBe(true);
+    expect(isMachineReadablePayload(describePayload('text/xml', '<?xml version="1.0"?>'))).toBe(true);
+    expect(describePayload('text/html; charset=UTF-8', '<!DOCTYPE html>')).toBe('html');
+    expect(isMachineReadablePayload(describePayload('text/html; charset=UTF-8', '<html>'))).toBe(false);
   });
 });
 

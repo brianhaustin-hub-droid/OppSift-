@@ -21,10 +21,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 import postgres from 'postgres';
 import {
+  alternateHostUrl,
+  classifyFailure,
   classifyLiveStatus,
+  describePayload,
+  isMachineReadablePayload,
   LIVE_CHECK_TIMEOUT_MS,
   LIVE_CHECK_USER_AGENT,
 } from '../backend/neon/intelligence/source-liveness.ts';
+
+// A network failure can be a property of the host we asked, not of the
+// publisher: an apex host whose certificate belongs to www, a missing DNS
+// record that exists on the other name, or a dropped connection. Those are
+// retried once on the alternate host before the source is recorded as failing.
+const RETRY_ON_ALTERNATE_HOST = new Set([
+  'dns_not_found',
+  'tls_name_mismatch',
+  'tls_incomplete_chain',
+  'tls_handshake',
+  'timeout',
+  'connection_reset',
+]);
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const CONCURRENCY = Number(process.env.LIVENESS_CONCURRENCY ?? 6);
@@ -69,32 +86,55 @@ function targetsFor(source) {
   return targets;
 }
 
-async function probe(target) {
+async function requestOnce(target, url) {
   const startedAt = Date.now();
   try {
-    const response = await fetch(target.url, {
+    const response = await fetch(url, {
       redirect: 'follow',
       headers: {
         'user-agent': LIVE_CHECK_USER_AGENT,
-        accept: 'application/json, text/html;q=0.9, */*;q=0.8',
+        accept: 'application/json, application/xml, text/html;q=0.9, */*;q=0.8',
         'accept-language': 'en',
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     const latencyMs = Math.min(Date.now() - startedAt, 600_000);
-    // The body is not needed for a reachability check; cancel it so a large
-    // page or dataset is not downloaded just to close the request.
+    const contentType = response.headers.get('content-type');
+    // Only a feed target needs its first bytes: they say whether the endpoint
+    // delivered data or a web page. Everything else is cancelled unread so a
+    // large page or dataset is never downloaded just to close the request.
+    let prefix = null;
     try {
-      await response.body?.cancel();
+      if (target.kind === 'feed' && response.body) {
+        const reader = response.body.getReader();
+        const first = await reader.read();
+        prefix = first.value ? first.value.slice(0, 2048) : null;
+        await reader.cancel();
+      } else {
+        await response.body?.cancel();
+      }
     } catch {
       /* the connection is closed either way */
     }
+
+    const payload = target.kind === 'feed' ? describePayload(contentType, prefix) : null;
+    const status = classifyLiveStatus(response.status);
+    // A 200 that carries an HTML page is not a feed. The source stays reachable
+    // (its website is checked separately) but this endpoint is recorded as a
+    // failure so no one reads the check as a working data feed. A refusal keeps
+    // its `blocked` outcome: the publisher answered, it just said no.
+    const silentFeed =
+      status === 'answered' && target.kind === 'feed' && payload !== null && !isMachineReadablePayload(payload);
     return {
-      outcome: classifyLiveStatus(response.status),
+      outcome: silentFeed ? 'error' : status,
       http_status: response.status,
       latency_ms: latencyMs,
-      final_url: response.url || target.url,
-      error_message: null,
+      final_url: response.url || url,
+      content_type: contentType,
+      payload,
+      error_message: silentFeed
+        ? `Not a feed: answered HTTP ${response.status} with ${payload} instead of feed data`
+        : null,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -111,10 +151,34 @@ async function probe(target) {
       http_status: null,
       latency_ms: Math.min(Date.now() - startedAt, 600_000),
       final_url: null,
+      content_type: null,
+      payload: null,
       error_message:
         (timedOut ? 'No response within ' + Math.round(TIMEOUT_MS / 1000) + ' s: ' : '') + reason.slice(0, 300),
     };
   }
+}
+
+/**
+ * Requests the registered URL, then the alternate host when the failure could
+ * be the host's fault. The returned `target_url` is the URL that was actually
+ * requested, so the stored check never claims evidence from a URL nobody asked.
+ */
+async function probe(target) {
+  const attempts = [target.url];
+  const alternate = alternateHostUrl(target.url);
+  if (alternate) attempts.push(alternate);
+
+  let first = null;
+  for (const url of attempts) {
+    const result = { ...(await requestOnce(target, url)), target_url: url };
+    if (!first) first = result;
+    if (result.outcome !== 'unreachable') return result;
+    if (!RETRY_ON_ALTERNATE_HOST.has(classifyFailure(result.error_message, result.outcome))) break;
+  }
+  // Nothing answered: the stored check describes the URL the source declares,
+  // not the last fallback that was tried.
+  return first;
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -196,9 +260,10 @@ try {
       const result = await probe(job.target);
       results.push({ ...job, result });
       const mark = result.outcome === 'answered' ? 'ok  ' : 'FAIL';
+      const note = result.payload && result.payload !== 'json' && result.payload !== 'xml' ? ` [${result.payload}]` : '';
       console.log(
         `${mark} ${result.outcome.padEnd(11)} ${String(result.http_status ?? '-').padStart(3)} ` +
-          `${String(result.latency_ms).padStart(6)} ms  ${job.source.name} — ${job.target.kind}`,
+          `${String(result.latency_ms).padStart(6)} ms  ${job.source.name} — ${job.target.kind}${note}`,
       );
     }
   }
@@ -209,11 +274,14 @@ try {
       const rows = results.map(({ source, target, result }) => ({
         source_id: source.id,
         target_kind: target.kind,
-        target_url: target.url,
+        // The URL that produced this result, which is the registered one unless
+        // the alternate host was the only one that answered.
+        target_url: result.target_url ?? target.url,
         outcome: result.outcome,
         http_status: result.http_status,
         latency_ms: result.latency_ms,
         final_url: result.final_url,
+        content_type: result.content_type ?? null,
         error_message: result.error_message,
         checked_by: 'liveness-probe',
       }));
@@ -228,6 +296,7 @@ try {
           'http_status',
           'latency_ms',
           'final_url',
+          'content_type',
           'error_message',
           'checked_by',
         )}`;
@@ -237,6 +306,14 @@ try {
 
   const tally = results.reduce((acc, item) => {
     acc[item.result.outcome] = (acc[item.result.outcome] ?? 0) + 1;
+    return acc;
+  }, {});
+  // Grouped by what a publisher would have to change: this is the list the
+  // outreach work is built from.
+  const failures = results.reduce((acc, item) => {
+    if (item.result.outcome === 'answered') return acc;
+    const cls = classifyFailure(item.result.error_message, item.result.outcome);
+    acc[cls] = (acc[cls] ?? 0) + 1;
     return acc;
   }, {});
   const [countrySummary] = await sql`
@@ -253,6 +330,15 @@ try {
         .map(([outcome, count]) => `${outcome}=${count}`)
         .join(' ') || 'recorded 0 checks',
   );
+  if (Object.keys(failures).length > 0) {
+    console.log(
+      'failures by cause: ' +
+        Object.entries(failures)
+          .sort((a, b) => b[1] - a[1])
+          .map(([cls, count]) => `${cls}=${count}`)
+          .join(' '),
+    );
+  }
   console.log(
     `countries: ${countrySummary.countries} total · ${countrySummary.verified} all sources answered · ` +
       `${countrySummary.partial} partial · ${countrySummary.failed} none answered`,

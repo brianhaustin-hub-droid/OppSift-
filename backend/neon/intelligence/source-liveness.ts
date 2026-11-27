@@ -110,6 +110,150 @@ export function isLiveCheckFresh(checkedAt: string | null, now = Date.now()): bo
   return now - time <= LIVE_CHECK_FRESH_HOURS * 3_600_000;
 }
 
+/**
+ * Why a probe failed, in the terms a publisher can act on.
+ *
+ * "Connection failed" is useless in an outreach email; "TLS certificate
+ * expired" or "chain incomplete" is something their web team can fix today.
+ * The class is derived from what Node reported, never assumed.
+ */
+export type LiveFailureClass =
+  | 'dns_not_found'
+  | 'tls_expired'
+  | 'tls_incomplete_chain'
+  | 'tls_name_mismatch'
+  | 'tls_handshake'
+  | 'timeout'
+  | 'connection_reset'
+  | 'blocked'
+  | 'http_error'
+  | 'not_a_feed'
+  | 'unknown';
+
+export const LIVE_FAILURE_LABELS: Record<LiveFailureClass, string> = {
+  dns_not_found: 'Domain does not resolve',
+  tls_expired: 'TLS certificate expired',
+  tls_incomplete_chain: 'TLS chain incomplete (intermediate certificate missing)',
+  tls_name_mismatch: 'TLS certificate does not match the hostname',
+  tls_handshake: 'TLS handshake refused',
+  timeout: 'No response before the timeout',
+  connection_reset: 'Connection reset by the publisher',
+  blocked: 'Automated access refused',
+  http_error: 'Publisher returned an error status',
+  not_a_feed: 'Answered without feed data',
+  unknown: 'Unclassified failure',
+};
+
+/** What the publisher's team would have to change for the check to pass. */
+export const LIVE_FAILURE_ACTIONS: Record<LiveFailureClass, string> = {
+  dns_not_found: 'Confirm the current portal hostname and re-register it; the DNS name no longer exists.',
+  tls_expired: 'Renew the TLS certificate on the portal host.',
+  tls_incomplete_chain: 'Serve the full certificate chain, including the intermediate CA.',
+  tls_name_mismatch: 'Issue the certificate for the hostname clients actually request (apex or www).',
+  tls_handshake: 'Check the TLS version and cipher configuration of the portal.',
+  timeout: 'Check the portal from outside its own network; connections are not completing.',
+  connection_reset: 'Check the edge/WAF rules that close requests from non-browser clients.',
+  blocked: 'Register OppSift for API access, an allowlisted client, or a data-use agreement.',
+  http_error: 'The registered URL returns an error; confirm the current notice or feed path.',
+  not_a_feed: 'The feed URL returns a web page; publish an OCDS/JSON/XML endpoint or document the HTML listing.',
+  unknown: 'Re-run the probe and capture the failure detail before contacting the publisher.',
+};
+
+export function classifyFailure(
+  errorMessage: string | null | undefined,
+  outcome: LiveOutcome | null = null,
+): LiveFailureClass {
+  const message = (errorMessage ?? '').toUpperCase();
+  if (/NOT_A_FEED|NOT A FEED|NO MACHINE FEED/.test(message)) return 'not_a_feed';
+  if (!message) {
+    if (outcome === 'blocked') return 'blocked';
+    if (outcome === 'error') return 'http_error';
+    return 'unknown';
+  }
+  if (outcome === 'blocked' || /\bHTTP 40[137]\b|\bHTTP 429\b/.test(message)) return 'blocked';
+  if (outcome === 'error') return 'http_error';
+  if (/CERT_HAS_EXPIRED|CERTIFICATE HAS EXPIRED/.test(message)) return 'tls_expired';
+  if (/UNABLE_TO_VERIFY_LEAF_SIGNATURE|SELF_SIGNED_CERT_IN_CHAIN|UNABLE_TO_GET_ISSUER_CERT/.test(message)) {
+    return 'tls_incomplete_chain';
+  }
+  if (/ALTNAME_INVALID|DOES NOT MATCH CERTIFICATE/.test(message)) return 'tls_name_mismatch';
+  if (/ENOTFOUND|EAI_AGAIN|GETADDRINFO/.test(message)) return 'dns_not_found';
+  if (/ETIMEDOUT|TIMEOUT|ABORT|UND_ERR_CONNECT_TIMEOUT/.test(message)) return 'timeout';
+  if (/ECONNRESET/.test(message)) return 'connection_reset';
+  if (/EPROTO|TLSV1_ALERT|SSL ROUTINES|ERR_SSL|HANDSHAKE/.test(message)) return 'tls_handshake';
+  return 'unknown';
+}
+
+/**
+ * The other host a publisher's site may answer on: www ↔ apex.
+ *
+ * Several catalogued portals fail on the registered host only because the
+ * certificate or DNS record belongs to the other one. The probe retries once
+ * there and records the URL that actually answered, so the evidence names the
+ * endpoint that was requested.
+ */
+export function alternateHostUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.startsWith('www.')) {
+      const bare = parsed.hostname.slice(4);
+      if (!bare.includes('.')) return null;
+      parsed.hostname = bare;
+    } else {
+      if (parsed.hostname.split('.').length < 2) return null;
+      parsed.hostname = `www.${parsed.hostname}`;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+export type LivePayloadKind =
+  | 'json'
+  | 'xml'
+  | 'gzip'
+  | 'csv'
+  | 'binary'
+  | 'html'
+  | 'text'
+  | 'empty'
+  | 'unknown';
+
+/**
+ * What a 200 response actually delivered.
+ *
+ * A source can answer HTTP 200 and still be silent for our purposes: several
+ * catalogued "feed" URLs return an HTML tender page, which a browser can read
+ * and a connector cannot. Naming the payload keeps an answered check from
+ * being mistaken for a machine-readable feed.
+ */
+export function describePayload(
+  contentType: string | null | undefined,
+  prefix: Uint8Array | string | null | undefined,
+): LivePayloadKind {
+  const type = (contentType ?? '').toLowerCase();
+  const head = typeof prefix === 'string' ? prefix : prefix ? new TextDecoder().decode(prefix.slice(0, 512)) : '';
+  const trimmed = head.replace(/^\uFEFF/, '').trimStart();
+  if (type.includes('json') || trimmed.startsWith('{') || trimmed.startsWith('[')) return 'json';
+  if (type.includes('gzip') || (prefix instanceof Uint8Array && prefix[0] === 0x1f && prefix[1] === 0x8b)) {
+    return 'gzip';
+  }
+  if (type.includes('octet-stream') || type.includes('zip')) return 'binary';
+  if (type.includes('html') || /^<(!doctype|html)/i.test(trimmed)) return 'html';
+  if (type.includes('xml') || trimmed.startsWith('<?xml') || trimmed.startsWith('<')) return 'xml';
+  if (type.includes('csv')) return 'csv';
+  if (!type && !trimmed) return 'empty';
+  return 'text';
+}
+
+const MACHINE_PAYLOADS: ReadonlySet<LivePayloadKind> = new Set(['json', 'xml', 'gzip', 'csv', 'binary']);
+
+/** True when a feed target delivered data a connector could parse. */
+export function isMachineReadablePayload(kind: LivePayloadKind): boolean {
+  return MACHINE_PAYLOADS.has(kind);
+}
+
 export type CountryLiveCoverage = 'verified' | 'partial' | 'failed' | 'unchecked';
 
 export type CountryLiveSummary = {

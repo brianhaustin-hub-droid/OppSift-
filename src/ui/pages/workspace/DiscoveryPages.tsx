@@ -34,8 +34,12 @@ import { useCountryLeads } from '../../data/leads';
 import {
   describeLiveCheck,
   describeLiveStatus,
+  feedPayloadNote,
   formatLiveAge,
+  liveCountryTag,
+  liveCoverageTone,
   liveOutcomeTone,
+  useCountryLiveIndex,
   useCountryLiveStatus,
   useSourceLiveStatus,
 } from '../../data/liveness';
@@ -74,6 +78,10 @@ function OpportunityExplorerCore({
     recordSearch,
     searchHistory,
   } = useAppState();
+
+  // Every country's stored live status in one read, so the explorer's country
+  // list and result rows can show whether that market's sources answer now.
+  const liveIndex = useCountryLiveIndex();
 
   const {
     query,
@@ -386,7 +394,7 @@ function OpportunityExplorerCore({
                   <option value="All">All Countries</option>
                   {countries.map((c) => (
                     <option key={c.code} value={c.code}>
-                      {c.name} ({c.currency})
+                      {c.name} ({c.currency}) — {liveCountryTag(liveIndex.byCountry.get(c.code))}
                     </option>
                   ))}
                 </select>
@@ -575,6 +583,60 @@ function OpportunityExplorerCore({
           )}
         </div>
 
+        {/* Market live checks for the selected market, or the whole catalogue. */}
+        {liveIndex.error ? (
+          <div className="p-3 rounded-lg border border-[#DC2626]/30 bg-[#DC2626]/10 text-xs text-[#DC2626]">
+            Live source checks unavailable: {liveIndex.error}
+          </div>
+        ) : (
+          <div className="p-3 rounded-lg border border-[#E2E8F0] dark:border-white/12 bg-[#F8FAFC] dark:bg-white/6 text-xs flex flex-wrap items-center justify-between gap-2">
+            {(() => {
+              const selected = countryFilter !== 'All' ? liveIndex.byCountry.get(countryFilter) : undefined;
+              if (countryFilter !== 'All') {
+                return (
+                  <>
+                    <span className="font-semibold">
+                      {countries.find((c) => c.code === countryFilter)?.name ?? countryFilter} live check:{' '}
+                      <span className={liveCoverageTone(selected?.coverage ?? 'unchecked')}>
+                        {liveCountryTag(selected)}
+                      </span>
+                    </span>
+                    <span className="text-[#64748B] dark:text-[#CBD5E1]">
+                      {liveIndex.loading
+                        ? 'Reading stored live checks…'
+                        : selected
+                          ? selected.detail
+                          : 'No live check stored for this market yet'}
+                    </span>
+                  </>
+                );
+              }
+              return (
+                <>
+                  <span className="font-semibold">
+                    Market live checks: {liveIndex.totals.verified} of{' '}
+                    {liveIndex.totals.countries || countries.length} jurisdictions fully answered
+                  </span>
+                  <span className="text-[#64748B] dark:text-[#CBD5E1]">
+                    {liveIndex.loading ? (
+                      'Reading stored live checks…'
+                    ) : (
+                      <>
+                        <span className="text-[#D97706]">{liveIndex.totals.partial} partial</span> ·{' '}
+                        <span className="text-[#DC2626]">{liveIndex.totals.failed} none answered</span> ·{' '}
+                        {liveIndex.totals.answered} of {liveIndex.totals.sources} sources answered
+                        {formatLiveAge(liveIndex.totals.lastCheckedAt)
+                          ? ` · newest check ${formatLiveAge(liveIndex.totals.lastCheckedAt)}`
+                          : ''}
+                      </>
+                    )}
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Results Meta Strip */}
         <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-[#CBD5E1]">
           <p className="font-mono tabular-nums">
@@ -616,7 +678,14 @@ function OpportunityExplorerCore({
                   <div>
                     <div className="flex items-center justify-between gap-2 text-xs text-[#64748B] dark:text-[#CBD5E1]">
                       <span>
-                        {opp.countryName} · {opp.category} ·{' '}
+                        {opp.countryName} ·{' '}
+                        <span
+                          title={liveIndex.byCountry.get(opp.countryCode)?.detail}
+                          className={liveCoverageTone(liveIndex.byCountry.get(opp.countryCode)?.coverage ?? 'unchecked')}
+                        >
+                          {liveCountryTag(liveIndex.byCountry.get(opp.countryCode))}
+                        </span>{' '}
+                        · {opp.category} ·{' '}
                         <span className="font-mono font-semibold text-[#541B32] dark:text-[#E8A4B5]">
                           {opp.matchScore}% match
                         </span>
@@ -768,7 +837,17 @@ function OpportunityExplorerCore({
                     <td className="py-3 px-4 text-[#64748B] dark:text-[#CBD5E1] max-w-[200px] truncate">
                       {opp.issuingOrganisation}
                     </td>
-                    <td className="py-3 px-4">{opp.countryName}</td>
+                    <td className="py-3 px-4">
+                      <span>{opp.countryName}</span>
+                      <span
+                        title={liveIndex.byCountry.get(opp.countryCode)?.detail}
+                        className={`block text-[11px] ${liveCoverageTone(
+                          liveIndex.byCountry.get(opp.countryCode)?.coverage ?? 'unchecked',
+                        )}`}
+                      >
+                        {liveCountryTag(liveIndex.byCountry.get(opp.countryCode))}
+                      </span>
+                    </td>
                     <td className="py-3 px-4 font-mono tabular-nums">{formatDisplayDate(opp.deadlineDate)}</td>
                     <td className="py-3 px-4 text-right font-mono tabular-nums">
                       {formatCurrencyValue(opp.estimatedValue, opp.currency)}
@@ -1469,6 +1548,9 @@ export function CountryDiscoveryPage({ countryCode }: { countryCode: string }) {
                         <p className={`truncate ${liveOutcomeTone(reachable ? 'answered' : (live?.outcome ?? null))}`}>
                           {live ? describeLiveStatus(live) : 'Live check not recorded'}
                         </p>
+                        {feedPayloadNote(live) && (
+                          <p className="truncate text-[11px] text-[#D97706]">{feedPayloadNote(live)}</p>
+                        )}
                       </div>
                       <span
                         title="Connector state for ingestion, separate from the live reachability check"

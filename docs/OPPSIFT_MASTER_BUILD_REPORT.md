@@ -438,12 +438,18 @@ endpoint, and both the country page and the source page show the latest result
 with its age.
 
 * All **215 registered endpoints across 180 sources** were requested on the
-  app-facing branch, then every silent source retried with a 25 s timeout:
-  **148 endpoints answered**, 17 refused automated access, 6 returned an error
-  status and 44 failed to connect.
-* **128 of 180 sources answered at least one endpoint.**
-* **All 101 countries now have live evidence: 70 have every registered source
+  app-facing branch with a 25 s timeout: **144 endpoints answered**, 17 refused
+  automated access, 12 returned an error status and 42 failed to connect.
+* **130 of 180 sources answered at least one endpoint**; 58 did not, and each is
+  filed in `docs/source-catalog/SOURCE_ACCESS_OUTREACH.md` by cause.
+* **All 101 countries have live evidence: 70 have every registered source
   answering, 31 are partial, 0 have none.** No country is left unverified.
+* The probe now retries the alternate host (apex ↔ www) once, stores the
+  response content type so an HTML page is not mistaken for a feed, and
+  classifies every failure by what the publisher would have to change.
+* `.github/workflows/source-liveness.yml` re-runs the probe every six hours;
+  `/markets` and the Explorer's country list now carry the same live status as
+  the country page, with the age of the evidence.
 * New reads: `source_live_status`, `country_source_live_status` and
   `country_live_summary`; the base check table stays private. The country page
   shows `Live: <status> (answered/total)` plus a per-source result line, and the

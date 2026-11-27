@@ -1,0 +1,63 @@
+name: Source live checks
+
+# Keeps every country's live evidence fresh without anyone remembering to run
+# the probe. Each run requests every registered source endpoint and appends the
+# result to public.source_live_checks; the app reads the newest row per source.
+#
+# Required repository secret:
+#   LIVENESS_DATABASE_URL — connection string of the database the app serves
+#                           (the app-facing Neon branch, not a dev branch).
+#
+# The workflow never writes a secret to the repository and never invents a
+# result: a run that cannot reach the database fails instead of reporting
+# sources as verified.
+
+on:
+  schedule:
+    # Every six hours; evidence in the UI always shows its age.
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      country:
+        description: 'Only this ISO country code (leave empty for every source)'
+        required: false
+        default: ''
+
+concurrency:
+  group: source-liveness
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check that the database secret is configured
+        env:
+          LIVENESS_DATABASE_URL: ${{ secrets.LIVENESS_DATABASE_URL }}
+        run: |
+          if [ -z "$LIVENESS_DATABASE_URL" ]; then
+            echo "LIVENESS_DATABASE_URL is not set: add it as a repository secret."
+            exit 1
+          fi
+
+      - name: Probe registered source endpoints
+        env:
+          LIVENESS_DATABASE_URL: ${{ secrets.LIVENESS_DATABASE_URL }}
+          LIVENESS_TIMEOUT_MS: '25000'
+          LIVENESS_CONCURRENCY: '8'
+        run: |
+          if [ -n "${{ inputs.country }}" ]; then
+            node scripts/check-source-liveness.mjs --country="${{ inputs.country }}"
+          else
+            node scripts/check-source-liveness.mjs
+          fi

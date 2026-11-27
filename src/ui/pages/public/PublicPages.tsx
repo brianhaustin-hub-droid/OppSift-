@@ -23,6 +23,12 @@ import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
 import { ANNUAL_DISCOUNT_PERCENT, BILLING_PROVIDER_CONFIG } from '../../data/billingConfig';
 import { formatCurrencyValue } from '../../data/fixtures';
+import {
+  formatLiveAge,
+  liveCountryTag,
+  liveCoverageTone,
+  useCountryLiveIndex,
+} from '../../data/liveness';
 import { BillingFrequency, OpportunityCategory, PhotographicThemeId, PlanTierConfig } from '../../types/oppsift';
 
 function PublicHeroBanner({
@@ -650,6 +656,9 @@ export function PublicOpportunitiesPage() {
 export function PublicMarketsPage() {
   const { navigate } = useRouter();
   const { countries } = useAppState();
+  // One read of the stored live checks, so every row below states what was
+  // observed and when, instead of claiming a country works because it is listed.
+  const liveIndex = useCountryLiveIndex();
   const [regionFilter, setRegionFilter] = useState('All');
   const [marketQuery, setMarketQuery] = useState('');
   const [layoutMode, setLayoutMode] = useState<'table' | 'cards'>('table');
@@ -702,7 +711,7 @@ export function PublicMarketsPage() {
           <div className="p-4 rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923]">
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">Active Jurisdictions</p>
             <p className="mt-1 font-display text-2xl font-bold tabular-nums text-[#172033] dark:text-white">{activeCount}</p>
-            <p className="text-[11px] text-[#16A34A] mt-0.5 font-medium">Full ingestion verified</p>
+            <p className="text-[11px] text-[#16A34A] mt-0.5 font-medium">Stored records from a source</p>
           </div>
           <div className="p-4 rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923]">
             <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">Partial / Planned Expansion</p>
@@ -719,6 +728,31 @@ export function PublicMarketsPage() {
             <p className="mt-1 font-display text-2xl font-bold tabular-nums text-[#172033] dark:text-white">{distinctCurrencies}</p>
             <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1] mt-0.5">ISO 4217 native schema</p>
           </div>
+        </div>
+
+        {/* Live verification roll-up: stored HTTP checks, with their age. */}
+        <div className="rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923] px-4 py-3 text-xs flex flex-wrap items-center justify-between gap-2">
+          {liveIndex.error ? (
+            <span className="text-[#DC2626]">Live source checks unavailable: {liveIndex.error}</span>
+          ) : liveIndex.loading ? (
+            <span className="text-[#64748B] dark:text-[#CBD5E1]">Reading stored live source checks…</span>
+          ) : (
+            <>
+              <span className="font-semibold text-[#172033] dark:text-white">
+                Live source checks: {liveIndex.totals.verified} of {liveIndex.totals.countries || countries.length}{' '}
+                jurisdictions have every registered source answering
+              </span>
+              <span className="text-[#64748B] dark:text-[#CBD5E1]">
+                <span className="text-[#D97706]">{liveIndex.totals.partial} partial</span> ·{' '}
+                <span className="text-[#DC2626]">{liveIndex.totals.failed} none answered</span> ·{' '}
+                <span className="text-[#64748B] dark:text-[#CBD5E1]">{liveIndex.totals.unchecked} pending</span> ·{' '}
+                {liveIndex.totals.sources} country-source links probed · {liveIndex.totals.answered} answered
+                {formatLiveAge(liveIndex.totals.lastCheckedAt)
+                  ? ` · newest check ${formatLiveAge(liveIndex.totals.lastCheckedAt)}`
+                  : ''}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Filter Bar + View Switcher */}
@@ -781,6 +815,7 @@ export function PublicMarketsPage() {
                   <th className="py-3 px-4 font-semibold">Region</th>
                   <th className="py-3 px-4 font-semibold">Currency / TZ</th>
                   <th className="py-3 px-4 font-semibold">Coverage State</th>
+                  <th className="py-3 px-4 font-semibold">Live Check</th>
                   <th className="py-3 px-4 font-semibold">Supported Categories</th>
                   <th className="py-3 px-4 font-semibold text-right">Sources</th>
                   <th className="py-3 px-4 font-semibold text-right">Action</th>
@@ -808,6 +843,27 @@ export function PublicMarketsPage() {
                       >
                         {c.coverageStatus}
                       </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {(() => {
+                        const live = liveIndex.byCountry.get(c.code);
+                        return (
+                          <>
+                            <span className={`font-semibold text-xs ${liveCoverageTone(live?.coverage ?? 'unchecked')}`}>
+                              {live ? live.label : 'Not checked'}
+                            </span>
+                            <span className="block text-[11px] text-[#64748B] dark:text-[#CBD5E1] font-mono tabular-nums">
+                              {liveIndex.loading
+                                ? 'reading…'
+                                : live
+                                  ? `${live.answeredCount}/${live.sourceCount} answered${
+                                      formatLiveAge(live.lastCheckedAt) ? ` · ${formatLiveAge(live.lastCheckedAt)}` : ''
+                                    }`
+                                  : 'no live check stored'}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="py-3.5 px-4 text-xs text-[#64748B] dark:text-[#CBD5E1]">
                       {c.categoriesSupported.join(', ')}
@@ -849,6 +905,19 @@ export function PublicMarketsPage() {
                   </span>
                 </div>
                 <h2 className="font-display text-lg font-semibold">{c.name}</h2>
+                {(() => {
+                  const live = liveIndex.byCountry.get(c.code);
+                  return (
+                    <p className={`text-xs ${liveCoverageTone(live?.coverage ?? 'unchecked')}`}>
+                      Live check: {liveCountryTag(live)}
+                      {live
+                        ? ` · ${live.answeredCount}/${live.sourceCount} answered${
+                            formatLiveAge(live.lastCheckedAt) ? ` · ${formatLiveAge(live.lastCheckedAt)}` : ''
+                          }`
+                        : ''}
+                    </p>
+                  );
+                })()}
                 <p className="text-xs text-[#64748B] dark:text-[#CBD5E1]">
                   Categories: {c.categoriesSupported.join(', ')}
                 </p>
