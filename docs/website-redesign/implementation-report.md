@@ -343,3 +343,45 @@ shares them again, which is the intended consequence of the privacy boundary.
 Unchanged in substance and consistent with the review: "Built for organisations pursuing
 global opportunities", the six audiences, and the explicit statement that no customer is
 named until they agree to be.
+
+### 5.6 Remaining anonymous database grants removed
+
+Migration `0058_revoke_unused_anonymous_grants.sql` removes every grant the public site no
+longer uses. Anonymous visitors have no database path at all now: figures come from
+`public/platform-stats.json`, `/o/:id` reads through the Pages Function, and share creation
+is the authenticated server route. `authenticated` access is unchanged — each object that
+was reachable through a base `PUBLIC` grant is granted to `authenticated` explicitly, so the
+workspace sees the same rows as before.
+
+Removed from `PUBLIC`/`anonymous` (granted to `authenticated`): `global_countries`,
+`currencies`, `country_currencies`, `country_languages`, `languages`,
+`opportunity_categories`, `opportunity_types`, `opportunity_analyses`,
+`opportunity_versions`, `coverage_override`, `country_classification_mappings`,
+`ingestion_funnel`, `market_intelligence_summary`, `opportunity_dedupe_suspects`,
+`coverage_truth`, `source_country_coverage`, `country_lead_summary`,
+`country_live_summary`, `country_source_live_status`, `source_leads_public`,
+`source_live_status`, `public_platform_stats`, `public_market_coverage`,
+`public_region_coverage`, `opportunity_source_links`.
+
+`source_leads_public` is the notable one: it exposed 7,373 acquisition leads — the provider
+identities the public site is no longer allowed to publish — to any unauthenticated caller.
+
+`get_shared_notice(uuid)` and `get_sources_coverage_summary()` keep no `PUBLIC`/`anonymous`
+execute grant; the Pages Function calls the first as the owner role.
+
+**Verification against the production database (after applying 0058).**
+
+| Check | Result |
+| --- | --- |
+| `anonymous` select over all 25 objects above | `permission denied` on every one |
+| `anonymous` execute `get_shared_notice(uuid)` | `permission denied for function` |
+| `anonymous` execute `get_sources_coverage_summary()` | `permission denied for function` |
+| `authenticated` counts (countries, coverage, categories, leads, sources, notices) | 101 / 101 / 3 / 7,373 / 516 / 1,609 — identical to the pre-migration baseline |
+| `authenticated` `opportunity_source_links` / `opportunity_sources` | 1,636 / 180 (workspace unchanged) |
+| `GET /api/shared-notice/<id>` after an owner share row | 200 with the notice payload |
+| same call after revoking the share row | 404 `not publicly shared` |
+| `POST /api/share-links` without a session | 401 (no share row written) |
+
+The build also stopped importing the database client into the public entry: `formatLiveAge`
+moved to `src/ui/data/relativeTime.ts`, taking the marketing bundle from 743.95 kB
+(192.58 kB gzip) to 548.27 kB (133.09 kB gzip).

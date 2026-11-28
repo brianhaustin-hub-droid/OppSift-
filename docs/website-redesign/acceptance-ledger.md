@@ -85,8 +85,9 @@ blanket exception:
 - `opportunity_share_links(id, opportunity_id, created_by, created_at, revoked_at)`, RLS
   owner-only (`created_by = auth.user_id()`), one active row per notice.
 - `get_shared_notice(uuid)` (`SECURITY DEFINER`, `search_path` pinned) returns one
-  verified notice **only** while an active share row exists. Execute is granted to
-  `anonymous`; the table itself is not readable by `anonymous`.
+  verified notice **only** while an active share row exists. Execute is granted to the
+  owner role used by the Pages Function, not to `anonymous` (migration 0058); the table
+  itself is not readable by `anonymous`.
 - `/o/:id` reads through `/api/shared-notice/:id` (Pages Function) and renders "not shared
   publicly" for everything else.
 
@@ -99,15 +100,31 @@ blanket exception:
 | `set role anonymous; select * from opportunity_source_links` | `permission denied` |
 | `set role anonymous; select * from opportunity_sources` | `permission denied` |
 | `set role anonymous; select from opportunity_share_links` | `permission denied` |
-| `get_shared_notice(<unshared id>)` as `anonymous` | 0 rows |
-| `get_shared_notice(<shared id>)` as `anonymous` | 1 row |
+| `get_shared_notice(<unshared id>)` as owner role | 0 rows |
+| `get_shared_notice(<shared id>)` as owner role | 1 row |
 | `get_shared_notice(<shared id>)` after revoking the share | 0 rows |
+| `get_shared_notice(<shared id>)` as `anonymous` | `permission denied for function` |
 | `set role authenticated; select count(*) from opportunities` | 1,609 (workspace unchanged) |
 | Data API, anonymous JWT, `/rest/v1/opportunities` | 403 `permission denied for table opportunities` |
 | Data API, anonymous JWT, `/rest/v1/opportunity_sources` | 403 `permission denied` |
 
 Test share rows were deleted; production currently holds no share rows, so no notice is
 publicly readable.
+
+**Migration 0058 — remaining anonymous grants removed.** Every object the public site no
+longer queries (the aggregate views, the country/reference tables, coverage views,
+`source_leads_public`, `opportunity_source_links`) lost its `PUBLIC`/`anonymous` SELECT
+grant; each is granted to `authenticated` so workspace visibility is unchanged.
+
+| Check | Result |
+| --- | --- |
+| `anonymous` select over all 25 objects | `permission denied` on every one |
+| `anonymous` execute `get_sources_coverage_summary()` | `permission denied` |
+| `authenticated`: countries / coverage / categories / leads / sources / notices | 101 / 101 / 3 / 7,373 / 516 / 1,609 (names of the pre-migration baseline) |
+| `POST /api/share-links` without a session | 401, no row written |
+| `GET /api/shared-notice/<id>` with an active share row | 200 |
+| `GET /api/shared-notice/<id>` after revoking it | 404 |
+| public entry bundle | 548.27 kB (133.09 kB gzip), no database client |
 
 **Consequence to be accepted by the owner.** Previously copied `/o/<id>` links no longer
 resolve until an owner shares them again from the workspace. That is the intended result of

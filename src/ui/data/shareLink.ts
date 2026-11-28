@@ -2,34 +2,40 @@ import { neonClient } from '../../app/auth/neon-client';
 
 /**
  * Creates (or reuses) the explicit share row that authorises one notice to be
- * readable at `/o/<id>`. Workspace-only: the public marketing bundle must not
- * import the database client.
+ * readable at `/o/<id>`.
  *
- * The row records who authorised the share, so it can be revoked; a unique
- * index keeps one active share per notice.
+ * The write goes through `POST /api/share-links`, which verifies the caller's
+ * session against Neon Auth before inserting and records the verified user id.
+ * It deliberately does not insert from the browser: the managed Data API still
+ * does not expose the new share table, and a client-side insert would make the
+ * feature depend on that cache.
  */
-type InsertClient = {
-  from(table: string): {
-    insert(row: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }>;
+
+type SessionClient = {
+  auth: {
+    getSession(): PromiseLike<{
+      data?: { session?: { access_token?: string } | null } | null;
+    }>;
   };
 };
 
-export async function createShareLink(opportunityId: string, userId: string | null): Promise<boolean> {
+export async function createShareLink(opportunityId: string): Promise<boolean> {
   if (!neonClient) return false;
-  const db = neonClient as unknown as InsertClient;
   try {
-    const { error } = await db.from('opportunity_share_links').insert({
-      opportunity_id: opportunityId,
-      created_by: userId,
+    const client = neonClient as unknown as SessionClient;
+    const { data } = await client.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) return false;
+
+    const response = await fetch('/api/share-links', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ opportunityId }),
     });
-    if (!error) return true;
-    // A second copy of the same link hits the unique index; that means the
-    // active share row already exists, which is the success case for the caller.
-    const message =
-      error && typeof error === 'object' && 'message' in error
-        ? String((error as { message?: unknown }).message ?? '')
-        : '';
-    return /duplicate key|unique|23505/i.test(message);
+    return response.ok;
   } catch {
     return false;
   }

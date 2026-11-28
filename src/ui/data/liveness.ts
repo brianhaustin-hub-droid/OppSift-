@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { neonClient } from '../../app/auth/neon-client';
+import { formatLiveAge } from './relativeTime';
 
 // Reads the stored live checks of a country's registered sources.
 //
@@ -129,18 +130,7 @@ function asOutcome(value: string | null): LiveOutcome | null {
   return null;
 }
 
-export function formatLiveAge(checkedAt: string | null, now = Date.now()): string {
-  if (!checkedAt) return '';
-  const time = Date.parse(checkedAt);
-  if (!Number.isFinite(time)) return '';
-  const seconds = Math.max(0, Math.round((now - time) / 1000));
-  if (seconds < 90) return 'just now';
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 90) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 36) return `${hours} h ago`;
-  return `${Math.round(hours / 24)} d ago`;
-}
+export { formatLiveAge } from './relativeTime';
 
 const OUTCOME_LABELS: Record<LiveOutcome, string> = {
   answered: 'Answered',

@@ -19,7 +19,7 @@ import { PublicLayout } from '../../components/layout/PublicLayout';
 import { PhotographicBackdrop } from '../../components/media/PhotographicBackdrop';
 import { useRouter } from '../../context/RouterContext';
 import { INITIAL_PLAN_CATALOG, formatUsd } from '../../data/billingConfig';
-import { formatLiveAge } from '../../data/liveness';
+import { formatLiveAge } from '../../data/relativeTime';
 import { usePlatformStats } from '../../data/platformStats';
 import { usePageMeta } from '../../../seo/usePageMeta';
 import siteContent from '../../../seo/site-content.json';

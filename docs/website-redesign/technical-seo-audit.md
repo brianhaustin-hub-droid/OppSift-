@@ -74,17 +74,18 @@ sets `noindex` for unmapped routes).
 
 | Asset | Size | Gzip |
 | --- | --- | --- |
-| `index-*.js` (public site) | 743.95 kB | 192.58 kB |
+| `index-*.js` (public site) | 548.27 kB | 133.09 kB |
 | `index-*.css` | 77.00 kB | 13.62 kB |
 | `WorkspaceApp-*.js` (lazy) | 21.73 kB | 5.93 kB |
 | `AuthApp-*.js` (lazy) | 47.30 kB | 10.66 kB |
 
 Before this work the single entry bundle was **1,224.83 kB (291.51 kB gzip)**. Splitting the
 authenticated application, lazily loading the auth/onboarding module and deleting the
-retired marketing page components reduced the public entry to the figure above (−35% raw,
-−28% gzip) and removed the workspace data layer from the marketing page entirely.
+retired marketing page components reduced the public entry to the figure above (−55% raw,
+−54% gzip) and removed the workspace data layer from the marketing page entirely.
 
-The public entry no longer includes a database client. Statistics come from
+The public entry no longer includes a database client (548.27 kB vs 743.95 kB once the last
+`formatLiveAge` import was moved out of the module that owns the client). Statistics come from
 `public/platform-stats.json`, an aggregate snapshot written before the build by
 `scripts/build-public-stats.mjs`; the marketing pages make no database request, so no
 anonymous token, PostgREST client or schema handling ships to visitors. The remaining

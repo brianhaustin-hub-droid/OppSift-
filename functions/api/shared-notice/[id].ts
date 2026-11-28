@@ -1,4 +1,5 @@
-import { createSql } from "../_lib/db";
+import { neon } from "@neondatabase/serverless";
+import { getDatabaseUrl } from "../_lib/db";
 import { errorResponse, json, methodNotAllowed, type PagesContext } from "../_lib/http";
 
 /**
@@ -6,12 +7,13 @@ import { errorResponse, json, methodNotAllowed, type PagesContext } from "../_li
  *
  * The only public path to a notice record. It returns one verified notice when
  * an authenticated owner has created an active row in opportunity_share_links
- * for it (see migration 0057), and 404 otherwise — including for a valid id
- * that was never shared. No listing, no search, no enumeration.
+ * for it (migration 0057), and 404 otherwise — including for a valid id that
+ * was never shared. No listing, no search, no enumeration.
  *
- * The query runs as the database owner through a narrow SECURITY DEFINER
- * function rather than as the anonymous role, so the anonymous role itself
- * keeps no read access to the table.
+ * The query runs through `get_shared_notice`, a narrow SECURITY DEFINER function
+ * owned by the database owner, so the anonymous role itself keeps no read access
+ * to the table. It uses Neon's HTTP driver rather than a TCP `postgres`
+ * connection because Cloudflare Workers do not provide raw sockets.
  */
 
 type SharedNoticeRow = {
@@ -46,15 +48,14 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     return errorResponse(404, "No shared notice with that identifier.");
   }
 
-  const sql = createSql(context.env);
-  if (!sql) {
+  const databaseUrl = getDatabaseUrl(context.env);
+  if (!databaseUrl) {
     return errorResponse(503, "Share links are not configured in this deployment.");
   }
 
   try {
-    const rows = await sql<SharedNoticeRow[]>`
-      select * from public.get_shared_notice(${id}::uuid)
-    `;
+    const sql = neon(databaseUrl);
+    const rows = (await sql`select * from public.get_shared_notice(${id}::uuid)`) as SharedNoticeRow[];
     if (rows.length === 0) {
       return errorResponse(404, "This notice is not publicly shared.");
     }
@@ -62,10 +63,14 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       // A withdrawn share must stop serving quickly, so this is deliberately short.
       "cache-control": "public, max-age=30, s-maxage=30",
     });
-  } catch {
+  } catch (error) {
+    // Server-side diagnostics only; the client never sees database detail.
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      "[shared-notice] query failed:",
+      message.replace(/postgres(?:ql)?:\/\/\S+/gi, "[redacted connection string]"),
+    );
     return errorResponse(500, "The shared notice could not be read.");
-  } finally {
-    await sql.end({ timeout: 5 }).catch(() => undefined);
   }
 }
 

@@ -22,6 +22,7 @@
     "@neon/config": "^1.11.3",
     "@neon/env": "^1.6.15",
     "@neon/neon-js": "^0.10.2",
+    "@neondatabase/serverless": "^1.2.2",
     "@vitejs/plugin-react": "^5.0.0",
     "linkedom": "^0.18.15",
     "lucide-react": "^0.546.0",

@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight, Database, Globe2, ShieldCheck } from 'lucide-react';
 import { PublicLayout } from '../../components/layout/PublicLayout';
 import { PhotographicBackdrop } from '../../components/media/PhotographicBackdrop';
-import { formatLiveAge } from '../../data/liveness';
+import { formatLiveAge } from '../../data/relativeTime';
 import { usePlatformStats } from '../../data/platformStats';
 import { pageMeta, usePageMeta } from '../../../seo/usePageMeta';
 
