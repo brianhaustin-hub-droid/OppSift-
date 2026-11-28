@@ -137,6 +137,53 @@
   text-wrap: balance;
 }
 
+/* Anchor targets clear the sticky header. */
+section[id],
+[id^="product"],
+main [id] {
+  scroll-margin-top: 5.5rem;
+}
+
+/* Continuous source strip: decorative only, hidden from assistive tech in the
+   markup and stopped entirely for visitors who prefer reduced motion. */
+@keyframes oppsift-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.oppsift-source-marquee {
+  animation: oppsift-marquee 70s linear infinite;
+  will-change: transform;
+}
+
+.oppsift-source-marquee:hover,
+.oppsift-source-marquee:focus-within {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oppsift-source-marquee {
+    animation: none;
+    transform: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

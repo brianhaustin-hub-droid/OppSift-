@@ -17,3 +17,6 @@ scripts/_ke_*.sql
 scripts/migration-backups/
 *.tsbuildinfo
 .neon
+
+# Chat/tooling artefacts (screenshots, downloaded previews)
+artifacts/

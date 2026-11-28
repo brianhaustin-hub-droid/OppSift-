@@ -3,27 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { I18nProvider } from '../i18n/I18nContext';
 import { PublicLayout } from './components/layout/PublicLayout';
+import { NotFoundScreen } from './components/layout/NotFoundScreen';
+import { PublicHomepage } from './pages/public/PublicHomePage';
+import { PublicLandingPage } from './pages/public/LandingPages';
 import { PublicOpportunityPage } from './pages/public/PublicOpportunityPage';
-import { ToastContainer } from './components/ui/StateViews';
-import { AppStateProvider, useAppState } from './context/AppStateContext';
-import { RouterProvider, useRouter } from './context/RouterContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { AdminBillingConsolePage } from './pages/admin/AdminBillingPages';
-import { AdminConsolePage } from './pages/admin/AdminPages';
-import { AuthScreensPage } from './pages/auth/AuthScreens';
-import {
-  BillingHistoryPage,
-  CancelSubscriptionPage,
-  PlanChangePage,
-  StandaloneCheckoutPage,
-  SubscriptionBillingPage,
-  UsageLimitsPage,
-} from './pages/billing/BillingPages';
-import { OnboardingWizardPage } from './pages/onboarding/OnboardingWizard';
 import {
   PublicAboutPage,
   PublicContactPage,
@@ -31,96 +17,53 @@ import {
   PublicDataProcessingPage,
   PublicDocsPage,
   PublicGettingStartedPage,
-  PublicHomepage,
-  PublicHowItWorksPage,
-  PublicMarketsPage,
-  PublicOpportunitiesPage,
-  PublicPricingPage,
   PublicPrivacyPage,
-  PublicProductPage,
   PublicSecurityPage,
-  PublicSolutionsPage,
-  PublicSourcesPage,
   PublicTermsPage,
 } from './pages/public/PublicPages';
-import { AcceptInvitationPage, SettingsPage, TeamsOrganisationPage } from './pages/workspace/AccountAndOrgPages';
-import {
-  BrandSystemPage,
-  FirstTimeUserExperiencePage,
-  IntegrationsPage,
-} from './pages/workspace/CommercialSupportAndBrandPages';
-import { DashboardPage } from './pages/workspace/DashboardPage';
-import {
-  CountryDiscoveryPage,
-  DiscoverCommercialPage,
-  DiscoverExplorerPage,
-  DiscoverGovernmentPage,
-  DiscoverGrantsPage,
-  DiscoverSearchResultsPage,
-  OpportunityComparisonPage,
-  SourceDetailPage,
-} from './pages/workspace/DiscoveryPages';
-import {
-  AlertsMonitoringPage,
-  AnalyticsPage,
-  IntelligenceWorkspacePage,
-  MatchedOpportunitiesPage,
-  NotificationsCentrePage,
-  ReportsPage,
-} from './pages/workspace/IntelligenceAndMonitoringPages';
-import { OpportunityDetailPage } from './pages/workspace/OpportunityDetailPage';
-import {
-  MyOpportunitiesPage,
-  OpportunityPreparationPage,
-  SavedOpportunitiesPage,
-  SavedSearchesPage,
-  SearchHistoryPage,
-} from './pages/workspace/PersonalWorkspacePages';
-import {
-  AccountSecurityPage,
-  ActivityAuditPage,
-  GlobalPreferencesPage,
-  SupportTicketsPage,
-  SystemStatusPage,
-  UserJourneysPage,
-} from './pages/workspace/PlatformOperationsPages';
+import { RouterProvider, useRouter } from './context/RouterContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { isApplicationPath } from './routing/applicationPaths';
+import { usePageMeta } from '../seo/usePageMeta';
 
-function NotFoundScreen() {
-  const { path, navigate, canGoBack, goBack, getBackLabel } = useRouter();
+/**
+ * The public website is the default bundle. The authenticated application is a
+ * separate module, so a marketing visitor never downloads workspace code or
+ * issues a query for opportunity records.
+ */
+const WorkspaceApp = lazy(() => import('./WorkspaceApp'));
+const AuthApp = lazy(() => import('./AuthApp'));
+
+const LANDING_PATHS = new Set([
+  '/global-government-tenders',
+  '/international-grants',
+  '/official-data-sources',
+  '/commercial-rfp-opportunities',
+]);
+
+/**
+ * The five public marketing sections used to be separate pages. Their content
+ * now lives on the consolidated homepage, so the old URLs forward to the
+ * matching section rather than serving a second, thinner page.
+ */
+function SectionRedirect({ section }: { section: string }) {
+  const { navigate } = useRouter();
+
+  useEffect(() => {
+    navigate('/', { replace: true });
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(section);
+      if (!target) return;
+      window.history.replaceState({}, '', `/#${section}`);
+      target.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [navigate, section]);
+
   return (
     <PublicLayout>
-      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
-        <p className="font-mono text-xs font-semibold text-[#541B32] dark:text-[#E8A4B5]">404 · Route Not Found</p>
-        <h1 className="font-display text-3xl font-bold">This OppSift route does not exist</h1>
-        <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">
-          No screen is mapped to <span className="font-mono break-all">{path}</span>. Return to the previous page, homepage, or workspace dashboard.
-        </p>
-        <div className="pt-2 flex flex-wrap justify-center gap-3">
-          {canGoBack && (
-            <button
-              type="button"
-              onClick={() => goBack('/')}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[#E2E8F0] dark:border-[#263244] text-sm font-medium"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to {getBackLabel('Previous Page')}</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="px-4 py-2 rounded-lg border border-[#E2E8F0] dark:border-[#263244] text-sm font-medium"
-          >
-            Public Homepage
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 rounded-lg bg-[#541B32] hover:bg-[#A33B59] text-white text-sm font-semibold"
-          >
-            Open Dashboard
-          </button>
-        </div>
+      <div role="status" className="max-w-xl mx-auto px-4 py-20 text-center text-sm text-[#526070] dark:text-[#CBD5E1]">
+        This section is part of the OppSift homepage. Opening it…
       </div>
     </PublicLayout>
   );
@@ -128,22 +71,25 @@ function NotFoundScreen() {
 
 function AppRoutes() {
   const { path } = useRouter();
-  const { isAdminAuthorized } = useAppState();
+  usePageMeta(path);
 
-  const renderRoute = () => {
-    // Public Website & Legal
-        if (path === '/') return <PublicHomepage />;
-    if (path === '/product') return <PublicProductPage />;
-    if (path === '/opportunities') return <PublicOpportunitiesPage />;
-    if (path === '/markets') return <PublicMarketsPage />;
-    if (path === '/sources') return <PublicSourcesPage />;
-    if (path === '/solutions') return <PublicSolutionsPage />;
-    if (path === '/how-it-works') return <PublicHowItWorksPage />;
+  const renderPublicRoute = () => {
+    if (path === '/') return <PublicHomepage />;
+    if (LANDING_PATHS.has(path)) return <PublicLandingPage path={path} />;
+
+    // Retired marketing URLs, forwarded to their homepage section
+    if (path === '/product' || path === '/platform') return <SectionRedirect section="product" />;
+    if (path === '/opportunities') return <SectionRedirect section="opportunities" />;
+    if (path === '/markets') return <SectionRedirect section="markets" />;
+    if (path === '/sources') return <SectionRedirect section="sources" />;
+    if (path === '/pricing') return <SectionRedirect section="pricing" />;
+    if (path === '/how-it-works') return <SectionRedirect section="how-it-works" />;
+    if (path === '/solutions') return <SectionRedirect section="opportunities" />;
+
+    // Utility and trust pages that keep their own URL
     if (path === '/about') return <PublicAboutPage />;
     if (path === '/contact') return <PublicContactPage />;
     if (path === '/contact/confirmed') return <PublicContactPage initialSubmitted={true} />;
-    if (path === '/pricing') return <PublicPricingPage />;
-    if (path === '/status') return <SystemStatusPage />;
     if (path === '/getting-started') return <PublicGettingStartedPage />;
     if (path === '/docs') return <PublicDocsPage />;
     if (path === '/security') return <PublicSecurityPage />;
@@ -152,116 +98,40 @@ function AppRoutes() {
     if (path === '/cookies' || path === '/legal/cookies') return <PublicCookiesPage />;
     if (path === '/legal/dpa') return <PublicDataProcessingPage />;
 
-    // Shareable opportunity link. Public on purpose: every stored opportunity
-    // has a stable URL that can be sent to a colleague without a workspace seat.
+    // Shareable notice link: public on purpose and part of the approved
+    // product model. It renders one notice snapshot, never the workspace.
     if (path.startsWith('/o/')) {
-      const sharedId = path.replace('/o/', '');
-      return <PublicOpportunityPage opportunityId={sharedId} />;
+      return <PublicOpportunityPage opportunityId={path.replace('/o/', '')} />;
     }
 
-    // Authentication & Onboarding (legacy /login, /register and /verify-email
-    // URLs are kept and rendered by the current auth screens)
+    // Authentication and onboarding
     if (
       path === '/login' ||
       path === '/register' ||
       path === '/verify-email' ||
-      path === '/reset-password'
+      path === '/reset-password' ||
+      path === '/auth' ||
+      path.startsWith('/auth/')
     ) {
-      return <AuthScreensPage />;
+      return <AuthApp mode="auth" />;
     }
-    if (path === '/auth' || path.startsWith('/auth/')) return <AuthScreensPage />;
-    if (path === '/onboarding') return <OnboardingWizardPage />;
-    if (path === '/first-time') return isAdminAuthorized ? <FirstTimeUserExperiencePage /> : <NotFoundScreen />;
-    if (path === '/journeys') return isAdminAuthorized ? <UserJourneysPage /> : <NotFoundScreen />;
+    if (path === '/onboarding') return <AuthApp mode="onboarding" />;
 
-    // Brand Foundation (Internal Only)
-    if (path === '/brand-system') return isAdminAuthorized ? <BrandSystemPage /> : <NotFoundScreen />;
-
-    // Main Workspace & Discovery
-    if (path === '/dashboard') return <DashboardPage />;
-    if (path === '/matched') return <MatchedOpportunitiesPage />;
-    if (path === '/discover') return <DiscoverExplorerPage />;
-    if (path === '/discover/government') return <DiscoverGovernmentPage />;
-    if (path === '/discover/grants') return <DiscoverGrantsPage />;
-    if (path === '/discover/commercial') return <DiscoverCommercialPage />;
-    if (path === '/discover/search') return <DiscoverSearchResultsPage />;
-    if (path === '/discover/compare') return <OpportunityComparisonPage />;
-    if (path.startsWith('/discover/country/')) {
-      const code = path.replace('/discover/country/', '').toUpperCase() || 'GB';
-      return <CountryDiscoveryPage countryCode={code} />;
-    }
-    if (path.startsWith('/sources/')) {
-      const sourceId = path.replace('/sources/', '');
-      return <SourceDetailPage sourceId={sourceId} />;
-    }
-    if (path.startsWith('/opportunity/')) {
-      const id = path.replace('/opportunity/', '');
-      return <OpportunityDetailPage opportunityId={id} />;
-    }
-
-    // Personal Workspace
-    if (path === '/saved') return <SavedOpportunitiesPage />;
-    if (path === '/saved-searches') return <SavedSearchesPage />;
-    if (path === '/search-history') return <SearchHistoryPage />;
-    if (path === '/my-opportunities') return <MyOpportunitiesPage />;
-    if (path.startsWith('/my-opportunities/')) {
-      const pipeId = path.replace('/my-opportunities/', '');
-      return <OpportunityPreparationPage pipelineId={pipeId} />;
-    }
-
-    // Intelligence & Monitoring
-    if (path === '/intelligence') return <IntelligenceWorkspacePage />;
-    if (path === '/alerts') return <AlertsMonitoringPage />;
-    if (path === '/notifications') return <NotificationsCentrePage />;
-    if (path === '/analytics') return <AnalyticsPage />;
-    if (path === '/reports') return <ReportsPage />;
-
-    // Organisations, Security, Preferences & Account
-    if (path === '/teams') return <TeamsOrganisationPage />;
-    if (path === '/accept-invitation') return <AcceptInvitationPage />;
-    if (path === '/profile') {
-      return <SettingsPage initialTab="profile" title="My Profile" breadcrumb="Workspace / My Profile" />;
-    }
-    if (path === '/settings') return <SettingsPage />;
-    if (path === '/settings/security') return <AccountSecurityPage />;
-    if (path === '/settings/preferences') return <GlobalPreferencesPage />;
-    if (path === '/settings/activity') return <ActivityAuditPage adminMode={false} />;
-
-    // Commercial Billing & Subscription Management (Lemon Squeezy MoR)
-    if (path === '/checkout') return <StandaloneCheckoutPage />;
-    if (path === '/billing' || path === '/settings/billing') return <SubscriptionBillingPage />;
-    if (path === '/settings/usage') return <UsageLimitsPage />;
-    if (path === '/settings/billing/history') return <BillingHistoryPage />;
-    if (path === '/settings/billing/change') return <PlanChangePage />;
-    if (path === '/settings/billing/cancel') return <CancelSubscriptionPage />;
-
-    // Platform & Financial Administration (Protected)
-    if (path === '/admin') return <AdminConsolePage section="overview" />;
-    if (path === '/admin/sources') return <AdminConsolePage section="sources" />;
-    if (path === '/admin/coverage') return <AdminConsolePage section="coverage" />;
-    if (path === '/admin/ingestion') return <AdminConsolePage section="ingestion" />;
-    if (path === '/admin/quality') return <AdminConsolePage section="quality" />;
-    if (path === '/admin/audit') return <ActivityAuditPage adminMode={true} />;
-    if (path === '/admin/billing') return <AdminBillingConsolePage section="overview" />;
-    if (path === '/admin/subscriptions') return <AdminBillingConsolePage section="subscriptions" />;
-    if (path === '/admin/transactions') return <AdminBillingConsolePage section="transactions" />;
-    if (path === '/admin/invoices') return <AdminBillingConsolePage section="invoices" />;
-    if (path === '/admin/plans') return <AdminBillingConsolePage section="plans" />;
-    if (path === '/admin/coupons') return <AdminBillingConsolePage section="coupons" />;
-    if (path === '/admin/refunds') return <AdminBillingConsolePage section="refunds" />;
-
-    // Integrations & Support
-    if (path === '/integrations') return <IntegrationsPage />;
-    if (path === '/support' || path === '/help') return <SupportTicketsPage />;
+    if (isApplicationPath(path)) return <WorkspaceApp path={path} />;
 
     return <NotFoundScreen />;
   };
 
   return (
-    <>
-      {renderRoute()}
-      <ToastContainer />
-    </>
+    <Suspense
+      fallback={
+        <div role="status" className="px-4 py-24 text-center text-sm text-[#526070] dark:text-[#CBD5E1]">
+          Loading…
+        </div>
+      }
+    >
+      {renderPublicRoute()}
+    </Suspense>
   );
 }
 
@@ -270,9 +140,7 @@ export default function App() {
     <ThemeProvider>
       <I18nProvider>
         <RouterProvider>
-          <AppStateProvider>
-            <AppRoutes />
-          </AppStateProvider>
+          <AppRoutes />
         </RouterProvider>
       </I18nProvider>
     </ThemeProvider>

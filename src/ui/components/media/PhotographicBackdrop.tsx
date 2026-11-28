@@ -13,6 +13,27 @@ export interface PhotographicBackdropProps {
 
 const CROSSFADE_DURATION_MS = 1400;
 
+/**
+ * Continuous photographic sequence. The collection is the approved slideshow
+ * asset set (see src/ui/data/photographicSlideshow.ts); every image is an
+ * attributed, licensed photograph of a trade, infrastructure or market subject.
+ * Motion stops completely when the visitor prefers reduced motion.
+ */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(query.matches);
+    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  return reduced;
+}
+
 export function PhotographicBackdrop({
   initialTheme,
   overlayTone = 'burgundy-navy',
@@ -23,6 +44,7 @@ export function PhotographicBackdrop({
 }: PhotographicBackdropProps) {
   const photos = PHOTOGRAPHIC_SLIDESHOW_IMAGES;
   const total = photos.length;
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const initialIdx = React.useMemo(() => {
     if (!initialTheme || total === 0) return 0;
@@ -46,9 +68,11 @@ export function PhotographicBackdrop({
     setIncomingVisible(false);
   }, [initialIdx]);
 
-  // Preload the next 2 upcoming photographs smoothly without downloading all 300 at once
+  // Preload only the next two photographs. The full collection is never
+  // downloaded up front: the first image is requested by the <img> element and
+  // each later frame is fetched shortly before it is needed.
   useEffect(() => {
-    if (total <= 1 || typeof window === 'undefined') return;
+    if (total <= 1 || typeof window === 'undefined' || prefersReducedMotion) return;
     const preloadOffsets = [1, 2];
     const preloaders: HTMLImageElement[] = [];
 
@@ -68,10 +92,12 @@ export function PhotographicBackdrop({
         img.onerror = null;
       }
     };
-  }, [stableIndex, photos, total]);
+  }, [stableIndex, photos, total, prefersReducedMotion]);
 
-  // Automatic indefinite slideshow loop (~7s per photograph, wrapping 300 -> 1)
+  // Automatic indefinite slideshow loop (~7s per photograph, wrapping the
+  // collection back to the first image). No controls are rendered.
   useEffect(() => {
+    if (prefersReducedMotion) return;
     if (total <= 1 || typeof window === 'undefined') return;
 
     let cancelled = false;
@@ -134,7 +160,7 @@ export function PhotographicBackdrop({
       if (settleTimer !== null) window.clearTimeout(settleTimer);
       if (rafId !== null) window.cancelAnimationFrame(rafId);
     };
-  }, [photos, total, intervalMs]);
+  }, [photos, total, intervalMs, prefersReducedMotion]);
 
   const stablePhoto = photos[stableIndex];
   const incomingPhoto = incomingIndex !== null ? photos[incomingIndex] : null;
@@ -158,7 +184,8 @@ export function PhotographicBackdrop({
     <div
       className={`relative overflow-hidden bg-[#1D0B14] text-white flex flex-col justify-center ${minHeightClass} ${className}`}
     >
-      {/* Active Settled Full-Bleed Photograph */}
+      {/* Active settled photograph. It is the LCP element, so it is fetched
+          eagerly and at high priority while the headline renders above it. */}
       {stablePhoto && (
         <img
           src={stablePhoto.imageUrl}
@@ -166,6 +193,8 @@ export function PhotographicBackdrop({
           aria-hidden="true"
           referrerPolicy="no-referrer"
           decoding="async"
+          fetchPriority="high"
+          loading="eager"
           onLoad={() => setBaseLoaded(true)}
           onError={handleBaseError}
           className={`absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none transition-opacity duration-700 ease-out ${
