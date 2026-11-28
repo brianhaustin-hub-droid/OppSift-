@@ -149,15 +149,14 @@ function snapshot(path, meta) {
           .join('')}</ul></section>`
       : '';
 
+  // The public site describes its data ecosystem by broad category. Individual
+  // publisher identities, endpoints and per-provider status are internal.
   const sources =
     path === '/official-data-sources' || path === '/'
-      ? `<section><h2>Official sources</h2><p>${escapeHtml(content.sources.intro)}</p><ul>${content.sources.candidates
-          .map(
-            (candidate) =>
-              `<li><a href="${escapeHtml(candidate.website)}" rel="noreferrer">${escapeHtml(
-                candidate.name,
-              )}</a> — ${escapeHtml(candidate.publisher)} (${escapeHtml(candidate.market)})</li>`,
-          )
+      ? `<section><h2>${escapeHtml(content.sources.title)}</h2><p>${escapeHtml(
+          content.sources.intro,
+        )}</p><ul>${content.sources.categories
+          .map((category) => `<li>${escapeHtml(category.name)} — ${escapeHtml(category.detail)}</li>`)
           .join('')}</ul><p>${escapeHtml(content.sources.disclaimer)}</p></section>`
       : '';
 

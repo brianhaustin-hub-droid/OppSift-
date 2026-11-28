@@ -144,31 +144,22 @@ main [id] {
   scroll-margin-top: 5.5rem;
 }
 
-/* Continuous source strip: decorative only, hidden from assistive tech in the
-   markup and stopped entirely for visitors who prefer reduced motion. */
-@keyframes oppsift-marquee {
-  from {
-    transform: translateX(0);
-  }
+/* Decorative data-flow line in the ecosystem section. It only animates the
+   dash offset, so it costs nothing to lay out, and it stops for visitors who
+   prefer reduced motion. */
+@keyframes oppsift-flow {
   to {
-    transform: translateX(-50%);
+    stroke-dashoffset: -200;
   }
 }
 
-.oppsift-source-marquee {
-  animation: oppsift-marquee 70s linear infinite;
-  will-change: transform;
-}
-
-.oppsift-source-marquee:hover,
-.oppsift-source-marquee:focus-within {
-  animation-play-state: paused;
+.oppsift-flow {
+  animation: oppsift-flow 12s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oppsift-source-marquee {
+  .oppsift-flow {
     animation: none;
-    transform: none;
   }
 
   html {

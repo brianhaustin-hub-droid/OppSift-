@@ -1,6 +1,12 @@
-# Source and coverage verification
+# Source and coverage verification (internal)
 
 Date: 28 November 2026
+
+> **Internal document — do not publish.** This file exists so the team can re-check
+> coverage claims. Provider identities, endpoints and per-provider status must not appear
+> on any public page, sitemap, structured data or marketing metadata. Since the review of
+> 28 November 2026 the public site describes its data ecosystem by category only; the
+> section that used to publish these fifteen sources has been removed.
 Database: the platform's configured Neon branch (the same endpoint the deployed Data API
 serves). Read-only queries only; no schema or data was changed.
 
@@ -11,11 +17,16 @@ website. If a number is not in this file, it does not belong on the site.
 
 ## 1. Queries run
 
+Production branch (the one the public site reports from) and the dev branch hold different
+corpora. Production: **1,636 stored / 1,609 verified notices**. Dev: **2,540 stored / 2,513
+verified**. The figures below were taken on the dev branch unless marked production; the
+public site only ever shows the production snapshot.
+
 ```sql
 select count(*) from global_countries;                                   -- 101
 select count(*) from coverage_truth where record_count > 0;              -- 23
-select coalesce(sum(record_count),0) from coverage_truth;                -- 2540 (owner) / 1636 (anonymous role)
-select count(*) from opportunities;                                      -- 2540
+select coalesce(sum(record_count),0) from coverage_truth;                -- 2540 (dev, owner)
+select count(*) from opportunities;                                      -- 2540 dev / 1636 production
 select count(distinct country_code) from opportunities;                  -- 23
 select count(*) from opportunity_sources;                                -- 180
 select count(*) from opportunity_sources where integration_status='operational'; -- 86
@@ -46,17 +57,17 @@ Source health distribution for the 86 operational connectors: 16 `healthy`, 32
 count (86) and the count with a recorded successful retrieval, and never equates
 "operational" with "delivering data".
 
-### Why "verified notices" shows 1,636 and not 2,540
+### Why the public figure is 1,609 and not 1,636
 
-The public Data API reads `coverage_truth` through the anonymous role. The
-`opportunities` policy `verified_opportunities_public_read` exposes only rows where
-`data_quality_status = 'valid'`, `source_verified_at is not null` and
-`opportunity_has_verified_source(id)` is true. The rolled-up `record_count` is therefore
-1,636 for an anonymous reader and 2,540 for the owner. The public label is **"Verified
-notices"**, which is exactly what the visitor can read through that policy.
+The verification rules are `data_quality_status = 'valid'`, `source_verified_at is not
+null` and `opportunity_has_verified_source(id)`. On production 27 of 1,636 notices fail at
+least one rule, leaving **1,609 verified**. The public site shows 1,609 and labels it
+"Verified notices"; the stored total is never displayed. (The earlier note in this file
+quoted 1,636 as "anonymous-visible", which conflated the production corpus with a public
+read that no longer exists — anonymous access to the table is closed by migration 0057.)
 
-Markets holding notices: 23 either way, because every market with stored notices has at
-least one verified row.
+Markets: 23 hold stored notices, **18 hold verified notices**. The public market count is
+18. The dev branch's larger corpus is not published.
 
 ---
 

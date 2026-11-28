@@ -38,7 +38,7 @@ its own registry and database, and every public page must be readable without Ja
 | `/` | Consolidated marketing homepage (5 sections) | Category + brand | yes |
 | `/global-government-tenders` | Procurement guide | Transactional / informational: find tenders | yes |
 | `/international-grants` | Grants guide | Informational: find funding | yes |
-| `/official-data-sources` | Source ecosystem + live status | Trust / due diligence | yes |
+| `/official-data-sources` | Data ecosystem by category (no provider names) | Trust / due diligence | yes |
 | `/commercial-rfp-opportunities` | Commercial guide | Informational: supplier opportunities | yes |
 | `/about` | Company and principles | Navigational / trust | yes |
 | `/contact` | Contact routes | Navigational | yes |

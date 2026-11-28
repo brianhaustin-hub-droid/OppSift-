@@ -4,13 +4,7 @@ import { PublicLayout } from '../../components/layout/PublicLayout';
 import { PhotographicBackdrop } from '../../components/media/PhotographicBackdrop';
 import { formatLiveAge } from '../../data/liveness';
 import { usePlatformStats } from '../../data/platformStats';
-import {
-  sourceStatusDot,
-  sourceStatusTone,
-  useSourceShowcase,
-} from '../../data/sourceShowcase';
 import { pageMeta, usePageMeta } from '../../../seo/usePageMeta';
-import siteContent from '../../../seo/site-content.json';
 
 const numberFormat = new Intl.NumberFormat('en-GB');
 
@@ -23,7 +17,6 @@ export function PublicLandingPage({ path }: { path: string }) {
   usePageMeta(path);
   const meta = pageMeta(path);
   const platform = usePlatformStats();
-  const showcase = useSourceShowcase();
 
   if (!meta) {
     return (
@@ -104,10 +97,10 @@ export function PublicLandingPage({ path }: { path: string }) {
                 <dl className="mt-3 space-y-2.5 text-xs">
                   {[
                     { label: 'Markets in the registry', value: stats?.registeredMarkets },
-                    { label: 'Markets holding notices', value: stats?.marketsWithRecords },
-                    { label: 'Registered sources', value: stats?.registeredSources },
-                    { label: 'Operational connectors', value: stats?.operationalSources },
-                    { label: 'Notices stored', value: stats?.storedNotices },
+                    { label: 'Markets with verified notices', value: stats?.marketsWithNotices },
+                    { label: 'Registered integrations', value: stats?.registeredSources },
+                    { label: 'Operational integrations', value: stats?.operationalSources },
+                    { label: 'Verified notices', value: stats?.verifiedNotices },
                   ].map((row) => (
                     <div key={row.label} className="flex items-baseline justify-between gap-3">
                       <dt className="text-[#64748B] dark:text-[#94A3B8]">{row.label}</dt>
@@ -142,50 +135,6 @@ export function PublicLandingPage({ path }: { path: string }) {
             </div>
           </aside>
         </div>
-
-        {isSourcesPage && (
-          <section className="mt-12">
-            <h2 className="font-display text-xl font-semibold">The source showcase, with current status</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#526070] dark:text-[#CBD5E1]">
-              Status is read from the source registry and the newest stored HTTP check. “Delivering records” requires an
-              operational connector and a recorded successful retrieval; a registry entry alone is never enough.
-            </p>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {siteContent.sources.candidates.map((candidate) => {
-                const live = showcase.sources.find((entry) => entry.key === candidate.key);
-                return (
-                  <article
-                    key={candidate.key}
-                    className="rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923] p-4"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-display text-sm font-semibold">{candidate.name}</h3>
-                      <span className="shrink-0 text-[10px] text-[#64748B] dark:text-[#94A3B8]">{candidate.market}</span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">{live?.publisher ?? candidate.publisher}</p>
-                    <p className="mt-2 text-[11px] text-[#526070] dark:text-[#CBD5E1]">
-                      {candidate.category} · {candidate.access}
-                    </p>
-                    <div className="mt-3 flex items-start gap-1.5">
-                      <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${live ? sourceStatusDot(live.status) : 'bg-[#CBD5E1]'}`} />
-                      <div>
-                        <p className={`text-[11px] font-semibold ${live ? sourceStatusTone(live.status) : 'text-[#64748B]'}`}>
-                          {showcase.loading ? 'Reading registry…' : live?.statusLabel ?? 'Status unavailable'}
-                        </p>
-                        <p className="mt-0.5 text-[10px] leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
-                          {live?.detail ?? 'No registry row could be read for this source.'}
-                        </p>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            {showcase.error && (
-              <p className="mt-4 text-xs text-[#B45309] dark:text-[#FCD34D]">{showcase.error}</p>
-            )}
-          </section>
-        )}
 
         <div className="mt-14 rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-[#F8FAFC] dark:bg-[#1C2433] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

@@ -1,10 +1,7 @@
-import React, { useState } from "react";
-import { ArrowRight, Check, Copy, ExternalLink, Link2, SearchX } from "lucide-react";
-import { PublicLayout } from "../../components/layout/PublicLayout";
-import { useAppState } from "../../context/AppStateContext";
-import { useRouter } from "../../context/RouterContext";
-import { useI18n } from "../../../i18n/I18nContext";
-import { useNoticeTranslation } from "../../../i18n/useNoticeTranslation";
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, Check, Copy, ExternalLink, Link2, Lock, SearchX } from 'lucide-react';
+import { PublicLayout } from '../../components/layout/PublicLayout';
+import { useSharedNotice } from '../../data/sharedNotice';
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -15,24 +12,63 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
+function formatDate(value: string | null, timeZone?: string | null): string {
+  if (!value) return 'Not published';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Not published';
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: timeZone || undefined,
+    }).format(parsed);
+  } catch {
+    return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
+  }
+}
+
+function formatMoney(amount: number | null, currency: string | null): string {
+  if (amount === null) return 'Not disclosed';
+  try {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currency || 'USD',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${new Intl.NumberFormat('en-GB').format(amount)} ${currency ?? ''}`.trim();
+  }
+}
+
+function humanise(value: string | null): string {
+  if (!value) return 'Not stated';
+  return value.replace(/[_-]+/g, ' ').replace(/^./, (character) => character.toUpperCase());
+}
+
 /**
- * Public, linkable view of a single opportunity. It reads the same live data as
- * the workspace, so a shared link never shows a stored copy that has drifted
- * from the database, and it always links out to the issuing source notice.
+ * Public, linkable view of one notice.
+ *
+ * The record is read through `get_shared_notice`, which returns a row only when
+ * an owner has explicitly shared that notice (migration 0057). A signed-out
+ * visitor cannot open a notice by guessing its id, and no workspace data is
+ * mounted on this page.
  */
 export function PublicOpportunityPage({ opportunityId }: { opportunityId: string }) {
-  const { opportunities, dataLoading } = useAppState();
-  const { navigate } = useRouter();
-  const { t, formatDate, formatCurrency, translateValue, detect } = useI18n();
+  const { notice, loading, notShared, error } = useSharedNotice(opportunityId);
   const [copied, setCopied] = useState(false);
 
-  const opportunity = opportunities.find((item) => item.id === opportunityId) ?? null;
-  const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/o/${opportunityId}`;
-  const language = opportunity ? detect(opportunity.title) : { code: "und", confidence: 0 };
-  // Notice content follows the reader's language; the original wording stays
-  // one click away and is what gets attributed to the publisher.
-  const titleTranslation = useNoticeTranslation(opportunity?.title ?? "");
-  const descriptionTranslation = useNoticeTranslation(opportunity?.description ?? "");
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex,nofollow';
+    document.head.appendChild(meta);
+    return () => {
+      meta.remove();
+    };
+  }, []);
+
+  const shareUrl = typeof window === 'undefined' ? '' : `${window.location.origin}/o/${opportunityId}`;
 
   const copy = async () => {
     try {
@@ -44,31 +80,48 @@ export function PublicOpportunityPage({ opportunityId }: { opportunityId: string
     }
   };
 
-  if (dataLoading) {
+  if (loading) {
     return (
       <PublicLayout>
         <div className="max-w-3xl mx-auto px-4 py-20 text-center text-sm text-[#64748B] dark:text-[#CBD5E1]">
-          Loading the live notice…
+          Reading the shared notice…
         </div>
       </PublicLayout>
     );
   }
 
-  if (!opportunity) {
+  if (!notice) {
     return (
       <PublicLayout>
         <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
-          <SearchX className="w-8 h-8 mx-auto text-[#94A3B8]" />
-          <h1 className="font-display text-2xl font-bold">{t("share.missingTitle")}</h1>
-          <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">{t("share.missingBody")}</p>
-          <button
-            type="button"
-            onClick={() => navigate("/opportunities")}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#541B32] hover:bg-[#A33B59] text-white text-sm font-semibold"
-          >
-            <span>{t("nav.opportunities")}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          {notShared ? (
+            <Lock className="w-8 h-8 mx-auto text-[#94A3B8]" />
+          ) : (
+            <SearchX className="w-8 h-8 mx-auto text-[#94A3B8]" />
+          )}
+          <h1 className="font-display text-2xl font-bold">
+            {notShared ? 'This notice is not shared publicly' : 'This shared notice is unavailable'}
+          </h1>
+          <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">
+            {notShared
+              ? 'Public links are created deliberately by the team that owns the notice, and can be withdrawn at any time. Ask the sender to share it again, or sign in to open it in the workspace.'
+              : error ?? 'The notice could not be read. Try again, or open the workspace.'}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <a
+              href="/login"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#541B32] hover:bg-[#A33B59] text-white text-sm font-semibold"
+            >
+              Sign in
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+            <a
+              href="/register"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md border border-[#E2E8F0] dark:border-white/15 text-sm font-semibold hover:bg-[#F8FAFC] dark:hover:bg-white/5"
+            >
+              Create an account
+            </a>
+          </div>
         </div>
       </PublicLayout>
     );
@@ -79,112 +132,97 @@ export function PublicOpportunityPage({ opportunityId }: { opportunityId: string
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-[#64748B] dark:text-[#CBD5E1]">
-            <span className="font-semibold text-[#A33B59] dark:text-[#E8A4B5]">
-              {translateValue("category", opportunity.category)}
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>{opportunity.countryName}</span>
-            <span aria-hidden="true">·</span>
-            <span className="font-mono">{opportunity.referenceNumber}</span>
-            {language.code !== "und" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-[#E2E8F0] px-2 py-0.5 font-mono uppercase dark:border-white/15">
-                {t("common.detectedLanguage")}: {language.code}
-              </span>
+            <span className="font-semibold text-[#A33B59] dark:text-[#E8A4B5]">{humanise(notice.categoryCode)}</span>
+            {notice.countryCode && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{notice.countryCode}</span>
+              </>
             )}
+            {notice.referenceNumber && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="font-mono">{notice.referenceNumber}</span>
+              </>
+            )}
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#E2E8F0] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:border-white/15">
+              <Lock className="w-3 h-3" aria-hidden="true" />
+              Shared notice
+            </span>
           </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{titleTranslation.text}</h1>
-          <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">{opportunity.issuingOrganisation}</p>
-          {(titleTranslation.isTranslated || titleTranslation.pending || titleTranslation.unavailable) && (
-            <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1] flex flex-wrap items-center gap-2">
-              <span>
-                {titleTranslation.pending
-                  ? "Translating the notice…"
-                  : titleTranslation.isTranslated
-                    ? `Machine translation from ${titleTranslation.sourceLanguage ?? language.code}`
-                    : "Automatic translation is unavailable right now; the original wording is shown."}
-              </span>
-              {titleTranslation.isTranslated && (
-                <button
-                  type="button"
-                  onClick={titleTranslation.toggleOriginal}
-                  className="underline decoration-dotted underline-offset-2 hover:text-[#172033] dark:hover:text-white"
-                >
-                  {titleTranslation.showOriginal ? "Show translation" : "Show original"}
-                </button>
-              )}
-            </p>
-          )}
+          <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{notice.title}</h1>
+          {notice.buyerName && <p className="text-sm text-[#64748B] dark:text-[#CBD5E1]">{notice.buyerName}</p>}
         </header>
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={copy}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#E2E8F0] text-xs font-semibold hover:bg-[#F8FAFC] dark:border-white/15 dark:hover:bg-white/5"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-[#E2E8F0] text-xs font-semibold hover:bg-[#F8FAFC] dark:border-white/15 dark:hover:bg-white/5"
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? t("common.linkCopied") : t("common.copyLink")}</span>
+            <span>{copied ? 'Link copied' : 'Copy link'}</span>
           </button>
-          {opportunity.sourceUrl && (
+          {notice.sourceUrl && (
             <a
-              href={opportunity.sourceUrl}
+              href={notice.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#541B32] hover:bg-[#A33B59] text-white text-xs font-semibold"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-[#541B32] hover:bg-[#A33B59] text-white text-xs font-semibold"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>{t("common.openSource")}</span>
+              <span>Open the original notice</span>
             </a>
           )}
-          <button
-            type="button"
-            onClick={() => navigate(`/opportunity/${opportunity.id}`)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#E2E8F0] text-xs font-semibold hover:bg-[#F8FAFC] dark:border-white/15 dark:hover:bg-white/5"
+          <a
+            href="/register"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-[#E2E8F0] text-xs font-semibold hover:bg-[#F8FAFC] dark:border-white/15 dark:hover:bg-white/5"
           >
             <ArrowRight className="w-3.5 h-3.5" />
-            <span>{t("common.viewInWorkspace")}</span>
-          </button>
+            <span>Open in the workspace</span>
+          </a>
         </div>
 
         <section className="rounded-lg oppsift-card p-5">
           <dl className="grid sm:grid-cols-2 gap-x-8">
-            <DetailRow label={t("opportunity.buyer")}>{opportunity.issuingOrganisation}</DetailRow>
-            <DetailRow label={t("opportunity.location")}>{opportunity.location}</DetailRow>
-            <DetailRow label={t("opportunity.published")}>{formatDate(opportunity.publicationDate)}</DetailRow>
-            <DetailRow label={t("opportunity.deadline")}>
-              {formatDate(opportunity.deadlineDate)}{" "}
-              <span className="font-mono text-[11px] text-[#64748B] dark:text-[#CBD5E1]">
-                {opportunity.deadlineTimezone}
-              </span>
+            <DetailRow label="Buyer">{notice.buyerName ?? 'Not stated'}</DetailRow>
+            <DetailRow label="Location">
+              {[notice.city, notice.region, notice.countryCode].filter(Boolean).join(', ') || 'Not stated'}
             </DetailRow>
-            <DetailRow label={t("opportunity.value")}>
-              {formatCurrency(opportunity.estimatedValue, opportunity.currency)}
+            <DetailRow label="Published">{formatDate(notice.publishedAt)}</DetailRow>
+            <DetailRow label="Deadline">
+              {formatDate(notice.closingAt, notice.timeZone)}{' '}
+              {notice.timeZone && (
+                <span className="font-mono text-[11px] text-[#64748B] dark:text-[#CBD5E1]">{notice.timeZone}</span>
+              )}
             </DetailRow>
-            <DetailRow label={t("opportunity.status")}>{translateValue("status", opportunity.status)}</DetailRow>
-            <DetailRow label={t("opportunity.source")}>{opportunity.sourceName}</DetailRow>
+            <DetailRow label="Value">{formatMoney(notice.publishedAmount, notice.currencyCode)}</DetailRow>
+            <DetailRow label="Status">{humanise(notice.status)}</DetailRow>
+            <DetailRow label="Notice type">{humanise(notice.opportunityTypeCode)}</DetailRow>
+            <DetailRow label="Issuing source">{notice.sourceName ?? 'Attribution stored with the record'}</DetailRow>
           </dl>
         </section>
 
-        {opportunity.description && opportunity.description !== opportunity.title && (
+        {notice.description && notice.description !== notice.title && (
           <section className="rounded-lg oppsift-card p-5 space-y-2">
-            <p className="text-sm leading-relaxed whitespace-pre-line">{descriptionTranslation.text}</p>
-            {descriptionTranslation.isTranslated && (
-              <button
-                type="button"
-                onClick={descriptionTranslation.toggleOriginal}
-                className="text-[11px] underline decoration-dotted underline-offset-2 text-[#64748B] dark:text-[#CBD5E1] hover:text-[#172033] dark:hover:text-white"
-              >
-                {descriptionTranslation.showOriginal
-                  ? "Show translated description"
-                  : `Show original (${descriptionTranslation.sourceLanguage ?? language.code})`}
-              </button>
-            )}
+            <p className="text-sm leading-relaxed whitespace-pre-line">{notice.description}</p>
           </section>
+        )}
+
+        {notice.lastVerifiedAt && (
+          <p className="text-[11px] text-[#64748B] dark:text-[#CBD5E1]">
+            Source-verified {formatDate(notice.lastVerifiedAt)}. The issuing authority&apos;s published documents always
+            govern.
+          </p>
         )}
 
         <p className="flex items-center gap-1.5 text-[11px] font-mono text-[#64748B] dark:text-[#CBD5E1] break-all">
           <Link2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           <span>{shareUrl}</span>
+        </p>
+
+        <p className="text-[11px] leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
+          This is a single notice shared by an OppSift user. Search, monitoring and eligibility work require an account.
         </p>
       </article>
     </PublicLayout>

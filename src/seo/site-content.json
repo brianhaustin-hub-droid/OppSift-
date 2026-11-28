@@ -10,11 +10,26 @@
     "contactEmail": "hello@getoppsift.com"
   },
   "nav": [
-    { "label": "Product", "section": "product" },
-    { "label": "Opportunities", "section": "opportunities" },
-    { "label": "Markets", "section": "markets" },
-    { "label": "Sources", "section": "sources" },
-    { "label": "Pricing", "section": "pricing" }
+    {
+      "label": "Product",
+      "section": "product"
+    },
+    {
+      "label": "Opportunities",
+      "section": "opportunities"
+    },
+    {
+      "label": "Markets",
+      "section": "markets"
+    },
+    {
+      "label": "Sources",
+      "section": "sources"
+    },
+    {
+      "label": "Pricing",
+      "section": "pricing"
+    }
   ],
   "hero": {
     "eyebrow": "Global Opportunity Intelligence",
@@ -93,160 +108,40 @@
     "intro": "OppSift separates three different claims that are often blurred together: a market in the registry, a market with registered sources, and a market that actually holds collected notices. Every figure below is read from the platform database, with the time of the newest recorded collection."
   },
   "sources": {
-    "eyebrow": "Official source ecosystem",
-    "title": "Built on official notices, not scraped summaries",
-    "intro": "Every notice OppSift stores is read from an official publisher or its published data feed. Where a source is registered but has not delivered records, or has not answered its latest live check, the showcase says so instead of implying a working integration.",
-    "disclaimer": "Status is derived from the source registry and the newest stored HTTP check. A registered source is not counted as a working connector.",
-    "candidates": [
+    "eyebrow": "Connected global data ecosystem",
+    "title": "Intelligence from a connected global data ecosystem",
+    "intro": "Structured information from diverse public and institutional data environments across supported markets, normalised into one record and linked back to its issuing publisher.",
+    "disclaimer": "Coverage figures are aggregate counts read from the platform database. OppSift publishes its coverage, not its acquisition endpoints.",
+    "categories": [
       {
-        "key": "ted",
-        "name": "TED — Tenders Electronic Daily",
-        "publisher": "Publications Office of the European Union",
-        "market": "European Union",
-        "category": "Government procurement",
-        "access": "Official search API",
-        "website": "https://ted.europa.eu",
-        "match": "^TED published procurement notices"
+        "key": "government-procurement",
+        "name": "Government procurement",
+        "detail": "National and regional tender notices, framework agreements and public contract awards."
       },
       {
-        "key": "grants-gov",
-        "name": "Grants.gov",
-        "publisher": "U.S. federal grants portal",
-        "market": "United States",
-        "category": "Grants and funding",
-        "access": "Official search API",
-        "website": "https://www.grants.gov",
-        "match": "^Grants\\.gov"
+        "key": "public-tendering",
+        "name": "Public tendering systems",
+        "detail": "Electronic tendering services and official publication platforms, read through their public interfaces."
       },
       {
-        "key": "sam-gov",
-        "name": "SAM.gov Contract Opportunities",
-        "publisher": "U.S. General Services Administration",
-        "market": "United States",
-        "category": "Government procurement",
-        "access": "Official API",
-        "website": "https://sam.gov",
-        "match": "^SAM\\.gov"
+        "key": "grants-funding",
+        "name": "Grants and funding databases",
+        "detail": "Programme and call information published by public funders, foundations and development institutions."
       },
       {
-        "key": "canadabuys",
-        "name": "CanadaBuys",
-        "publisher": "Government of Canada",
-        "market": "Canada",
-        "category": "Government procurement",
-        "access": "Official tender service",
-        "website": "https://canadabuys.canada.ca",
-        "match": "^CanadaBuys"
+        "key": "commercial-procurement",
+        "name": "Commercial procurement channels",
+        "detail": "Corporate Requests for Proposal and supplier notices published in machine-readable form."
       },
       {
-        "key": "austender",
-        "name": "AusTender",
-        "publisher": "Australian Government Department of Finance",
-        "market": "Australia",
-        "category": "Government procurement",
-        "access": "Official API",
-        "website": "https://www.tenders.gov.au",
-        "match": "^AusTender"
+        "key": "institutional-networks",
+        "name": "Institutional data networks",
+        "detail": "Multilateral and development institutions that publish their own procurement and funding notices."
       },
       {
-        "key": "contracts-finder",
-        "name": "UK Contracts Finder",
-        "publisher": "UK Government",
-        "market": "United Kingdom",
-        "category": "Government procurement",
-        "access": "Official API",
-        "website": "https://www.contractsfinder.service.gov.uk",
-        "match": "^Contracts Finder$"
-      },
-      {
-        "key": "kenya-ppip",
-        "name": "Kenya PPIP",
-        "publisher": "Public Procurement Regulatory Authority, Kenya",
-        "market": "Kenya",
-        "category": "Government procurement",
-        "access": "Official tender portal",
-        "website": "https://tenders.go.ke",
-        "match": "Kenya PPIP"
-      },
-      {
-        "key": "tanzania-nest",
-        "name": "Tanzania NeST",
-        "publisher": "Public Procurement Regulatory Authority, Tanzania",
-        "market": "Tanzania",
-        "category": "Government procurement",
-        "access": "OCDS publication",
-        "website": "https://nest.go.tz",
-        "match": "NeST OCDS"
-      },
-      {
-        "key": "philgeps",
-        "name": "PhilGEPS",
-        "publisher": "Philippine Government Electronic Procurement System",
-        "market": "Philippines",
-        "category": "Government procurement",
-        "access": "Open opportunities feed",
-        "website": "https://philgeps.gov.ph",
-        "match": "PhilGEPS"
-      },
-      {
-        "key": "ireland-etenders",
-        "name": "Ireland eTenders",
-        "publisher": "Office of Government Procurement, Ireland",
-        "market": "Ireland",
-        "category": "Government procurement",
-        "access": "National tender portal",
-        "website": "https://www.etenders.gov.ie",
-        "match": "^Ireland eTenders"
-      },
-      {
-        "key": "italy-anac",
-        "name": "Italy ANAC",
-        "publisher": "Autorità Nazionale Anticorruzione",
-        "market": "Italy",
-        "category": "Government procurement",
-        "access": "Open data publications",
-        "website": "https://www.anticorruzione.it",
-        "match": "^Italy ANAC"
-      },
-      {
-        "key": "tenderned",
-        "name": "TenderNed",
-        "publisher": "Ministry of Economic Affairs, Netherlands",
-        "market": "Netherlands",
-        "category": "Government procurement",
-        "access": "Official publications API",
-        "website": "https://www.tenderned.nl",
-        "match": "^TenderNed"
-      },
-      {
-        "key": "boamp",
-        "name": "France BOAMP",
-        "publisher": "Direction de l'information légale et administrative",
-        "market": "France",
-        "category": "Government procurement",
-        "access": "Official notices API",
-        "website": "https://www.boamp.fr",
-        "match": "^BOAMP"
-      },
-      {
-        "key": "ocds",
-        "name": "Open Contracting Data Standard",
-        "publisher": "Open Contracting Partnership",
-        "market": "Global standard",
-        "category": "Procurement data",
-        "access": "OCDS publication standard",
-        "website": "https://standard.open-contracting.org",
-        "match": "^Open Contracting"
-      },
-      {
-        "key": "aiib",
-        "name": "Asian Infrastructure Investment Bank",
-        "publisher": "AIIB procurement notices",
-        "market": "Multilateral",
-        "category": "Development procurement",
-        "access": "Institutional notice board",
-        "website": "https://www.aiib.org",
-        "match": "^AIIB"
+        "key": "open-contracting",
+        "name": "Open contracting data ecosystems",
+        "detail": "Structured publication standards that expose procurement data as comparable, attributable records."
       }
     ]
   },
@@ -255,21 +150,59 @@
     "title": "Built for organisations pursuing global opportunities",
     "intro": "OppSift is used by the teams that have to read the notice, check the requirements and decide whether to bid — not by audiences looking for a directory.",
     "audiences": [
-      { "title": "Businesses", "description": "Supplier and services companies competing for public and corporate contracts across borders." },
-      { "title": "Specialist suppliers", "description": "Niche technical providers assessing lots, frameworks and subcontracting routes." },
-      { "title": "Consultants", "description": "Advisers running discovery and eligibility checks for several client organisations." },
-      { "title": "Nonprofits", "description": "Organisations tracking development funding, calls for proposals and programme windows." },
-      { "title": "Research organisations", "description": "Universities and institutes following research and innovation funding calls." },
-      { "title": "Procurement and bid teams", "description": "Teams that need a shared, auditable view of pipeline, deadlines and source evidence." }
+      {
+        "title": "Businesses",
+        "description": "Supplier and services companies competing for public and corporate contracts across borders."
+      },
+      {
+        "title": "Specialist suppliers",
+        "description": "Niche technical providers assessing lots, frameworks and subcontracting routes."
+      },
+      {
+        "title": "Consultants",
+        "description": "Advisers running discovery and eligibility checks for several client organisations."
+      },
+      {
+        "title": "Nonprofits",
+        "description": "Organisations tracking development funding, calls for proposals and programme windows."
+      },
+      {
+        "title": "Research organisations",
+        "description": "Universities and institutes following research and innovation funding calls."
+      },
+      {
+        "title": "Procurement and bid teams",
+        "description": "Teams that need a shared, auditable view of pipeline, deadlines and source evidence."
+      }
     ],
     "note": "OppSift publishes no customer names, logos or testimonials until a customer has agreed to be named."
   },
   "stages": [
-    { "key": "discover", "title": "Discover", "description": "Find notices across markets, categories and issuing authorities." },
-    { "key": "understand", "title": "Understand", "description": "Read the notice with its source record, documents and reference identifiers intact." },
-    { "key": "evaluate", "title": "Evaluate", "description": "Compare requirements against your organisation's capabilities and gaps." },
-    { "key": "monitor", "title": "Monitor", "description": "Track amendments, clarifications and closing dates for what matters." },
-    { "key": "pursue", "title": "Pursue", "description": "Organise the bid with tasks, milestones and evidence in one place." }
+    {
+      "key": "discover",
+      "title": "Discover",
+      "description": "Find notices across markets, categories and issuing authorities."
+    },
+    {
+      "key": "understand",
+      "title": "Understand",
+      "description": "Read the notice with its source record, documents and reference identifiers intact."
+    },
+    {
+      "key": "evaluate",
+      "title": "Evaluate",
+      "description": "Compare requirements against your organisation's capabilities and gaps."
+    },
+    {
+      "key": "monitor",
+      "title": "Monitor",
+      "description": "Track amendments, clarifications and closing dates for what matters."
+    },
+    {
+      "key": "pursue",
+      "title": "Pursue",
+      "description": "Organise the bid with tasks, milestones and evidence in one place."
+    }
   ],
   "pricing": {
     "eyebrow": "Access and pricing",
@@ -294,7 +227,7 @@
     },
     {
       "question": "Where does OppSift obtain its information?",
-      "answer": "From official publishers: national procurement portals, official search APIs and Open Contracting Data Standard publications. Each stored notice keeps its issuing source, reference number and a link to the original notice."
+      "answer": "From official publishers: national procurement portals, official search APIs and open contracting data publications. Each stored notice keeps its issuing source, reference number and a link to the original notice."
     },
     {
       "question": "How does eligibility intelligence work?",
@@ -328,38 +261,92 @@
       "priority": "1.0",
       "changefreq": "weekly",
       "sections": [
-        { "heading": "Discovery, eligibility and monitoring in one workspace", "body": "Six integrated capabilities take a notice from discovery to a prepared pursuit: discovery, profile matching, eligibility, opportunity intelligence, monitoring, and preparation with reporting." },
-        { "heading": "Three opportunity categories", "body": "Government procurement, grants and funding, and commercial Requests for Proposal are normalised into a single record shape with native currency, timezone-aware deadlines and issuing authority." },
-        { "heading": "Market coverage stated honestly", "body": "Registered markets, markets with registered sources and markets holding collected notices are reported separately, with the newest recorded collection time." },
-        { "heading": "Official sources, attributed", "body": "Notices are read from official portals and published data feeds. The source showcase states which sources are delivering records, which are registered but not delivering, and which are not integrated." }
+        {
+          "heading": "Discovery, eligibility and monitoring in one workspace",
+          "body": "Six integrated capabilities take a notice from discovery to a prepared pursuit: discovery, profile matching, eligibility, opportunity intelligence, monitoring, and preparation with reporting."
+        },
+        {
+          "heading": "Three opportunity categories",
+          "body": "Government procurement, grants and funding, and commercial Requests for Proposal are normalised into a single record shape with native currency, timezone-aware deadlines and issuing authority."
+        },
+        {
+          "heading": "Market coverage stated honestly",
+          "body": "Registered markets, markets with registered sources and markets holding collected notices are reported separately, with the newest recorded collection time."
+        },
+        {
+          "heading": "Official sources, attributed",
+          "body": "Notices are read from official portals and published data feeds. The source showcase states which sources are delivering records, which are registered but not delivering, and which are not integrated."
+        }
       ],
       "links": [
-        { "label": "Global government tenders", "href": "/global-government-tenders" },
-        { "label": "International grants", "href": "/international-grants" },
-        { "label": "Official data sources", "href": "/official-data-sources" },
-        { "label": "Commercial RFP opportunities", "href": "/commercial-rfp-opportunities" }
+        {
+          "label": "Global government tenders",
+          "href": "/global-government-tenders"
+        },
+        {
+          "label": "International grants",
+          "href": "/international-grants"
+        },
+        {
+          "label": "Official data sources",
+          "href": "/official-data-sources"
+        },
+        {
+          "label": "Commercial RFP opportunities",
+          "href": "/commercial-rfp-opportunities"
+        }
       ],
-      "jsonLd": ["Organization", "WebSite", "SoftwareApplication", "FAQPage"]
+      "jsonLd": [
+        "Organization",
+        "WebSite",
+        "SoftwareApplication",
+        "FAQPage"
+      ]
     },
     "/global-government-tenders": {
       "title": "Global Government Tenders — Official Procurement Notices | OppSift",
       "description": "Search government tenders and public procurement notices from official national portals and APIs. Compare markets, categories, reference numbers and deadlines in one workspace.",
       "h1": "Global government tenders, from the official portals",
-      "lead": "OppSift reads public procurement notices from national portals, official search APIs and Open Contracting Data Standard publications, and keeps each notice tied to the authority that published it.",
+      "lead": "OppSift reads public procurement notices from national portals, official search APIs and open contracting data publications, and keeps each notice tied to the authority that published it.",
       "priority": "0.8",
       "changefreq": "monthly",
       "sections": [
-        { "heading": "What is in a tender record", "body": "Issuing authority, reference number, procedure type, category, published and closing dates, native currency, disclosed value and a link to the original notice. Missing fields are shown as missing rather than estimated." },
-        { "heading": "Markets with procurement sources", "body": "Coverage is reported from the platform registry: markets with operational procurement sources, markets whose sources answered their latest live check, and markets that already hold collected notices." },
-        { "heading": "From notice to decision", "body": "Search by category, market, value and deadline, then compare published requirements against your organisation profile. Confirmed criteria are cited; unknown facts are listed as gaps." },
-        { "heading": "What OppSift does not do", "body": "OppSift does not submit bids on your behalf and does not replace the issuing authority's documents. Submission happens on the authority's portal." }
+        {
+          "heading": "What is in a tender record",
+          "body": "Issuing authority, reference number, procedure type, category, published and closing dates, native currency, disclosed value and a link to the original notice. Missing fields are shown as missing rather than estimated."
+        },
+        {
+          "heading": "Markets with procurement sources",
+          "body": "Coverage is reported from the platform registry: markets with operational procurement sources, markets whose sources answered their latest live check, and markets that already hold collected notices."
+        },
+        {
+          "heading": "From notice to decision",
+          "body": "Search by category, market, value and deadline, then compare published requirements against your organisation profile. Confirmed criteria are cited; unknown facts are listed as gaps."
+        },
+        {
+          "heading": "What OppSift does not do",
+          "body": "OppSift does not submit bids on your behalf and does not replace the issuing authority's documents. Submission happens on the authority's portal."
+        }
       ],
       "links": [
-        { "label": "Official data sources", "href": "/official-data-sources" },
-        { "label": "How OppSift works", "href": "/#how-it-works" },
-        { "label": "Pricing and access", "href": "/#pricing" }
+        {
+          "label": "Official data sources",
+          "href": "/official-data-sources"
+        },
+        {
+          "label": "How OppSift works",
+          "href": "/#how-it-works"
+        },
+        {
+          "label": "Pricing and access",
+          "href": "/#pricing"
+        }
       ],
-      "jsonLd": ["Organization", "WebSite", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ]
     },
     "/international-grants": {
       "title": "International Grants and Funding Opportunities | OppSift",
@@ -369,37 +356,87 @@
       "priority": "0.8",
       "changefreq": "monthly",
       "sections": [
-        { "heading": "Funding notices, not funding guesses", "body": "Where a funder publishes an award range or an eligibility statement, OppSift keeps it. Where a funder does not publish an amount, the record says the value is not disclosed." },
-        { "heading": "Who the funding is for", "body": "Beneficiary types, eligible countries and consortium requirements are recorded where the notice states them, so a research institute and a small supplier do not see the same call described the same way." },
-        { "heading": "Research, development and non-repayable funding", "body": "The grants category covers public funding programmes, research calls, development finance and non-repayable grants published by official funders." },
-        { "heading": "Check the call before you commit", "body": "OppSift links every record to the funder's own page. Programme rules, eligibility and deadlines on the funder's site always take precedence." }
+        {
+          "heading": "Funding notices, not funding guesses",
+          "body": "Where a funder publishes an award range or an eligibility statement, OppSift keeps it. Where a funder does not publish an amount, the record says the value is not disclosed."
+        },
+        {
+          "heading": "Who the funding is for",
+          "body": "Beneficiary types, eligible countries and consortium requirements are recorded where the notice states them, so a research institute and a small supplier do not see the same call described the same way."
+        },
+        {
+          "heading": "Research, development and non-repayable funding",
+          "body": "The grants category covers public funding programmes, research calls, development finance and non-repayable grants published by official funders."
+        },
+        {
+          "heading": "Check the call before you commit",
+          "body": "OppSift links every record to the funder's own page. Programme rules, eligibility and deadlines on the funder's site always take precedence."
+        }
       ],
       "links": [
-        { "label": "Global government tenders", "href": "/global-government-tenders" },
-        { "label": "Official data sources", "href": "/official-data-sources" },
-        { "label": "Pricing and access", "href": "/#pricing" }
+        {
+          "label": "Global government tenders",
+          "href": "/global-government-tenders"
+        },
+        {
+          "label": "Official data sources",
+          "href": "/official-data-sources"
+        },
+        {
+          "label": "Pricing and access",
+          "href": "/#pricing"
+        }
       ],
-      "jsonLd": ["Organization", "WebSite", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ]
     },
     "/official-data-sources": {
-      "title": "Official Data Sources — Verified Procurement and Funding Feeds | OppSift",
-      "description": "See which official procurement and funding sources OppSift reads, how each is accessed, and whether it is delivering records or only registered.",
-      "h1": "The official sources behind every notice",
-      "lead": "OppSift's credibility rests on where its records come from. This page lists the source ecosystem and states, per source, whether it is delivering records, registered but not delivering, or not integrated.",
+      "title": "Data Ecosystem — How OppSift Sources Procurement and Funding Records | OppSift",
+      "description": "How OppSift sources, normalises and attributes tenders, grants and commercial notices from public procurement and institutional data environments.",
+      "h1": "A connected data ecosystem, with the provenance kept",
+      "lead": "OppSift reads structured information from public procurement systems, grants databases, commercial channels and open contracting publications. Every stored record keeps its issuing publisher, reference and a link to the original notice.",
       "priority": "0.7",
       "changefreq": "weekly",
       "sections": [
-        { "heading": "How a source is counted", "body": "A source is only counted as connected when it is registered as operational, its latest live check answered, and a successful retrieval is recorded. A registration alone is never presented as a working integration." },
-        { "heading": "What a live check records", "body": "Each check stores the endpoint requested, its HTTP status, latency, content type and timestamp. A feed that returns an HTML page is recorded as a web page rather than as a working data feed." },
-        { "heading": "Access methods", "body": "Official search APIs, structured feeds, Open Contracting Data Standard publications and permitted portal monitoring are recorded per source, together with any attribution requirement." },
-        { "heading": "Attribution and licensing", "body": "Attribution requirements are stored with the source. Where a publisher requires attribution, it travels with the record and appears beside the notice." }
+        {
+          "heading": "What OppSift reads",
+          "body": "Government procurement publications, public tendering services, grants and funding programmes, commercial supplier notices and open contracting publications. Coverage is described by market and by category, not by disclosing individual acquisition endpoints."
+        },
+        {
+          "heading": "How a record is verified",
+          "body": "A record is only presented as verified when it is linked to its issuing source and marked valid. Records that fail a check are not shown as verified notices."
+        },
+        {
+          "heading": "How coverage is measured",
+          "body": "Coverage is counted per market from stored verified notices. A market in the registry is not a covered market, and a source that is configured is not a source that is delivering."
+        },
+        {
+          "heading": "Attribution and licensing",
+          "body": "Attribution requirements travel with the record. Where a publisher requires attribution, it appears beside the notice, together with a link to the original publication."
+        }
       ],
       "links": [
-        { "label": "Global government tenders", "href": "/global-government-tenders" },
-        { "label": "International grants", "href": "/international-grants" },
-        { "label": "Security and provenance", "href": "/security" }
+        {
+          "label": "Global government tenders",
+          "href": "/global-government-tenders"
+        },
+        {
+          "label": "International grants",
+          "href": "/international-grants"
+        },
+        {
+          "label": "Security and provenance",
+          "href": "/security"
+        }
       ],
-      "jsonLd": ["Organization", "WebSite", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ]
     },
     "/commercial-rfp-opportunities": {
       "title": "Commercial RFP and Supplier Opportunities | OppSift",
@@ -409,17 +446,42 @@
       "priority": "0.6",
       "changefreq": "monthly",
       "sections": [
-        { "heading": "One record shape", "body": "Buyer, reference, category, value, currency, deadline and source link are normalised so a commercial RFP can be compared with a public tender without re-reading both." },
-        { "heading": "Subcontracting and supplier registration", "body": "Supplier registration windows and subcontracting notices are recorded where the buyer publishes them openly." },
-        { "heading": "Honest coverage", "body": "Commercial coverage depends on what buyers publish. Where a buyer only publishes behind a login, OppSift does not claim to read it." },
-        { "heading": "Prepare the pursuit", "body": "Move a commercial opportunity into the same pipeline as a public tender: tasks, deadlines, documents and internal notes." }
+        {
+          "heading": "One record shape",
+          "body": "Buyer, reference, category, value, currency, deadline and source link are normalised so a commercial RFP can be compared with a public tender without re-reading both."
+        },
+        {
+          "heading": "Subcontracting and supplier registration",
+          "body": "Supplier registration windows and subcontracting notices are recorded where the buyer publishes them openly."
+        },
+        {
+          "heading": "Honest coverage",
+          "body": "Commercial coverage depends on what buyers publish. Where a buyer only publishes behind a login, OppSift does not claim to read it."
+        },
+        {
+          "heading": "Prepare the pursuit",
+          "body": "Move a commercial opportunity into the same pipeline as a public tender: tasks, deadlines, documents and internal notes."
+        }
       ],
       "links": [
-        { "label": "Global government tenders", "href": "/global-government-tenders" },
-        { "label": "Official data sources", "href": "/official-data-sources" },
-        { "label": "Pricing and access", "href": "/#pricing" }
+        {
+          "label": "Global government tenders",
+          "href": "/global-government-tenders"
+        },
+        {
+          "label": "Official data sources",
+          "href": "/official-data-sources"
+        },
+        {
+          "label": "Pricing and access",
+          "href": "/#pricing"
+        }
       ],
-      "jsonLd": ["Organization", "WebSite", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ]
     },
     "/about": {
       "title": "About OppSift — Global Opportunity Intelligence",
@@ -429,17 +491,41 @@
       "priority": "0.5",
       "changefreq": "yearly",
       "sections": [
-        { "heading": "Why OppSift exists", "body": "A capable supplier should not lose a contract because the notice was published in a portal it does not read. OppSift normalises official notices into one comparable record." },
-        { "heading": "Provenance over volume", "body": "Every record keeps its issuing source, reference number and a link to the original notice. A record without a verifiable source is not presented as verified." },
-        { "heading": "Coverage without inflation", "body": "A market in the registry, a market with registered sources and a market holding collected notices are three different claims. OppSift reports them separately." },
-        { "heading": "Neutrality", "body": "OppSift is not affiliated with any procuring authority, funder or bidder, and does not accept payment to rank a notice." }
+        {
+          "heading": "Why OppSift exists",
+          "body": "A capable supplier should not lose a contract because the notice was published in a portal it does not read. OppSift normalises official notices into one comparable record."
+        },
+        {
+          "heading": "Provenance over volume",
+          "body": "Every record keeps its issuing source, reference number and a link to the original notice. A record without a verifiable source is not presented as verified."
+        },
+        {
+          "heading": "Coverage without inflation",
+          "body": "A market in the registry, a market with registered sources and a market holding collected notices are three different claims. OppSift reports them separately."
+        },
+        {
+          "heading": "Neutrality",
+          "body": "OppSift is not affiliated with any procuring authority, funder or bidder, and does not accept payment to rank a notice."
+        }
       ],
       "links": [
-        { "label": "Official data sources", "href": "/official-data-sources" },
-        { "label": "Security and provenance", "href": "/security" },
-        { "label": "Contact", "href": "/contact" }
+        {
+          "label": "Official data sources",
+          "href": "/official-data-sources"
+        },
+        {
+          "label": "Security and provenance",
+          "href": "/security"
+        },
+        {
+          "label": "Contact",
+          "href": "/contact"
+        }
       ],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/contact": {
       "title": "Contact OppSift",
@@ -449,16 +535,37 @@
       "priority": "0.4",
       "changefreq": "yearly",
       "sections": [
-        { "heading": "Access and plans", "body": "Ask about team access, plan suitability and paid seats while online checkout is being completed." },
-        { "heading": "Coverage requests", "body": "Tell us the market, the issuing authority and the portal URL. Coverage requests are reviewed against source access and terms." },
-        { "heading": "Data corrections", "body": "If a stored record disagrees with the official notice, send the reference number and the source link so the record can be checked." }
+        {
+          "heading": "Access and plans",
+          "body": "Ask about team access, plan suitability and paid seats while online checkout is being completed."
+        },
+        {
+          "heading": "Coverage requests",
+          "body": "Tell us the market, the issuing authority and the portal URL. Coverage requests are reviewed against source access and terms."
+        },
+        {
+          "heading": "Data corrections",
+          "body": "If a stored record disagrees with the official notice, send the reference number and the source link so the record can be checked."
+        }
       ],
       "links": [
-        { "label": "Security and provenance", "href": "/security" },
-        { "label": "Documentation", "href": "/docs" },
-        { "label": "System status", "href": "/status" }
+        {
+          "label": "Security and provenance",
+          "href": "/security"
+        },
+        {
+          "label": "Documentation",
+          "href": "/docs"
+        },
+        {
+          "label": "System status",
+          "href": "/status"
+        }
       ],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/docs": {
       "title": "OppSift Documentation",
@@ -468,16 +575,37 @@
       "priority": "0.4",
       "changefreq": "monthly",
       "sections": [
-        { "heading": "Record structure", "body": "A notice record carries its issuing source, reference number, category, publication and closing dates, native currency, disclosed value and canonical source URL." },
-        { "heading": "Dates, currencies and timezones", "body": "Deadlines are stored with the market's timezone where the source states it. Values are kept in the source currency and are never converted into an invented figure." },
-        { "heading": "Search", "body": "Search supports keyword, exact phrase, market, region, category, issuer, value range, publication window and deadline window." },
-        { "heading": "Eligibility boundary", "body": "Eligibility output distinguishes confirmed requirements, missing profile facts and interpretation. It is decision support, not legal advice." }
+        {
+          "heading": "Record structure",
+          "body": "A notice record carries its issuing source, reference number, category, publication and closing dates, native currency, disclosed value and canonical source URL."
+        },
+        {
+          "heading": "Dates, currencies and timezones",
+          "body": "Deadlines are stored with the market's timezone where the source states it. Values are kept in the source currency and are never converted into an invented figure."
+        },
+        {
+          "heading": "Search",
+          "body": "Search supports keyword, exact phrase, market, region, category, issuer, value range, publication window and deadline window."
+        },
+        {
+          "heading": "Eligibility boundary",
+          "body": "Eligibility output distinguishes confirmed requirements, missing profile facts and interpretation. It is decision support, not legal advice."
+        }
       ],
       "links": [
-        { "label": "Security and provenance", "href": "/security" },
-        { "label": "Getting started", "href": "/getting-started" }
+        {
+          "label": "Security and provenance",
+          "href": "/security"
+        },
+        {
+          "label": "Getting started",
+          "href": "/getting-started"
+        }
       ],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/getting-started": {
       "title": "Getting Started with OppSift",
@@ -487,16 +615,37 @@
       "priority": "0.4",
       "changefreq": "monthly",
       "sections": [
-        { "heading": "1. Create your account", "body": "Register with an email address and verify the code sent to it." },
-        { "heading": "2. Complete the organisation profile", "body": "Sectors, services, certifications and target markets are what matching and eligibility checks compare against." },
-        { "heading": "3. Search a market", "body": "Start with one market and one category, then widen. Save the search once it returns what you want to monitor." },
-        { "heading": "4. Set a watch", "body": "Turn the saved search into a deadline and amendment watch so changes reach you instead of being re-checked by hand." }
+        {
+          "heading": "1. Create your account",
+          "body": "Register with an email address and verify the code sent to it."
+        },
+        {
+          "heading": "2. Complete the organisation profile",
+          "body": "Sectors, services, certifications and target markets are what matching and eligibility checks compare against."
+        },
+        {
+          "heading": "3. Search a market",
+          "body": "Start with one market and one category, then widen. Save the search once it returns what you want to monitor."
+        },
+        {
+          "heading": "4. Set a watch",
+          "body": "Turn the saved search into a deadline and amendment watch so changes reach you instead of being re-checked by hand."
+        }
       ],
       "links": [
-        { "label": "Documentation", "href": "/docs" },
-        { "label": "Pricing and access", "href": "/#pricing" }
+        {
+          "label": "Documentation",
+          "href": "/docs"
+        },
+        {
+          "label": "Pricing and access",
+          "href": "/#pricing"
+        }
       ],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/security": {
       "title": "Security and Data Provenance — OppSift",
@@ -506,17 +655,41 @@
       "priority": "0.4",
       "changefreq": "yearly",
       "sections": [
-        { "heading": "Authentication", "body": "Accounts use managed authentication with email verification. Sessions are required for workspace routes." },
-        { "heading": "Tenant isolation", "body": "Organisation data is isolated with database row-level security; workspace records are scoped to the authenticated user's organisation." },
-        { "heading": "Public and private content", "body": "The public website publishes platform information, market coverage and source status. Opportunity dossiers, saved searches and pursuit records are workspace content." },
-        { "heading": "Provenance", "body": "Each stored notice keeps the source that published it and a link to the original notice, so a record can be checked against the publisher." },
-        { "heading": "Responsible disclosure", "body": "Report a suspected security issue to the contact address on the contact page; include reproduction steps and do not test against other customers' data." }
+        {
+          "heading": "Authentication",
+          "body": "Accounts use managed authentication with email verification. Sessions are required for workspace routes."
+        },
+        {
+          "heading": "Tenant isolation",
+          "body": "Organisation data is isolated with database row-level security; workspace records are scoped to the authenticated user's organisation."
+        },
+        {
+          "heading": "Public and private content",
+          "body": "The public website publishes platform information, market coverage and source status. Opportunity dossiers, saved searches and pursuit records are workspace content."
+        },
+        {
+          "heading": "Provenance",
+          "body": "Each stored notice keeps the source that published it and a link to the original notice, so a record can be checked against the publisher."
+        },
+        {
+          "heading": "Responsible disclosure",
+          "body": "Report a suspected security issue to the contact address on the contact page; include reproduction steps and do not test against other customers' data."
+        }
       ],
       "links": [
-        { "label": "Privacy policy", "href": "/legal/privacy" },
-        { "label": "Contact", "href": "/contact" }
+        {
+          "label": "Privacy policy",
+          "href": "/legal/privacy"
+        },
+        {
+          "label": "Contact",
+          "href": "/contact"
+        }
       ],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/legal/privacy": {
       "title": "Privacy Policy — OppSift",
@@ -526,12 +699,29 @@
       "priority": "0.2",
       "changefreq": "yearly",
       "sections": [
-        { "heading": "Data we collect", "body": "Account details you provide, organisation profile information, workspace activity needed to operate the product, and technical logs." },
-        { "heading": "How we use it", "body": "To authenticate you, operate your workspace, provide matching and monitoring, and maintain service security." },
-        { "heading": "Your rights", "body": "Access, correction, export and deletion requests can be made from the account settings or by contacting the team." }
+        {
+          "heading": "Data we collect",
+          "body": "Account details you provide, organisation profile information, workspace activity needed to operate the product, and technical logs."
+        },
+        {
+          "heading": "How we use it",
+          "body": "To authenticate you, operate your workspace, provide matching and monitoring, and maintain service security."
+        },
+        {
+          "heading": "Your rights",
+          "body": "Access, correction, export and deletion requests can be made from the account settings or by contacting the team."
+        }
       ],
-      "links": [{ "label": "Terms of service", "href": "/legal/terms" }],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "links": [
+        {
+          "label": "Terms of service",
+          "href": "/legal/terms"
+        }
+      ],
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/legal/terms": {
       "title": "Terms of Service — OppSift",
@@ -541,12 +731,29 @@
       "priority": "0.2",
       "changefreq": "yearly",
       "sections": [
-        { "heading": "Use of the service", "body": "Access is granted to the account holder and organisation named on the account, subject to these terms and applicable plan limits." },
-        { "heading": "Source data", "body": "Opportunity records are derived from official publishers. The publisher's own documents and portal govern any procurement or funding process." },
-        { "heading": "No bid submission", "body": "OppSift does not submit bids or applications and does not act as your agent with any authority." }
+        {
+          "heading": "Use of the service",
+          "body": "Access is granted to the account holder and organisation named on the account, subject to these terms and applicable plan limits."
+        },
+        {
+          "heading": "Source data",
+          "body": "Opportunity records are derived from official publishers. The publisher's own documents and portal govern any procurement or funding process."
+        },
+        {
+          "heading": "No bid submission",
+          "body": "OppSift does not submit bids or applications and does not act as your agent with any authority."
+        }
       ],
-      "links": [{ "label": "Privacy policy", "href": "/legal/privacy" }],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "links": [
+        {
+          "label": "Privacy policy",
+          "href": "/legal/privacy"
+        }
+      ],
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/legal/cookies": {
       "title": "Cookies and Storage — OppSift",
@@ -556,12 +763,29 @@
       "priority": "0.2",
       "changefreq": "yearly",
       "sections": [
-        { "heading": "Essential", "body": "Session storage required to keep you signed in and to protect requests against cross-site abuse." },
-        { "heading": "Preferences", "body": "Interface preferences such as theme and language are stored locally in your browser." },
-        { "heading": "Diagnostics", "body": "Technical logs used to detect failures. No advertising or cross-site tracking cookies are set by the public website." }
+        {
+          "heading": "Essential",
+          "body": "Session storage required to keep you signed in and to protect requests against cross-site abuse."
+        },
+        {
+          "heading": "Preferences",
+          "body": "Interface preferences such as theme and language are stored locally in your browser."
+        },
+        {
+          "heading": "Diagnostics",
+          "body": "Technical logs used to detect failures. No advertising or cross-site tracking cookies are set by the public website."
+        }
       ],
-      "links": [{ "label": "Privacy policy", "href": "/legal/privacy" }],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "links": [
+        {
+          "label": "Privacy policy",
+          "href": "/legal/privacy"
+        }
+      ],
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/legal/dpa": {
       "title": "Data Processing Agreement — OppSift",
@@ -571,12 +795,29 @@
       "priority": "0.2",
       "changefreq": "yearly",
       "sections": [
-        { "heading": "Roles", "body": "The customer organisation is the controller of its workspace data; OppSift acts as processor for that data." },
-        { "heading": "Sub-processors", "body": "Hosting, database and authentication providers are used to operate the service. A current list is available on request." },
-        { "heading": "Isolation and erasure", "body": "Organisation data is isolated at the database level, and workspace data can be exported or deleted on request." }
+        {
+          "heading": "Roles",
+          "body": "The customer organisation is the controller of its workspace data; OppSift acts as processor for that data."
+        },
+        {
+          "heading": "Sub-processors",
+          "body": "Hosting, database and authentication providers are used to operate the service. A current list is available on request."
+        },
+        {
+          "heading": "Isolation and erasure",
+          "body": "Organisation data is isolated at the database level, and workspace data can be exported or deleted on request."
+        }
       ],
-      "links": [{ "label": "Privacy policy", "href": "/legal/privacy" }],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "links": [
+        {
+          "label": "Privacy policy",
+          "href": "/legal/privacy"
+        }
+      ],
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     },
     "/status": {
       "title": "System Status — OppSift",
@@ -586,10 +827,21 @@
       "priority": "0.3",
       "changefreq": "daily",
       "sections": [
-        { "heading": "How status is determined", "body": "The status board reports the web application, authentication, search, ingestion, notifications, AI intelligence and billing separately, with the observation time." }
+        {
+          "heading": "How status is determined",
+          "body": "The status board reports the web application, authentication, search, ingestion, notifications, AI intelligence and billing separately, with the observation time."
+        }
       ],
-      "links": [{ "label": "Contact", "href": "/contact" }],
-      "jsonLd": ["Organization", "BreadcrumbList"]
+      "links": [
+        {
+          "label": "Contact",
+          "href": "/contact"
+        }
+      ],
+      "jsonLd": [
+        "Organization",
+        "BreadcrumbList"
+      ]
     }
   }
 }

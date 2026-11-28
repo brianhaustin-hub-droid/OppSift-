@@ -1,0 +1,972 @@
+{
+  "generatedAt": "2026-11-28T06:38:13.893Z",
+  "definitions": {
+    "marketsRegistered": "Markets in the country registry",
+    "marketsWithSources": "Markets with at least one linked source",
+    "marketsWithNotices": "Markets holding verified notices",
+    "verifiedNotices": "Notices marked valid, source-verified and linked to a verified source",
+    "registeredSources": "Source integrations registered in the acquisition registry",
+    "operationalSources": "Registered integrations marked operational",
+    "sourcesCollectedRecently": "Integrations with a successful retrieval in the last 7 days",
+    "noticesVerifiedNote": "Stored notices that do not meet the verification rules are excluded from every public figure."
+  },
+  "stats": {
+    "marketsRegistered": 101,
+    "marketsWithSources": 101,
+    "marketsWithNotices": 18,
+    "verifiedNotices": 1609,
+    "registeredSources": 180,
+    "operationalSources": 86,
+    "sourcesCollectedRecently": 1,
+    "newestCollectionAt": "2026-11-26T06:17:51.863Z"
+  },
+  "markets": [
+    {
+      "code": "NL",
+      "name": "Netherlands",
+      "region": "europe",
+      "records": 268,
+      "sources": 6,
+      "activeSources": 3,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "KE",
+      "name": "Kenya",
+      "region": "africa",
+      "records": 186,
+      "sources": 40,
+      "activeSources": 38,
+      "lastSuccessAt": "2026-11-17T20:21:10.775Z"
+    },
+    {
+      "code": "AU",
+      "name": "Australia",
+      "region": "oceania",
+      "records": 158,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "US",
+      "name": "United States",
+      "region": "north_america",
+      "records": 150,
+      "sources": 5,
+      "activeSources": 3,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "NG",
+      "name": "Nigeria",
+      "region": "africa",
+      "records": 140,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T16:32:20.971Z"
+    },
+    {
+      "code": "UG",
+      "name": "Uganda",
+      "region": "africa",
+      "records": 129,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "BR",
+      "name": "Brazil",
+      "region": "south_america",
+      "records": 100,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-26T06:17:51.863Z"
+    },
+    {
+      "code": "FR",
+      "name": "France",
+      "region": "europe",
+      "records": 83,
+      "sources": 6,
+      "activeSources": 3,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "ZA",
+      "name": "South Africa",
+      "region": "africa",
+      "records": 81,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "JP",
+      "name": "Japan",
+      "region": "asia",
+      "records": 75,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T20:20:48.467Z"
+    },
+    {
+      "code": "ZM",
+      "name": "Zambia",
+      "region": "africa",
+      "records": 69,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-16T07:40:40.269Z"
+    },
+    {
+      "code": "LR",
+      "name": "Liberia",
+      "region": "africa",
+      "records": 61,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-16T08:05:52.588Z"
+    },
+    {
+      "code": "GH",
+      "name": "Ghana",
+      "region": "africa",
+      "records": 41,
+      "sources": 21,
+      "activeSources": 7,
+      "lastSuccessAt": "2026-11-16T19:20:39.497Z"
+    },
+    {
+      "code": "MU",
+      "name": "Mauritius",
+      "region": "africa",
+      "records": 28,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T20:45:35.007Z"
+    },
+    {
+      "code": "PH",
+      "name": "Philippines",
+      "region": "asia",
+      "records": 21,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T01:05:25.768Z"
+    },
+    {
+      "code": "SL",
+      "name": "Sierra Leone",
+      "region": "africa",
+      "records": 13,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "TH",
+      "name": "Thailand",
+      "region": "asia",
+      "records": 5,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CI",
+      "name": "Côte d'Ivoire",
+      "region": "africa",
+      "records": 1,
+      "sources": 5,
+      "activeSources": 3,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "DZ",
+      "name": "Algeria",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "AO",
+      "name": "Angola",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "AR",
+      "name": "Argentina",
+      "region": "south_america",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "AT",
+      "name": "Austria",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "BH",
+      "name": "Bahrain",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "BD",
+      "name": "Bangladesh",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "BE",
+      "name": "Belgium",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "BJ",
+      "name": "Benin",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T18:25:35.631Z"
+    },
+    {
+      "code": "BW",
+      "name": "Botswana",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "BF",
+      "name": "Burkina Faso",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "BI",
+      "name": "Burundi",
+      "region": "africa",
+      "records": 0,
+      "sources": 3,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CM",
+      "name": "Cameroon",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CA",
+      "name": "Canada",
+      "region": "north_america",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "TD",
+      "name": "Chad",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CL",
+      "name": "Chile",
+      "region": "south_america",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CO",
+      "name": "Colombia",
+      "region": "south_america",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CG",
+      "name": "Congo",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CZ",
+      "name": "Czechia",
+      "region": "europe",
+      "records": 0,
+      "sources": 6,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CD",
+      "name": "DR Congo",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "DK",
+      "name": "Denmark",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "DJ",
+      "name": "Djibouti",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "EG",
+      "name": "Egypt",
+      "region": "africa",
+      "records": 0,
+      "sources": 20,
+      "activeSources": 7,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SZ",
+      "name": "Eswatini",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "ET",
+      "name": "Ethiopia",
+      "region": "africa",
+      "records": 0,
+      "sources": 3,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "FI",
+      "name": "Finland",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "GA",
+      "name": "Gabon",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "GM",
+      "name": "Gambia",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "DE",
+      "name": "Germany",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "GR",
+      "name": "Greece",
+      "region": "europe",
+      "records": 0,
+      "sources": 6,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "GN",
+      "name": "Guinea",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "HK",
+      "name": "Hong Kong",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "HU",
+      "name": "Hungary",
+      "region": "europe",
+      "records": 0,
+      "sources": 6,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "IN",
+      "name": "India",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T18:10:59.495Z"
+    },
+    {
+      "code": "ID",
+      "name": "Indonesia",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T16:00:27.731Z"
+    },
+    {
+      "code": "IE",
+      "name": "Ireland",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "IT",
+      "name": "Italy",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "JO",
+      "name": "Jordan",
+      "region": "asia",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "KZ",
+      "name": "Kazakhstan",
+      "region": "asia",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "KW",
+      "name": "Kuwait",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "LS",
+      "name": "Lesotho",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "LY",
+      "name": "Libya",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "MG",
+      "name": "Madagascar",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T17:15:29.027Z"
+    },
+    {
+      "code": "MW",
+      "name": "Malawi",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-16T19:35:33.883Z"
+    },
+    {
+      "code": "MY",
+      "name": "Malaysia",
+      "region": "asia",
+      "records": 0,
+      "sources": 3,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "ML",
+      "name": "Mali",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "MR",
+      "name": "Mauritania",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "MX",
+      "name": "Mexico",
+      "region": "north_america",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "MN",
+      "name": "Mongolia",
+      "region": "asia",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "MA",
+      "name": "Morocco",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "MZ",
+      "name": "Mozambique",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-16T19:30:29.450Z"
+    },
+    {
+      "code": "NA",
+      "name": "Namibia",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T18:55:27.858Z"
+    },
+    {
+      "code": "NZ",
+      "name": "New Zealand",
+      "region": "oceania",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "NE",
+      "name": "Niger",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "NO",
+      "name": "Norway",
+      "region": "europe",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "OM",
+      "name": "Oman",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "PK",
+      "name": "Pakistan",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "PE",
+      "name": "Peru",
+      "region": "south_america",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "PL",
+      "name": "Poland",
+      "region": "europe",
+      "records": 0,
+      "sources": 6,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "PT",
+      "name": "Portugal",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "QA",
+      "name": "Qatar",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "RO",
+      "name": "Romania",
+      "region": "europe",
+      "records": 0,
+      "sources": 6,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "RW",
+      "name": "Rwanda",
+      "region": "africa",
+      "records": 0,
+      "sources": 3,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SA",
+      "name": "Saudi Arabia",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SN",
+      "name": "Senegal",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SC",
+      "name": "Seychelles",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SG",
+      "name": "Singapore",
+      "region": "asia",
+      "records": 0,
+      "sources": 3,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SO",
+      "name": "Somalia",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "KR",
+      "name": "South Korea",
+      "region": "asia",
+      "records": 0,
+      "sources": 3,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SS",
+      "name": "South Sudan",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "ES",
+      "name": "Spain",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "LK",
+      "name": "Sri Lanka",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SD",
+      "name": "Sudan",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "SE",
+      "name": "Sweden",
+      "region": "europe",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "CH",
+      "name": "Switzerland",
+      "region": "europe",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "TW",
+      "name": "Taiwan",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "TZ",
+      "name": "Tanzania",
+      "region": "africa",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "TG",
+      "name": "Togo",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "TN",
+      "name": "Tunisia",
+      "region": "africa",
+      "records": 0,
+      "sources": 6,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "AE",
+      "name": "United Arab Emirates",
+      "region": "asia",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "GB",
+      "name": "United Kingdom",
+      "region": "europe",
+      "records": 0,
+      "sources": 4,
+      "activeSources": 2,
+      "lastSuccessAt": "2026-11-17T18:10:49.073Z"
+    },
+    {
+      "code": "UZ",
+      "name": "Uzbekistan",
+      "region": "asia",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "VN",
+      "name": "Vietnam",
+      "region": "asia",
+      "records": 0,
+      "sources": 3,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    },
+    {
+      "code": "ZW",
+      "name": "Zimbabwe",
+      "region": "africa",
+      "records": 0,
+      "sources": 5,
+      "activeSources": 1,
+      "lastSuccessAt": "2026-11-15T20:55:33.142Z"
+    }
+  ],
+  "regions": [
+    {
+      "region": "africa",
+      "markets": 47,
+      "marketsWithNotices": 10,
+      "records": 749
+    },
+    {
+      "region": "europe",
+      "markets": 20,
+      "marketsWithNotices": 2,
+      "records": 351
+    },
+    {
+      "region": "oceania",
+      "markets": 2,
+      "marketsWithNotices": 1,
+      "records": 158
+    },
+    {
+      "region": "north_america",
+      "markets": 3,
+      "marketsWithNotices": 1,
+      "records": 150
+    },
+    {
+      "region": "asia",
+      "markets": 24,
+      "marketsWithNotices": 3,
+      "records": 101
+    },
+    {
+      "region": "south_america",
+      "markets": 5,
+      "marketsWithNotices": 1,
+      "records": 100
+    }
+  ]
+}

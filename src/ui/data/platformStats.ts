@@ -1,41 +1,57 @@
 import { useEffect, useState } from 'react';
-import { neonClient } from '../../app/auth/neon-client';
 
 /**
- * Public marketing statistics, read from the small aggregate views.
+ * Public marketing statistics.
  *
- * The public website must never pull the opportunity corpus: it would expose
- * records to anonymous visitors and download the whole table for a handful of
- * numbers. This hook reads only the country registry, the coverage roll-up and
- * the source registry, and derives every figure from rows it can actually see.
- * A figure with no rows behind it is reported as unavailable, never estimated.
+ * The website reads a build-time snapshot (`public/platform-stats.json`, written
+ * by `scripts/build-public-stats.mjs` from the aggregate views). It does not
+ * query the database from the browser at all: anonymous visitors have no read
+ * access to the opportunity, provenance or source-registry tables (migration
+ * 0057), and the marketing bundle therefore ships no database client.
+ *
+ * Definitions, one per figure:
+ *
+ *   marketsRegistered      markets in the country registry
+ *   marketsWithSources     markets with at least one linked source
+ *   marketsWithNotices     markets holding verified notices
+ *   verifiedNotices        notices marked valid, source-verified and linked to a
+ *                          verified source — the only notices OppSift presents
+ *                          as verified
+ *   registeredSources      source integrations registered in the acquisition
+ *                          registry
+ *   operationalSources     of those, integrations marked operational
+ *   sourcesCollected7d     integrations with a successful retrieval in 7 days
+ *
+ * A failed read reports the failure; it never falls back to remembered numbers.
  */
 
-type CountryRow = {
-  alpha2_code: string;
-  name: string;
-  region: string | null;
-};
-
-type CoverageRow = {
-  code: string;
-  status: string | null;
-  last_success_at: string | null;
-  record_count: number | string | null;
-  source_count: number | string | null;
-  active_source_count: number | string | null;
-};
-
-type SourceRow = {
-  id: string;
-  integration_status: string | null;
-  source_health: string | null;
-  last_successful_retrieval: string | null;
-};
-
-type Query = {
-  select(columns: string): Query;
-  range(from: number, to: number): PromiseLike<{ data: unknown; error: unknown }>;
+type Snapshot = {
+  generatedAt?: string;
+  stats?: {
+    marketsRegistered?: number;
+    marketsWithSources?: number;
+    marketsWithNotices?: number;
+    verifiedNotices?: number;
+    registeredSources?: number;
+    operationalSources?: number;
+    sourcesCollectedRecently?: number;
+    newestCollectionAt?: string | null;
+  };
+  markets?: Array<{
+    code?: string;
+    name?: string | null;
+    region?: string | null;
+    records?: number;
+    sources?: number;
+    activeSources?: number;
+    lastSuccessAt?: string | null;
+  }>;
+  regions?: Array<{
+    region?: string | null;
+    markets?: number;
+    marketsWithNotices?: number;
+    records?: number;
+  }>;
 };
 
 export interface MarketRow {
@@ -51,19 +67,20 @@ export interface MarketRow {
 export interface RegionRow {
   region: string;
   markets: number;
-  marketsWithRecords: number;
+  marketsWithNotices: number;
   records: number;
 }
 
 export interface PlatformStats {
   registeredMarkets: number;
-  marketsWithRecords: number;
   marketsWithSources: number;
-  storedNotices: number;
+  marketsWithNotices: number;
+  verifiedNotices: number;
   registeredSources: number;
   operationalSources: number;
   sourcesCollectedRecently: number;
   newestCollectionAt: string | null;
+  generatedAt: string | null;
   markets: MarketRow[];
   regions: RegionRow[];
 }
@@ -75,27 +92,8 @@ export interface PlatformStatsState {
   configured: boolean;
 }
 
-const EMPTY_STATE: PlatformStatsState = {
-  stats: null,
-  loading: false,
-  error: null,
-  configured: false,
-};
-
-const ROW_LIMIT = 1000;
-
-function asNumber(value: number | string | null): number {
-  if (value === null) return 0;
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function errorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === 'string') return message;
-  }
-  return 'The platform statistics could not be read.';
+function asNumber(value: number | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 export function formatRegion(region: string | null): string {
@@ -105,154 +103,75 @@ export function formatRegion(region: string | null): string {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
-function buildStats(
-  countryRows: readonly CountryRow[],
-  coverageRows: readonly CoverageRow[],
-  sourceRows: readonly SourceRow[],
-): PlatformStats {
-  const countryByCode = new Map(
-    countryRows.map((row) => [row.alpha2_code.toUpperCase(), row]),
-  );
+async function loadSnapshot(): Promise<PlatformStats> {
+  const response = await fetch('/platform-stats.json', { headers: { accept: 'application/json' } });
+  if (!response.ok) throw new Error(`The coverage snapshot is unavailable (HTTP ${response.status}).`);
+  const snapshot = (await response.json()) as Snapshot;
+  const stats = snapshot.stats;
+  if (!stats) throw new Error('The coverage snapshot has no figures.');
 
-  const regions = new Map<string, RegionRow>();
-  const markets: MarketRow[] = [];
-  let storedNotices = 0;
-  let marketsWithRecords = 0;
-  let marketsWithSources = 0;
-  let newestCollectionAt: string | null = null;
-
-  for (const row of coverageRows) {
-    const code = row.code.toUpperCase();
-    const country = countryByCode.get(code);
-    const region = formatRegion(country?.region ?? null);
-    const records = asNumber(row.record_count);
-    const sources = asNumber(row.source_count);
-    const activeSources = asNumber(row.active_source_count);
-    if (records > 0) marketsWithRecords += 1;
-    if (sources > 0) marketsWithSources += 1;
-    storedNotices += records;
-    if (row.last_success_at && (!newestCollectionAt || row.last_success_at > newestCollectionAt)) {
-      newestCollectionAt = row.last_success_at;
-    }
-
-    const regionEntry =
-      regions.get(region) ?? { region, markets: 0, marketsWithRecords: 0, records: 0 };
-    regionEntry.markets += 1;
-    if (records > 0) regionEntry.marketsWithRecords += 1;
-    regionEntry.records += records;
-    regions.set(region, regionEntry);
-
-    markets.push({
-      code,
-      name: country?.name ?? code,
-      region,
-      records,
-      sources,
-      activeSources,
-      lastSuccessAt: row.last_success_at,
-    });
-  }
-
-  const registeredMarkets = countryRows.length || coverageRows.length;
-  const operationalSources = sourceRows.filter(
-    (row) => row.integration_status === 'operational',
-  ).length;
-  const recentCutoff = Date.now() - 7 * 86_400_000;
-  const sourcesCollectedRecently = sourceRows.filter((row) => {
-    if (!row.last_successful_retrieval) return false;
-    const time = Date.parse(row.last_successful_retrieval);
-    return Number.isFinite(time) && time >= recentCutoff;
-  }).length;
-
+  const markets: MarketRow[] = (snapshot.markets ?? [])
+    .map((row) => ({
+      code: row.code ?? '',
+      name: row.name?.trim() || row.code || '',
+      region: formatRegion(row.region ?? null),
+      records: asNumber(row.records),
+      sources: asNumber(row.sources),
+      activeSources: asNumber(row.activeSources),
+      lastSuccessAt: row.lastSuccessAt ?? null,
+    }))
+    .filter((row) => row.code);
   markets.sort((a, b) => b.records - a.records || a.name.localeCompare(b.name));
 
+  const regions: RegionRow[] = (snapshot.regions ?? [])
+    .map((row) => ({
+      region: formatRegion(row.region ?? null),
+      markets: asNumber(row.markets),
+      marketsWithNotices: asNumber(row.marketsWithNotices),
+      records: asNumber(row.records),
+    }))
+    .sort((a, b) => b.records - a.records || a.region.localeCompare(b.region));
+
   return {
-    registeredMarkets,
-    marketsWithRecords,
-    marketsWithSources,
-    storedNotices,
-    registeredSources: sourceRows.length,
-    operationalSources,
-    sourcesCollectedRecently,
-    newestCollectionAt,
+    registeredMarkets: asNumber(stats.marketsRegistered),
+    marketsWithSources: asNumber(stats.marketsWithSources),
+    marketsWithNotices: asNumber(stats.marketsWithNotices),
+    verifiedNotices: asNumber(stats.verifiedNotices),
+    registeredSources: asNumber(stats.registeredSources),
+    operationalSources: asNumber(stats.operationalSources),
+    sourcesCollectedRecently: asNumber(stats.sourcesCollectedRecently),
+    newestCollectionAt: stats.newestCollectionAt ?? null,
+    generatedAt: snapshot.generatedAt ?? null,
     markets,
-    regions: [...regions.values()].sort((a, b) => b.records - a.records || a.region.localeCompare(b.region)),
+    regions,
   };
 }
 
 export function usePlatformStats(): PlatformStatsState {
-  const [state, setState] = useState<PlatformStatsState>(() =>
-    neonClient
-      ? { stats: null, loading: true, error: null, configured: true }
-      : EMPTY_STATE,
-  );
+  const [state, setState] = useState<PlatformStatsState>({
+    stats: null,
+    loading: true,
+    error: null,
+    configured: true,
+  });
 
   useEffect(() => {
-    if (!neonClient) {
-      setState(EMPTY_STATE);
-      return;
-    }
-    const db = neonClient as unknown as { from(table: string): Query };
     let cancelled = false;
-
     void (async () => {
       try {
-        const [countryResult, coverageResult, sourceResult] = await Promise.all([
-          db.from('global_countries').select('alpha2_code, name, region').range(0, ROW_LIMIT - 1),
-          db
-            .from('coverage_truth')
-            .select('code, status, last_success_at, record_count, source_count, active_source_count')
-            .range(0, ROW_LIMIT - 1),
-          db
-            .from('opportunity_sources')
-            .select('id, integration_status, source_health, last_successful_retrieval')
-            .range(0, ROW_LIMIT - 1),
-        ]);
-        if (cancelled) return;
-
-        const failure = countryResult.error ?? coverageResult.error ?? sourceResult.error;
-        if (failure) {
-          setState({
-            stats: null,
-            loading: false,
-            error: errorMessage(failure),
-            configured: true,
-          });
-          return;
-        }
-
-        const countryRows = (Array.isArray(countryResult.data) ? countryResult.data : []) as CountryRow[];
-        const coverageRows = (Array.isArray(coverageResult.data) ? coverageResult.data : []) as CoverageRow[];
-        const sourceRows = (Array.isArray(sourceResult.data) ? sourceResult.data : []) as SourceRow[];
-
-        if (coverageRows.length === 0 && sourceRows.length === 0) {
-          setState({
-            stats: null,
-            loading: false,
-            error: 'No platform coverage has been recorded yet.',
-            configured: true,
-          });
-          return;
-        }
-
-        setState({
-          stats: buildStats(countryRows, coverageRows, sourceRows),
-          loading: false,
-          error: null,
-          configured: true,
-        });
+        const stats = await loadSnapshot();
+        if (!cancelled) setState({ stats, loading: false, error: null, configured: true });
       } catch (error) {
         if (!cancelled) {
           setState({
             stats: null,
             loading: false,
-            error: errorMessage(error),
+            error: error instanceof Error ? error.message : 'The platform statistics could not be read.',
             configured: true,
           });
         }
       }
     })();
-
     return () => {
       cancelled = true;
     };

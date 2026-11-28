@@ -18,9 +18,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { WorkspaceLayout } from '../../components/layout/WorkspaceLayout';
+import { useAuth } from '../../../app/auth/AuthProvider';
 import { useAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
 import { formatCurrencyValue, formatDisplayDate, getDaysRemaining } from '../../data/fixtures';
+import { createShareLink } from '../../data/shareLink';
 import { useNoticeTranslation } from '../../../i18n/useNoticeTranslation';
 
 type DetailTab =
@@ -43,6 +45,7 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
     pipeline,
     pushToast,
   } = useAppState();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
 
   // Never fall back to an arbitrary notice: a deep link must show the requested
@@ -89,9 +92,21 @@ export function OpportunityDetailPage({ opportunityId }: { opportunityId: string
   ];
 
   const shareUrl = `${window.location.origin}/o/${opp.id}`;
-  const handleCopyLink = () => {
-    navigator.clipboard?.writeText(shareUrl);
-    pushToast('info', `Copied public link for ${opp.referenceNumber}.`);
+  const handleCopyLink = async () => {
+    // The public share page reads one notice through get_shared_notice, which
+    // returns nothing until an owner has created this explicit share row.
+    const shared = await createShareLink(opp.id, user?.id ?? null);
+    try {
+      await navigator.clipboard?.writeText(shareUrl);
+    } catch {
+      // Clipboard access can be refused; the URL is still shown in the UI.
+    }
+    pushToast(
+      shared ? 'info' : 'warning',
+      shared
+        ? `Copied the public link for ${opp.referenceNumber}.`
+        : `Copied the link, but it could not be authorised for public access. Ask an administrator to check share permissions.`,
+    );
   };
 
   return (

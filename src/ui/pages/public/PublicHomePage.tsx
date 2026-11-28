@@ -21,11 +21,6 @@ import { useRouter } from '../../context/RouterContext';
 import { INITIAL_PLAN_CATALOG, formatUsd } from '../../data/billingConfig';
 import { formatLiveAge } from '../../data/liveness';
 import { usePlatformStats } from '../../data/platformStats';
-import {
-  sourceStatusDot,
-  sourceStatusTone,
-  useSourceShowcase,
-} from '../../data/sourceShowcase';
 import { usePageMeta } from '../../../seo/usePageMeta';
 import siteContent from '../../../seo/site-content.json';
 
@@ -113,8 +108,8 @@ function HeroProductPreview() {
         {tab === 'discover' && (
           <div className="space-y-2.5">
             {[
-              { market: 'Kenya · Government', ref: 'PPIP/2026/0148', line: 'Works supervision — lot 2', value: 'Value not disclosed' },
-              { market: 'European Union · Framework', ref: 'TED/2026/0417', line: 'Data interoperability services', value: 'EUR 1,850,000' },
+              { market: 'Kenya · Government', ref: 'KE-2026-0148', line: 'Works supervision — lot 2', value: 'Value not disclosed' },
+              { market: 'European Union · Framework', ref: 'EU-2026-0417', line: 'Data interoperability services', value: 'EUR 1,850,000' },
               { market: 'United States · Grants', ref: 'G-2026-0092', line: 'Regional innovation programme', value: 'USD 750,000' },
             ].map((row) => (
               <div
@@ -243,21 +238,21 @@ function StatsBand({ state }: { state: ReturnType<typeof usePlatformStats> }) {
           note: 'Countries with a market record',
         },
         {
-          label: 'Markets holding notices',
-          value: formatCount(stats.marketsWithRecords),
-          note: 'Markets with collected records',
+          label: 'Markets with verified notices',
+          value: formatCount(stats.marketsWithNotices),
+          note: 'A registry entry alone is not coverage',
         },
         {
-          label: 'Sources registered',
+          label: 'Source integrations',
           value: formatCount(stats.registeredSources),
           note: `${formatCount(stats.operationalSources)} marked operational`,
         },
         {
           label: 'Verified notices',
-          value: formatCount(stats.storedNotices),
+          value: formatCount(stats.verifiedNotices),
           note: stats.newestCollectionAt
-            ? `Newest collection ${formatTimestamp(stats.newestCollectionAt)}`
-            : 'No collection recorded',
+            ? `Valid and linked to a verified source · newest ${formatTimestamp(stats.newestCollectionAt)}`
+            : 'Valid and linked to a verified source',
         },
       ]
     : [];
@@ -275,8 +270,8 @@ function StatsBand({ state }: { state: ReturnType<typeof usePlatformStats> }) {
               : error
                 ? 'Live figures unavailable'
                 : stats?.newestCollectionAt
-                  ? `Read from the platform database · newest recorded collection ${formatLiveAge(stats.newestCollectionAt)}`
-                  : 'Read from the platform database'}
+                  ? `Aggregate snapshot of the platform database · newest collection ${formatLiveAge(stats.newestCollectionAt)}`
+                  : 'Aggregate snapshot of the platform database'}
           </p>
         </div>
 
@@ -449,7 +444,7 @@ function MarketsSection({ platform }: { platform: ReturnType<typeof usePlatformS
               {[
                 { label: 'Markets in the registry', value: stats?.registeredMarkets, note: 'Every market record' },
                 { label: 'With registered sources', value: stats?.marketsWithSources, note: 'At least one source linked' },
-                { label: 'Holding collected notices', value: stats?.marketsWithRecords, note: 'Records stored, not planned' },
+                { label: 'Holding verified notices', value: stats?.marketsWithNotices, note: 'Verified records, not planned markets' },
                 { label: 'Sources collected in 7 days', value: stats?.sourcesCollectedRecently, note: 'Successful retrieval recorded' },
               ].map((item) => (
                 <div key={item.label} className="rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-white dark:bg-[#171923] p-4">
@@ -476,7 +471,7 @@ function MarketsSection({ platform }: { platform: ReturnType<typeof usePlatformS
                         />
                       </span>
                       <span className="font-mono tabular-nums text-[#526070] dark:text-[#CBD5E1]">
-                        {formatCount(region.records)} notices · {region.marketsWithRecords}/{region.markets} markets
+                        {formatCount(region.records)} notices · {region.marketsWithNotices}/{region.markets} markets
                       </span>
                     </li>
                   ))}
@@ -541,8 +536,9 @@ function MarketsSection({ platform }: { platform: ReturnType<typeof usePlatformS
             )}
 
             <p className="mt-4 max-w-4xl text-xs leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
-              A market in the registry is not a supported market. Coverage is only counted when a market holds records from
-              a registered source; a market whose sources answer but deliver no notices is not presented as covered.
+              A market in the registry is not a supported market. Coverage is counted only when a market holds verified
+              notices linked to a registered source; a market whose sources answer but deliver no notices is not presented
+              as covered.
             </p>
           </>
         )}
@@ -551,13 +547,17 @@ function MarketsSection({ platform }: { platform: ReturnType<typeof usePlatformS
   );
 }
 
-function SourcesSection({ showcase }: { showcase: ReturnType<typeof useSourceShowcase> }) {
-  const { sources, counts, loading, error } = showcase;
-  const strip = sources.length > 0 ? sources : siteContent.sources.candidates.map((candidate) => ({
-    key: candidate.key,
-    name: candidate.name,
-    market: candidate.market,
-  }));
+function SourcesSection({ platform }: { platform: ReturnType<typeof usePlatformStats> }) {
+  const { stats, loading, error } = platform;
+  const categories = siteContent.sources.categories;
+  const icons = [Landmark, Globe2, Database, ClipboardList, Building2, FileSearch];
+
+  const aggregates = [
+    { label: 'Markets in the registry', value: stats?.registeredMarkets, note: 'Countries with a market record' },
+    { label: 'Registered integrations', value: stats?.registeredSources, note: 'Configured in the acquisition registry' },
+    { label: 'Operational integrations', value: stats?.operationalSources, note: 'Marked operational, still verified per check' },
+    { label: 'Collected in the last 7 days', value: stats?.sourcesCollectedRecently, note: 'Successful retrieval recorded' },
+  ];
 
   return (
     <section
@@ -567,102 +567,77 @@ function SourcesSection({ showcase }: { showcase: ReturnType<typeof useSourceSho
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading eyebrow={siteContent.sources.eyebrow} title={siteContent.sources.title} intro={siteContent.sources.intro} />
 
-        <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            { label: 'Delivering records', value: counts.delivering, tone: 'text-[#15803D] dark:text-[#4ADE80]' },
-            { label: 'Connected, no retrieval recorded', value: counts.connected_unverified, tone: 'text-[#0369A1] dark:text-[#7DD3FC]' },
-            { label: 'Latest check did not answer', value: counts.unreachable, tone: 'text-[#B45309] dark:text-[#FCD34D]' },
-            {
-              label: 'Registered, not connected or not integrated',
-              value: counts.registered + counts['not-integrated'],
-              tone: 'text-[#64748B] dark:text-[#CBD5E1]',
-            },
-          ].map((item) => (
-            <div key={item.label} className="rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-[#FBFBFC] dark:bg-[#171923] px-4 py-3">
-              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">{item.label}</p>
-              <p className={`font-display text-xl font-bold tabular-nums ${item.tone}`}>
-                {loading ? '—' : item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 overflow-hidden border-y border-[#E2E8F0] dark:border-[#263244] py-3" aria-hidden="true">
-          <div className="oppsift-source-marquee flex w-max gap-3">
-            {[0, 1].map((copy) => (
-              <div key={copy} className="flex gap-3">
-                {strip.map((source) => (
-                  <span
-                    key={`${copy}-${source.key}`}
-                    className="whitespace-nowrap rounded-md border border-[#E2E8F0] dark:border-[#263244] bg-[#F8FAFC] dark:bg-[#1C2433] px-3 py-1.5 text-[11px] font-medium text-[#526070] dark:text-[#CBD5E1]"
-                  >
-                    {source.name}
-                    <span className="ml-1.5 text-[#94A3B8]">· {source.market}</span>
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {error && (
-          <p className="mt-5 text-sm text-[#B45309] dark:text-[#FCD34D]">
-            {error} Status labels are withheld rather than assumed.
-          </p>
-        )}
-
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {siteContent.sources.candidates.map((candidate) => {
-            const live = sources.find((entry) => entry.key === candidate.key);
+        <div className="mt-9 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {categories.map((category, index) => {
+            const Icon = icons[index % icons.length];
             return (
               <article
-                key={candidate.key}
-                className="flex flex-col rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-[#FBFBFC] dark:bg-[#171923] p-4"
+                key={category.key}
+                className="relative overflow-hidden rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-[#FBFBFC] dark:bg-[#171923] p-5"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-display text-sm font-semibold leading-snug">{candidate.name}</h3>
-                  <span className="shrink-0 rounded border border-[#E2E8F0] dark:border-[#263244] px-1.5 py-0.5 text-[10px] font-medium text-[#526070] dark:text-[#CBD5E1]">
-                    {candidate.market}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full border border-[#E2E8F0] dark:border-[#263244] opacity-70"
+                />
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F5EDF0] text-[#541B32] dark:bg-[#2A1420] dark:text-[#E8A4B5]">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
+                  <h3 className="font-display text-sm font-semibold leading-snug">{category.name}</h3>
                 </div>
-                <p className="mt-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">{live?.publisher ?? candidate.publisher}</p>
-                <dl className="mt-3 space-y-1 text-[11px]">
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#64748B] dark:text-[#94A3B8]">Category</dt>
-                    <dd className="text-right font-medium">{candidate.category}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-[#64748B] dark:text-[#94A3B8]">Access</dt>
-                    <dd className="text-right font-medium">{candidate.access}</dd>
-                  </div>
-                </dl>
-                <div className="mt-3 flex items-start gap-1.5 border-t border-[#E2E8F0] dark:border-[#263244] pt-3">
-                  <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${live ? sourceStatusDot(live.status) : 'bg-[#CBD5E1]'}`} />
-                  <div>
-                    <p className={`text-[11px] font-semibold ${live ? sourceStatusTone(live.status) : 'text-[#64748B]'}`}>
-                      {loading ? 'Reading registry…' : live?.statusLabel ?? 'Status unavailable'}
-                    </p>
-                    <p className="mt-0.5 text-[10px] leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
-                      {live?.detail ?? 'No registry row could be read for this source.'}
-                    </p>
-                  </div>
-                </div>
-                <a
-                  href={candidate.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 text-[11px] font-semibold text-[#541B32] dark:text-[#E8A4B5] hover:underline"
-                >
-                  Official publisher site ↗
-                </a>
+                <p className="mt-2.5 text-xs leading-relaxed text-[#526070] dark:text-[#CBD5E1]">{category.detail}</p>
               </article>
             );
           })}
         </div>
 
+        <div className="mt-8 rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-[#F8FAFC] dark:bg-[#1C2433] px-5 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#541B32] dark:text-[#E8A4B5]">
+              From publisher to workspace
+            </p>
+            <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[#526070] dark:text-[#CBD5E1]">
+              {['Public data environments', 'Normalisation', 'Verification', 'One workspace'].map((step, index) => (
+                <li key={step} className="flex items-center gap-2">
+                  {index > 0 && <span aria-hidden="true" className="text-[#94A3B8]">→</span>}
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <svg aria-hidden="true" viewBox="0 0 800 24" preserveAspectRatio="none" className="mt-3 h-6 w-full text-[#541B32]/35 dark:text-[#E8A4B5]/35">
+            <path
+              d="M0 12 H800"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeDasharray="3 7"
+              className="oppsift-flow"
+            />
+          </svg>
+        </div>
+
+        <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {aggregates.map((item) => (
+            <div key={item.label} className="rounded-lg border border-[#E2E8F0] dark:border-[#263244] bg-[#FBFBFC] dark:bg-[#171923] px-4 py-3">
+              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">{item.label}</p>
+              <p className="font-display text-xl font-bold tabular-nums">
+                {loading || item.value === undefined ? '—' : formatCount(item.value)}
+              </p>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-[#94A3B8] dark:text-[#94A3B8]">{item.note}</p>
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <p className="mt-5 text-sm text-[#B45309] dark:text-[#FCD34D]">
+            Coverage counts could not be read in this session. They are withheld rather than estimated.
+          </p>
+        )}
+
         <p className="mt-5 max-w-4xl text-xs leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
-          {siteContent.sources.disclaimer} A source marked “not integrated” is a published official portal that OppSift does
-          not yet read; it is listed so the gap is visible.
+          {siteContent.sources.disclaimer} Registered integrations include environments still being verified, so the
+          operational count is stated separately and is never presented as a guarantee of delivery for every source.
         </p>
       </div>
     </section>
@@ -873,9 +848,8 @@ function FinalCta() {
 export function PublicHomepage() {
   usePageMeta('/');
   // One read of the aggregate views for the whole page: the statistics band,
-  // the market table and the source showcase share the same evidence.
+  // the market table and the ecosystem section share the same evidence.
   const platform = usePlatformStats();
-  const showcase = useSourceShowcase();
 
   return (
     <PublicLayout>
@@ -884,7 +858,7 @@ export function PublicHomepage() {
       <ProductSection />
       <CategoriesSection />
       <MarketsSection platform={platform} />
-      <SourcesSection showcase={showcase} />
+      <SourcesSection platform={platform} />
       <CredibilitySection />
       <HowItWorksSection />
       <PricingSection />

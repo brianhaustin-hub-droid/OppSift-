@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/prerender-seo.mjs",
+    "build": "node scripts/build-public-stats.mjs && tsc -b && vite build && node scripts/prerender-seo.mjs",
     "preview": "vite preview",
     "test": "vitest run --testTimeout=15000",
     "test:watch": "vitest",
@@ -14,7 +14,8 @@
     "typecheck": "tsc -b --pretty",
     "migrate": "node scripts/apply-pending-migrations.mjs",
     "sources:verify": "node scripts/check-source-liveness.mjs",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "stats:build": "node scripts/build-public-stats.mjs"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.0.4",

@@ -70,16 +70,40 @@ photographic sequence:
 views (`global_countries`, `coverage_truth`, `opportunity_sources`). The marketing page
 never reads the `opportunities` table.
 
-Displayed: markets in the registry, markets holding notices, sources registered (with the
-operational count), verified notices, sources collected in the last seven days, region
-breakdown and the newest recorded collection time. Loading and error states are honest:
-on failure the band says the figures could not be read rather than showing remembered
-numbers.
+Displayed (production build snapshot, 28 November 2026): 101 markets in the registry,
+18 markets holding verified notices, 180 source integrations of which 86 are marked
+operational, 1,609 verified notices, the count of integrations with a successful
+retrieval in the last seven days, a regional breakdown and the newest recorded
+collection. Loading and error states are honest: on failure the band says the figures
+could not be read rather than showing remembered numbers.
 
-Note on "verified notices": the public Data API reads through a row-level policy that
-exposes only notices already verified to a source, so the anonymous-visible count is a
-subset of the internal table (1,636 of 2,540 on 28 November 2026). The label matches what
-the visitor can actually read.
+**How the figures are produced.** `scripts/build-public-stats.mjs` runs before
+`vite build` and writes `public/platform-stats.json` from three aggregate views
+(`public_platform_stats`, `public_market_coverage`, `public_region_coverage`). The
+browser reads that file; it makes no database request at all. Three consequences:
+
+- Anonymous visitors have no read path to the opportunity, provenance or source-registry
+  tables (migration 0057), so no record and no provider identity can reach a visitor.
+- The marketing bundle no longer ships the database/auth client.
+- The file carries `generatedAt`, and the page shows the age of the newest collection, so
+  a stale snapshot is visible rather than implied.
+
+**Definitions, one per figure** (also recorded in the snapshot file):
+
+| Figure | Definition |
+| --- | --- |
+| Markets in the registry | rows in `global_countries` with an ISO alpha-2 code (101) |
+| Markets with verified notices | markets holding at least one verified notice (18) |
+| Source integrations | rows in the internal acquisition registry (180) |
+| Operational integrations | registry rows marked `operational` (86) — not a delivery guarantee |
+| Verified notices | notices marked `valid`, source-verified and linked to a verified source (1,609) |
+
+The distinction the review asked for: production stores **1,636** notices, of which
+**1,609** meet the verification rules; the remaining 27 fail at least one rule and are
+excluded from every public figure. The public site shows 1,609 and labels it "Verified
+notices". The two numbers are never added together or used interchangeably. The dev
+branch holds a larger corpus (2,540 stored / 2,513 verified) and is not what the public
+site reports.
 
 ### 1.5 Product capabilities
 
@@ -104,16 +128,29 @@ or dossiers are published publicly.
 - Explicit note that a registry entry is not a supported market, and that a market whose
   sources answer but deliver nothing is not presented as covered.
 
-### 1.8 Official source showcase
+### 1.8 Data ecosystem (no provider disclosure)
 
-Fifteen genuine official sources, each matched against the live registry by name and
-combined with the newest stored HTTP check. Five states are distinguished: *delivering
-records*, *connected, no retrieval recorded*, *latest check did not answer*, *registered,
-not connected* and *not integrated* (no registry row). The four summary counters cover all
-fifteen sources and add up to fifteen. The strip of
-source names is decorative, paused on hover and stopped under reduced motion. Statuses,
-dates and the reconciling note come from
-[source-verification.md](./source-verification.md).
+The public site does **not** name its data providers, show their logos or URLs, or publish
+per-provider connection status. The Sources section describes the ecosystem by category:
+
+- Government procurement
+- Public tendering systems
+- Grants and funding databases
+- Commercial procurement channels
+- Institutional data networks
+- Open contracting data ecosystems
+
+Copy: *Intelligence from a connected global data ecosystem* / *Structured information from
+diverse public and institutional data environments across supported markets...*, followed by
+an aggregate strip (markets in the registry, registered integrations, operational
+integrations, collections in the last seven days), a decorative publisher-to-workspace flow
+line that stops under reduced motion, and an explicit note that registered integrations
+include environments still being verified.
+
+The `/official-data-sources` landing page was rewritten the same way: its URL is preserved
+for search, and its wording no longer lists publishers. The 15-candidate verification
+remains an internal record in `source-verification.md`; the registry, connectors,
+diagnostics and admin monitoring are untouched.
 
 ### 1.9 Credibility
 
@@ -161,8 +198,12 @@ to do next.* with **Get Started** to `/register`.
 - The public site no longer mounts `AppStateProvider` at all: `src/ui/WorkspaceApp.tsx` is
   a lazy module, so the homepage cannot load opportunity records. This also removed an
   anonymous opportunity-table read that the previous homepage performed.
-- `/o/:id` remains public: share links are part of the approved product model
-  (migration 0050). The page renders one notice snapshot, never workspace data.
+- `/o/:id` is public only for notices an owner has explicitly shared. The page asks the
+  Pages Function `/api/shared-notice/:id`, which runs `get_shared_notice(id)` as the
+  database owner; that function returns a row only when an active, revocable row exists in
+  `opportunity_share_links` (migration 0057). With no share row it returns nothing, so a
+  guessed id discloses nothing. Share creation from the workspace ("Copy public link")
+  records who authorised the share.
 - Client routes are only a UX boundary. Database authorization is unchanged and is
   described, with the open item, in [acceptance-ledger.md](./acceptance-ledger.md) §5.
 
@@ -209,19 +250,96 @@ entry, canonical or JSON-LD field references a workspace or opportunity URL.
 
 ## 4. Known limitations
 
-1. **Database policy for opportunities.** The table still carries a `PUBLIC` read policy
-   for verified notices (see acceptance ledger §5). Public marketing no longer reads it,
-   and the UI gate is in place, but a signed-out caller can still query verified notices
-   directly. Changing that policy would break the approved `/o/:id` share model and needs
-   an owner decision; the exact SQL and impact are recorded, not applied.
-2. **Four of the fifteen showcase sources are not integrated** (Ireland eTenders, Italy
-   ANAC, OCDS registry, AIIB). They are labelled "Not integrated", not hidden.
-3. **Only 11 of 15 candidates exist in the registry**, and several registered candidates
-   have no recorded successful ingestion; the showcase says so per source.
-4. **Checkout is not enabled**, so pricing is informational and paid access is arranged
-   through contact.
-5. **hreflang is not emitted**: the app has UI translations but no localised URLs, and
-   emitting hreflang without regional variants would be incorrect.
-6. **Analytics and Search Console are not installed.** No measurement ID or site
-   verification token is available in this environment; readiness is documented instead.
-7. **The legal pages** remain the product owner's existing text and were not re-drafted.
+1. **Stale Data API schema cache.** The managed Data API has not yet picked up the new
+   aggregate views, the share table or `get_shared_notice`; it answers 404 (PGRST205) for
+   them even after `NOTIFY pgrst, 'reload schema'`. Nothing public depends on them any
+   more: statistics come from the build snapshot and share reads go through the Pages
+   Function. Share creation from the workspace reports a warning until the cache refreshes.
+2. **Share links need a deployment.** `/api/shared-notice/:id` is a Pages Function, so it
+   does not exist under `vite dev`; locally the page correctly renders "not publicly
+   shared". The SQL function itself was tested directly (a row is returned only while a
+   share row exists), but the Worker route has not been exercised in a Workers runtime here.
+3. **Coverage counts verified notices only** (18 markets), although the internal corpus
+   holds notices for 23. The difference is rows that fail the verification rules.
+4. **Checkout is not enabled**, so pricing is informational.
+5. **No hreflang**: UI translations exist but there are no localised URLs.
+6. **Analytics and Search Console are not installed**; no measurement ID or verification
+   token is available in this environment.
+7. **Legal pages** remain the owner's existing text.
+
+## 5. Corrections applied after review (28 November 2026)
+
+The first implementation treated the 15 verification candidates as a public showcase. That
+was wrong: the candidates were internal verification input, and a provider directory is not
+a marketing asset. This section records what was corrected and how it was checked.
+
+### 5.1 Provider identities removed from every public surface
+
+- Homepage Sources section rebuilt around six ecosystem categories; no names, logos,
+  publisher URLs or per-provider status.
+- `/official-data-sources` rewritten (title, description, H1, four sections, links); the URL
+  is kept, the provider list is gone.
+- `sourceShowcase.ts` deleted; `site-content.json` no longer contains a candidates array;
+  the prerender snapshot emits categories instead of a provider list.
+- The site-wide marquee of provider names was removed from markup and CSS.
+- Checked: built HTML, sitemap, robots, JSON-LD and the client bundle contain none of the
+  15 identifiers (SAM.gov, Grants.gov, CanadaBuys, AusTender, Contracts Finder, PhilGEPS,
+  TenderNed, BOAMP, Tenders Electronic Daily, PPIP, ANAC, eTenders, AIIB, OCDS, TED), and
+  the rendered page has no provider-status wording. Internal code paths (workspace and
+  admin chunks, ingestion, registry) still use them and were not modified.
+
+### 5.2 Statistics re-defined and decoupled from the database
+
+- Public figures now come from a build-time aggregate snapshot; no anonymous query.
+- Production truth: 1,636 stored notices, 1,609 verified, 18 markets with verified
+  notices, 180 registered integrations, 86 operational. The review's concern about
+  interchangeability is addressed by definitions in the UI, the snapshot file and this
+  report.
+- The previous report's "1,636 of 2,540" sentence conflated the production corpus (1,636)
+  with the dev corpus (2,540); both are now stated separately and correctly.
+
+### 5.3 Anonymous opportunity access closed
+
+Migration `0057_close_anonymous_opportunity_reads.sql`, applied to the dev branch and to
+the production branch:
+
+- `verified_opportunities_public_read` dropped; `opportunities_authenticated_read` created
+  with the same verification predicate, for `authenticated` only.
+- `SELECT` revoked from `PUBLIC`/`anonymous`/`anon` on `opportunities`,
+  `opportunity_source_records`, `opportunity_source_links`, `opportunity_sources`.
+- New `opportunity_share_links` (RLS: owner-only, `created_by = auth.user_id()`), and
+  `get_shared_notice(uuid)` (`SECURITY DEFINER`, execute granted to `anonymous`).
+- Aggregate views for the build script, granted to `authenticated` and `anonymous`.
+
+Evidence (direct database and API tests, not browser navigation):
+
+| Actor | Statement | Result |
+| --- | --- | --- |
+| `anonymous` | `select count(*) from opportunities` | `permission denied for table opportunities` |
+| `anonymous` | `select title from opportunities limit 1` | `permission denied` |
+| `anonymous` | `select * from opportunity_source_records` | `permission denied` |
+| `anonymous` | `select * from opportunity_sources` | `permission denied` |
+| `anonymous` | `select * from opportunity_source_links` | `permission denied` |
+| `anonymous` | `select count(*) from get_shared_notice(<unshared id>)` | 0 rows |
+| `anonymous` | same call while an owner share row exists | 1 row |
+| `anonymous` | same call after the share row is revoked | 0 rows |
+| `authenticated` | `select count(*) from opportunities` | 1,609 (unchanged workspace visibility) |
+| Data API (`anonymous` JWT) | `GET /rest/v1/opportunities?select=id&limit=1` | 403 `permission denied for table opportunities` |
+| Data API (`anonymous` JWT) | `GET /rest/v1/opportunity_sources?select=id` | 403 `permission denied` |
+
+The test share rows were deleted afterwards; production has zero share rows, so no notice
+is publicly readable at the time of writing.
+
+### 5.4 Share links kept, but only by explicit authorisation
+
+`/o/:id` now renders through the Pages Function and shows "This notice is not shared
+publicly" for anything not explicitly shared. The workspace "Copy public link" action
+creates the share row first. This preserves the share feature without retaining a blanket
+anonymous exception; it also means previously copied links stop resolving until the owner
+shares them again, which is the intended consequence of the privacy boundary.
+
+### 5.5 Credibility and trust section
+
+Unchanged in substance and consistent with the review: "Built for organisations pursuing
+global opportunities", the six audiences, and the explicit statement that no customer is
+named until they agree to be.

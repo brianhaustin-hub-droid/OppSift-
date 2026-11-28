@@ -74,7 +74,7 @@ sets `noindex` for unmapped routes).
 
 | Asset | Size | Gzip |
 | --- | --- | --- |
-| `index-*.js` (public site) | 800.76 kB | 209.75 kB |
+| `index-*.js` (public site) | 743.95 kB | 192.58 kB |
 | `index-*.css` | 77.00 kB | 13.62 kB |
 | `WorkspaceApp-*.js` (lazy) | 21.73 kB | 5.93 kB |
 | `AuthApp-*.js` (lazy) | 47.30 kB | 10.66 kB |
@@ -84,17 +84,12 @@ authenticated application, lazily loading the auth/onboarding module and deletin
 retired marketing page components reduced the public entry to the figure above (−35% raw,
 −28% gzip) and removed the workspace data layer from the marketing page entirely.
 
-Composition of the public entry (source-map analysis): `react-dom` ~620 kB of source,
-`zod` ~361 kB and the managed-auth client stack (`@supabase/auth-js`, `better-auth`,
-`@neon/auth`, `@supabase/postgrest-js`) ~330 kB. Those libraries come with the Neon client
-that the public coverage statistics currently use to obtain an anonymous token for the
-Data API.
-
-**Recommendation (not implemented here):** replace the client-side anonymous read with a
-cached aggregate endpoint (a small Worker route or a CI-generated `platform-stats.json`
-refreshed by the existing source-liveness workflow). That would remove the auth stack from
-the marketing bundle and take the public entry below ~150 kB gzip. It is a deployment and
-data-publication decision, so it is recorded rather than assumed.
+The public entry no longer includes a database client. Statistics come from
+`public/platform-stats.json`, an aggregate snapshot written before the build by
+`scripts/build-public-stats.mjs`; the marketing pages make no database request, so no
+anonymous token, PostgREST client or schema handling ships to visitors. The remaining
+weight is React, the icon set, the i18n catalogs and the page code. (Measurements are from
+`vite build` output; no field data is available.)
 
 ## 8. Image and font loading
 

@@ -503,6 +503,15 @@
       ],
       "status": "applied",
       "appliedAt": "2026-11-27T19:57:58.343Z"
+    },
+    {
+      "version": "0057",
+      "file": "0057_close_anonymous_opportunity_reads.sql",
+      "dependsOn": [
+        "0056"
+      ],
+      "status": "applied",
+      "appliedAt": "2026-11-28T06:15:13.285Z"
     }
   ]
 }
