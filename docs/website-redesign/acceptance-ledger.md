@@ -151,3 +151,11 @@ the privacy boundary, and it is recorded here rather than worked around.
 - No mass-generated country pages.
 - No fabricated customers, testimonials, logos, ratings or search volumes.
 - No analytics or advertising tags.
+
+**Deployment (28 November 2026).** The branch is live on Cloudflare Pages via the repository
+integration (`assets/index-BPFKle01.js`). Signed-out browser checks on `getoppsift.com` confirm
+homepage figures from the snapshot, no provider names in served HTML/JS/sitemap, `/o/` blocked
+and `noindex`, and the sign-in form rendering. Two production-only defects found during this
+check are fixed (§6 of the implementation report). Still open, dashboard-only: `DATABASE_URL` is
+not set on the Pages project (share reads 503), and the build command does not run the prerender
+step, so crawlers receive the head without the body snapshot.

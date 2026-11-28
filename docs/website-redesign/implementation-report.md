@@ -385,3 +385,38 @@ execute grant; the Pages Function calls the first as the owner role.
 The build also stopped importing the database client into the public entry: `formatLiveAge`
 moved to `src/ui/data/relativeTime.ts`, taking the marketing bundle from 743.95 kB
 (192.58 kB gzip) to 548.27 kB (133.09 kB gzip).
+
+## 6. Deployment record (28 November 2026)
+
+Deployed by pushing the branch to `main`; Cloudflare Pages built it and the new entry bundle
+went live (`assets/index-BPFKle01.js`, 548.32 kB / 133.11 kB gzip). Verified on
+`getoppsift.com`, signed out, in a real browser:
+
+| Check | Result |
+| --- | --- |
+| Homepage figures | 101 markets, 180 integrations, 86 operational, 1,609 verified notices, "Aggregate snapshot of the platform database · newest collection 2 d ago" |
+| `platform-stats.json` on the origin | `marketsRegistered 101`, `marketsWithNotices 18`, `verifiedNotices 1609`, `registeredSources 180`, `operationalSources 86` |
+| Provider names in served HTML, JS bundle or `sitemap.xml` | none (0 matches for the provider list used in §5.1) |
+| `/o/<unshared id>` | `noindex,nofollow`, renders "This shared notice is unavailable", no record content |
+| `GET /api/shared-notice/<id>` | 404 when the function is configured; 503 today because `DATABASE_URL` is not set on the Pages project |
+| `POST /api/share-links` with no session | 401 |
+| `/login` | sign-in form renders (email, password, Google), session endpoint 200 |
+| `/discover` signed out | "Sign in to open the workspace", no workspace data loaded |
+
+Two defects were found by this verification and fixed in the same deploy:
+
+1. `/login`, `/register` and the verification routes rendered **nothing** in production.
+   `AuthScreensPage` called `useAppState()`, which throws outside `AppStateProvider`; the auth
+   module deliberately does not mount that provider. It now uses an optional accessor and only
+   shows toasts when a provider is present.
+2. Shared-notice pages inherited the workspace title. They now use "Shared notice — OppSift".
+
+Outstanding after deployment — both need Cloudflare dashboard access, not code:
+
+- The Pages project does not set `DATABASE_URL` for Functions, so `/api/shared-notice/:id`
+  returns 503 and the share feature is not usable until the variable is added. The page still
+  exposes no record and stays `noindex`.
+- The deployed HTML is the raw Vite shell (`<div id="root"></div>`, 4.3 kB) rather than the
+  prerendered document produced by `scripts/prerender-seo.mjs`, so the head metadata and JSON-LD
+  ship but the per-route body snapshot does not. The Pages build command therefore needs to be
+  `npm run build` (not `vite build`).
