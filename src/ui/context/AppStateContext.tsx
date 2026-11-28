@@ -1077,3 +1077,13 @@ export function useAppState(): AppStateContextValue {
   if (!ctx) throw new Error('useAppState must be used inside AppStateProvider');
   return ctx;
 }
+
+/**
+ * Optional variant for screens that also render outside the workspace shell
+ * (sign-in, registration, verification, recovery). Those surfaces must not
+ * mount AppStateProvider — it issues the workspace data queries — but they do
+ * want to show toasts when it happens to be present.
+ */
+export function useOptionalAppState(): AppStateContextValue | null {
+  return useContext(AppStateContext) ?? null;
+}

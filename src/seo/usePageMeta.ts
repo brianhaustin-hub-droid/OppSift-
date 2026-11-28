@@ -43,7 +43,9 @@ export function applyPageMeta(path: string) {
   // public content: they are marked noindex and never given a canonical URL
   // that would compete with a marketing page.
   if (!meta) {
-    document.title = `${SITE.name} — Workspace`;
+    document.title = path.startsWith('/o/')
+      ? `Shared notice — ${SITE.name}`
+      : `${SITE.name} — Workspace`;
     upsertMeta('name', 'robots', 'noindex,nofollow');
     const canonicalTag = document.head.querySelector('link[rel="canonical"]');
     if (canonicalTag) canonicalTag.remove();

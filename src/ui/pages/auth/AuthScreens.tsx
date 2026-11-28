@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { OppSiftLogo } from '../../components/brand/OppSiftLogo';
 import { PhotographicBackdrop } from '../../components/media/PhotographicBackdrop';
-import { useAppState } from '../../context/AppStateContext';
+import { useOptionalAppState } from '../../context/AppStateContext';
 import { useRouter } from '../../context/RouterContext';
 import { useTheme } from '../../context/ThemeContext';
 import { AuthScreenMode } from '../../types/oppsift';
@@ -115,7 +115,8 @@ function verifyEmailHref(email: string) {
 
 export function AuthScreensPage() {
   const { path, navigate } = useRouter();
-  const { pushToast } = useAppState();
+  const appState = useOptionalAppState();
+  const pushToast = appState?.pushToast ?? (() => {});
   const { user, loading: sessionLoading, configured: authConfigured, signOut, refreshSession } = useAuth();
   const { resolvedTheme, toggleTheme } = useTheme();
 
